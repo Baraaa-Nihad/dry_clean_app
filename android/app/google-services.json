@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "205553289227",
+    "project_id": "saleem-dry-clean",
+    "storage_bucket": "saleem-dry-clean.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:205553289227:android:8e07c5080d96f3b3381f0e",
+        "android_client_info": {
+          "package_name": "com.saleem.dry_clean_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLv9tJj12v_Uoj3zkHh_wwQhnkJ73eHe4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,19 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M2.97931 3.85571C2.15395 3.85571 1.48486 4.5248 1.48486 5.35016C1.48486 6.17552 2.15395 6.8446 2.97931 6.8446H21.0207C21.8461 6.8446 22.5151 6.17552 22.5151 5.35016C22.5151 4.5248 21.8461 3.85571 21.0207 3.85571H2.97931ZM15.5694 19.7027L15.1156 19.8033C13.0634 20.258 10.9366 20.258 8.88443 19.8033L8.43056 19.7027C5.70601 19.099 3.55805 17.0045 2.88539 14.2956C2.38561 12.2829 2.37192 10.181 2.84433 8.16335C2.86958 8.0555 2.94366 7.96583 3.04398 7.91886L3.20258 7.8446H20.7974L20.956 7.91886C21.0563 7.96584 21.1304 8.0555 21.1557 8.16336C21.6281 10.181 21.6144 12.2829 21.1146 14.2956C20.442 17.0045 18.294 19.099 15.5694 19.7027Z" fill="url(#paint0_linear_1939_25146)"/>
+<path d="M5.80371 10V12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M8.90186 10V12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M12 10V12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M15.0981 10V12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M18.1963 10V12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M5.80371 14.6112V15.6112" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M8.90186 14.6112V16.6112" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M12 14.6112V16.6112" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M15.0981 14.6112V16.6112" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M18.1963 14.6112V15.6112" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+<defs>
+<linearGradient id="paint0_linear_1939_25146" x1="53.3004" y1="12" x2="1.48486" y2="12" gradientUnits="userSpaceOnUse">
+<stop stop-color="#00E213"/>
+<stop offset="1" stop-color="#01B5CF"/>
+</linearGradient>
+</defs>
+</svg>

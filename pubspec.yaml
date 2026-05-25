@@ -1,0 +1,77 @@
+name: saleem_dry_clean
+description: A new Flutter project for Saleem Dry Clean.
+
+environment:
+  sdk: ">=2.19.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  flutter_localizations:
+    sdk: flutter
+
+  flutter_svg: ^2.0.9
+  google_fonts: ^2.3.3
+  flutter_secure_storage: ^10.2.0
+  shimmer: ^3.0.0
+  carousel_slider: ^5.1.2
+  smooth_page_indicator: ^2.0.1 # Add this line
+  url_launcher: ^6.0.20
+  calendar_date_picker2: ^2.0.1
+  shared_preferences: ^2.0.6
+  provider: ^6.0.0
+  flutter_dotenv: ^6.0.1
+  http: ^0.13.6
+  http_interceptor: ^1.0.2
+  pin_code_fields: ^9.3.0
+  device_info_plus: ^12.4.0
+  connectivity_plus: ^7.1.1
+  flutter_screenutil: ^5.6.1
+  cached_network_image: ^3.2.3
+  lottie: ^3.0.0
+  firebase_core: ^4.8.0
+  firebase_messaging: ^16.2.1
+  flutter_local_notifications: ^18.0.1
+  package_info_plus: ^9.0.1
+  scrollable_positioned_list: ^0.3.5
+  pinput: ^6.0.2
+  
+
+
+dependency_overrides:
+  google_fonts: 2.3.3 # Specify the exact version that works without conflicts
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  min_sdk_android: 21 
+flutter:
+  uses-material-design: true
+
+  assets:
+    - .env
+    - assets/lang/
+    - assets/images/
+    - assets/vectors/
+    - assets/Icons/
+    - assets/animations/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins/Poppins-Bold.ttf
+
+    - family: BalooBhaijaan
+      fonts:
+        - asset: assets/fonts/BalooBhaijaan/BalooBhaijaan-Bold.ttf
+        - asset: assets/fonts/BalooBhaijaan/BalooBhaijaan-SemiBold.ttf
+        - asset: assets/fonts/BalooBhaijaan/BalooBhaijaan-Medium.ttf
+        - asset: assets/fonts/BalooBhaijaan/BalooBhaijaan-Regular.ttf
