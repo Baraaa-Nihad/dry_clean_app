@@ -16,8 +16,16 @@ class AddressesProvider with ChangeNotifier {
 
   bool _isLoading = false;
   final TokenService _tokenService = TokenService();
+  // Single reusable client — avoids re-initialising FlutterSecureStorage on every request
+  late final _client = ApiClient.createClient(_tokenService);
 
   bool get isLoading => _isLoading;
+
+  @override
+  void dispose() {
+    _client.close();
+    super.dispose();
+  }
 
   void setLoading(bool loading) {
     _isLoading = loading;
@@ -33,7 +41,7 @@ class AddressesProvider with ChangeNotifier {
     setLoading(true);
 
     final url = Uri.parse('${Config.getUserAddressApi}$userId/$lang');
-    final client = ApiClient.createClient(_tokenService);
+    final client = _client;
 
     try {
       final response = await client.get(url);
@@ -41,8 +49,6 @@ class AddressesProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         _addresses = List<Map<String, dynamic>>.from(responseData);
-        print("_addresses_addresses_addresses_addresses");
-        print(_addresses);
         notifyListeners();
       } else {
         throw Exception('Failed to fetch addresses');
@@ -58,7 +64,7 @@ class AddressesProvider with ChangeNotifier {
     setLoading(true);
 
     final url = Uri.parse('${Config.getAddressNamesApi}');
-    final client = ApiClient.createClient(_tokenService);
+    final client = _client;
 
     try {
       final response = await client.get(url);
@@ -69,7 +75,6 @@ class AddressesProvider with ChangeNotifier {
           _addressNames = List<Map<String, dynamic>>.from(responseData);
         } else if (responseData is Map<String, dynamic>) {
           _addressNames = [responseData];
-          print(_addressNames);
         } else {
           throw Exception('Unexpected response type');
         }
@@ -90,7 +95,7 @@ class AddressesProvider with ChangeNotifier {
     setLoading(true);
 
     final url = Uri.parse('${Config.addAddressApi}');
-    final client = ApiClient.createClient(_tokenService);
+    final client = _client;
 
     try {
       final response = await client.post(
@@ -123,7 +128,7 @@ class AddressesProvider with ChangeNotifier {
     setLoading(true);
 
     final url = Uri.parse('${Config.setDefaultAddressApi}');
-    final client = ApiClient.createClient(_tokenService);
+    final client = _client;
 
     try {
       final response = await client.post(
@@ -146,11 +151,9 @@ class AddressesProvider with ChangeNotifier {
 
   Future<void> updateAddress(Map<String, dynamic> address,
       UserProvider userProvider, String lang, BuildContext context) async {
-    print("updateAddress");
     setLoading(true);
-    print("asdfasdfasdfsadfas");
     final url = Uri.parse('${Config.updateUserAddressApi}');
-    final client = ApiClient.createClient(_tokenService);
+    final client = _client;
 
     try {
       final response = await client.post(
@@ -183,7 +186,7 @@ class AddressesProvider with ChangeNotifier {
 
     final url = Uri.parse(
         '${Config.deleteAddressApi}?userId=$userId&addressId=$addressId');
-    final client = ApiClient.createClient(_tokenService);
+    final client = _client;
 
     try {
       final response = await client.delete(
@@ -192,12 +195,8 @@ class AddressesProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        print('Address deleted successfully');
         await fetchAddresses(userId, 'en');
       } else {
-        print(
-            'Failed to delete address with status code: ${response.statusCode}');
-        print('Response body: ${response.body}');
         throw Exception('Failed to delete address');
       }
     } catch (error) {

@@ -8,7 +8,7 @@ class DryCleanProvider with ChangeNotifier {
 
   DryClean? get dryClean => _dryClean;
 
-  void setDryClean(DryClean newDryClean) async {
+  Future<void> setDryClean(DryClean newDryClean) async {
     _dryClean = newDryClean;
     notifyListeners();
 
@@ -24,7 +24,7 @@ class DryCleanProvider with ChangeNotifier {
     await prefs.setString('dryClean', jsonString);
   }
 
-  void clearDryClean() async {
+  Future<void> clearDryClean() async {
     _dryClean = null;
     notifyListeners();
 

@@ -107,18 +107,18 @@ class _AccountCreatedModalState extends State<AccountCreatedModal> {
 
     if (Platform.isAndroid) {
       AndroidDeviceInfo androidInfo = await DeviceInfoPlugin().androidInfo;
-      deviceType = 'android';
+      deviceType = 'Android';
       osVersion = androidInfo.version.release ?? 'Unknown';
       model = androidInfo.model ?? 'Unknown';
     } else if (Platform.isIOS) {
       IosDeviceInfo iosInfo = await DeviceInfoPlugin().iosInfo;
-      deviceType = 'ios';
+      deviceType = 'iOS';
       osVersion = iosInfo.systemVersion ?? 'Unknown';
       model = iosInfo.utsname.machine ?? 'Unknown';
     } else {
-      deviceType = 'unknown';
-      osVersion = 'unknown';
-      model = 'unknown';
+      deviceType = 'Unknown';
+      osVersion = 'Unknown';
+      model = 'Unknown';
     }
 
     // Fetch app version

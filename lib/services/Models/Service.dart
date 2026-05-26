@@ -10,8 +10,6 @@ class Service {
   });
 
   factory Service.fromJson(Map<String, dynamic> json) {
-    print("Parsing Service JSON: $json");
-
     return Service(
       id: json['id'] as int,
       serviceName:

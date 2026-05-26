@@ -86,12 +86,14 @@ class _ServicePageState extends State<ServicePage> {
         // After fetching, prefetch images
         _prefetchImages(serviceTypeProvider.groups);
 
-        // Mark initial load as complete
+        // Guard against calling setState on a disposed widget (e.g. the user
+        // navigated away while the fetch was still in flight).
+        if (!mounted) return;
+
         setState(() {
           _isInitialLoad = false;
           if (serviceTypeProvider.categories.isNotEmpty) {
-            selectedIndex = 0; // Initialize with the first category selected
-            // Do not perform initial scroll to category as CategoryFilter is hidden
+            selectedIndex = 0;
           }
         });
       });
@@ -105,6 +107,7 @@ class _ServicePageState extends State<ServicePage> {
   /// Scroll Listener with Throttle
   void _onScroll() {
     _throttle.run(() {
+      if (!mounted) return; // Guard: widget may have been disposed
       if (_isInitialLoad || _isProgrammaticallyScrolling) return;
 
       _updateSelectedCategory();
@@ -113,19 +116,15 @@ class _ServicePageState extends State<ServicePage> {
       _checkIfScrolledToBottom();
 
       // Determine scroll direction to update _isScrolled
-      final serviceTypeProvider =
-          Provider.of<ServiceTypeProvider>(context, listen: false);
       final visibleItems = _itemPositionsListener.itemPositions.value;
 
       if (visibleItems.isNotEmpty) {
-        // Assuming the first visible item's index can indicate scroll position
         int firstVisibleIndex = visibleItems
             .where((item) => item.itemTrailingEdge > 0)
             .map((item) => item.index)
             .reduce((value, element) => value < element ? value : element);
 
         if (firstVisibleIndex > 1) {
-          // Adjust based on your list structure
           if (!_isScrolled) {
             setState(() {
               _isScrolled = true;
@@ -500,12 +499,13 @@ class _ServicePageState extends State<ServicePage> {
   Future<void> _handleBasketTap(BuildContext context) async {
     await _handleBackNavigation();
     NavigatorService.navigateToAndRemoveUntil(RouteNames.main);
+    // navigateToAndRemoveUntil disposes this widget — capture the provider
+    // reference NOW before the delayed callback fires on a dead context.
+    final navigationProvider =
+        Provider.of<NavigationProvider>(context, listen: false);
     Future.delayed(Duration(milliseconds: 100), () {
-      Provider.of<NavigationProvider>(context, listen: false)
-          .setSelectedIndex(1); // Adjust based on your navigation logic
-      setState(() {
-        _isNavigating = false;
-      });
+      navigationProvider.setSelectedIndex(1);
+      // Widget is disposed after navigateToAndRemoveUntil — do not call setState.
     });
   }
 

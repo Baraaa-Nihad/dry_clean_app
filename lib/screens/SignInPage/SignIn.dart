@@ -57,13 +57,47 @@ class _SignInState extends State<SignIn> {
   bool enableValidation = false;
   String _errorMessage = '';
 
+  // Pre-fetched while the user is filling in the form — removes these calls
+  // from the critical path so pressing Login is instant.
+  late final Future<String?> _fcmTokenFuture;
+  late final Future<Map<String, String>> _deviceInfoFuture;
+
   @override
   void initState() {
     super.initState();
     _setTransparentStatusBar();
-    // Listen to input changes
     _mobileNumberController.addListener(() => _onInputChange(true));
     _passwordController.addListener(() => _onInputChange(true));
+    // Start fetching in the background immediately — by the time the user
+    // finishes typing and hits Login these will already be resolved.
+    _fcmTokenFuture = FirebaseMessaging.instance.getToken();
+    _deviceInfoFuture = _fetchDeviceInfo();
+  }
+
+  Future<Map<String, String>> _fetchDeviceInfo() async {
+    String deviceType, osVersion, model;
+    if (Platform.isAndroid) {
+      final info = await _deviceInfoPlugin.androidInfo;
+      deviceType = 'Android';
+      osVersion = info.version.release;
+      model = info.model;
+    } else if (Platform.isIOS) {
+      final info = await _deviceInfoPlugin.iosInfo;
+      deviceType = 'iOS';
+      osVersion = info.systemVersion;
+      model = info.utsname.machine;
+    } else {
+      deviceType = 'Unknown';
+      osVersion = 'Unknown';
+      model = 'Unknown';
+    }
+    final appVersion = await AppVersionHelper.getAppVersion();
+    return {
+      'deviceType': deviceType,
+      'osVersion': osVersion,
+      'model': model,
+      'appVersion': appVersion,
+    };
   }
 
   void _setTransparentStatusBar() {
@@ -101,71 +135,48 @@ class _SignInState extends State<SignIn> {
   }
 
   Future<void> _handleSignIn() async {
-    if (_isButtonEnabled) {
-      setState(() {
-        _isLoading = true;
-        _hasError = false;
-        _errorMessage = '';
-      });
+    if (!_isButtonEnabled) return;
 
-      try {
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = '';
+    });
 
-        // Retrieve device token
-        String? deviceToken = await FirebaseMessaging.instance.getToken();
-        if (deviceToken == null) {
-          throw Exception('Failed to retrieve device token');
-        }
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-        // Retrieve device information
-        String deviceType;
-        String osVersion;
-        String model;
+      // Both futures were started in initState — await them together so
+      // if either is still in-flight they finish in parallel, not sequentially.
+      final results = await Future.wait([_fcmTokenFuture, _deviceInfoFuture]);
+      final deviceToken = results[0] as String?;
+      final deviceInfo = results[1] as Map<String, String>;
 
-        if (Platform.isAndroid) {
-          AndroidDeviceInfo androidInfo = await _deviceInfoPlugin.androidInfo;
-          deviceType = 'android';
-          osVersion = androidInfo.version.release ?? 'Unknown';
-          model = androidInfo.model ?? 'Unknown';
-        } else if (Platform.isIOS) {
-          IosDeviceInfo iosInfo = await _deviceInfoPlugin.iosInfo;
-          deviceType = 'ios';
-          osVersion = iosInfo.systemVersion ?? 'Unknown';
-          model = iosInfo.utsname.machine ?? 'Unknown';
-        } else {
-          deviceType = 'unknown';
-          osVersion = 'unknown';
-          model = 'unknown';
-        }
-
-        // Fetch app version
-        String appVersion = await AppVersionHelper.getAppVersion();
-
-        // Perform sign-in
-        await userProvider.signIn(
-          selectedCountryCode: _selectedCountryCode,
-          phoneNumber: _mobileNumberController.text,
-          password: _passwordController.text,
-          context: context,
-          deviceToken: deviceToken,
-          deviceType: deviceType,
-          osVersion: osVersion,
-          model: model,
-          appVersion: appVersion,
-        );
-
-        // Navigate to the main screen after successful sign-in
-        NavigatorService.navigateTo(
-            RouteNames.main); // Ensure no other navigation is occurring
-      } catch (e) {
-        setState(() {
-          _isLoading = false;
-          _hasError = true;
-          _errorMessage = AppLocalizations.of(context)
-                  ?.translate('password_or_mobile_incorrect') ??
-              'Password or mobile number is incorrect';
-        });
+      if (deviceToken == null) {
+        throw Exception('Failed to retrieve device token');
       }
+
+      await userProvider.signIn(
+        selectedCountryCode: _selectedCountryCode,
+        phoneNumber: _mobileNumberController.text,
+        password: _passwordController.text,
+        context: context,
+        deviceToken: deviceToken,
+        deviceType: deviceInfo['deviceType']!,
+        osVersion: deviceInfo['osVersion']!,
+        model: deviceInfo['model']!,
+        appVersion: deviceInfo['appVersion']!,
+      );
+
+      NavigatorService.navigateTo(RouteNames.main);
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = AppLocalizations.of(context)
+                ?.translate('password_or_mobile_incorrect') ??
+            'Password or mobile number is incorrect';
+      });
     }
   }
 

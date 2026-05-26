@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/AppBar/AppHeader.dart';
@@ -36,6 +39,10 @@ class _OrdersPageState extends State<OrdersPage>
   bool _isShimmeringCompleted = true; // Flag for shimmer in completed orders
   bool _isCompletedOrdersLoaded = false; // Track completed orders load
 
+  // FCM subscription — refreshes active orders when a push notification
+  // arrives while the screen is open (e.g. admin changed an order status).
+  StreamSubscription<RemoteMessage>? _fcmSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -44,6 +51,14 @@ class _OrdersPageState extends State<OrdersPage>
     // Start shimmer effect immediately when the page opens
     _isShimmering = true;
     _isShimmeringCompleted = true; // Start completed shimmer as well
+
+    // Refresh active orders whenever an FCM message arrives in the foreground.
+    // This covers the case where the admin changes a status and the user is
+    // already on this screen — without this the badge stayed stale until
+    // the user manually pull-to-refreshed.
+    _fcmSubscription = FirebaseMessaging.onMessage.listen((message) {
+      if (mounted) _refreshOrders();
+    });
 
     // Fetch orders after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -74,6 +89,7 @@ class _OrdersPageState extends State<OrdersPage>
 
   @override
   void dispose() {
+    _fcmSubscription?.cancel();
     // Dispose controllers and remove listeners
     _tabController.dispose();
     _scrollController.removeListener(_onScroll); // Remove listeners

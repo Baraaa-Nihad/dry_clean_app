@@ -18,8 +18,6 @@ class ErrorPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    print('errorMessage');
-    print(errorMessage);
     return Scaffold(
       backgroundColor: AppColors.white, // Optional: Set a background color
       body: Column(children: [
@@ -27,7 +25,9 @@ class ErrorPage extends StatelessWidget {
           fem: 1,
           iconUrl: 'assets/Icons/errorPageIcon.svg', // Ensure this asset exists
           title: localizations.translate("oops_something_wrong"),
-          subtitle: localizations.translate("please_try_again"),
+          subtitle: errorMessage.isNotEmpty
+              ? errorMessage
+              : localizations.translate("please_try_again"),
           showButton: true,
           enableRefresh: true,
           backgroundColor: AppColors.white,

@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
 import 'package:saleem_dry_clean/services/Providers/NavigationProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/UserProvider.dart';
+import 'package:saleem_dry_clean/services/Providers/notification_provider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/navigator_key.dart';
@@ -38,6 +39,10 @@ class _LogoutButtonState extends State<LogoutButton> {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final navigationProvider =
         Provider.of<NavigationProvider>(context, listen: false);
+    // Capture notification provider NOW — context is still alive at this point.
+    // By the time _performLogout runs (after navigation), the context is dead.
+    final notificationProvider =
+        Provider.of<NotificationProvider>(context, listen: false);
 
     SmallModal.show(
       context,
@@ -60,8 +65,10 @@ class _LogoutButtonState extends State<LogoutButton> {
           // Simulate loading for 1 second
           await Future.delayed(const Duration(seconds: 1));
 
-          // Perform the logout process
-          await _performLogout(context, userProvider);
+          // Perform the logout process — pass the pre-captured notificationProvider
+          // so signOut can clear it without needing a (now-dead) BuildContext.
+          await _performLogout(context, userProvider,
+              notificationProvider: notificationProvider);
 
           if (mounted) {
             setState(() {
@@ -87,17 +94,15 @@ class _LogoutButtonState extends State<LogoutButton> {
   }
 
   Future<void> _performLogout(
-      BuildContext context, UserProvider userProvider) async {
-    // Get the device token
+      BuildContext context, UserProvider userProvider,
+      {NotificationProvider? notificationProvider}) async {
     String? deviceToken = await FirebaseMessaging.instance.getToken();
-    print('Device Token: $deviceToken');
 
-    if (deviceToken != null) {
-      await userProvider.signOut(context, deviceToken);
-    } else {
-      print('Failed to retrieve device token');
-      await userProvider.signOut(context, '');
-    }
+    await userProvider.signOut(
+      context,
+      deviceToken ?? '',
+      notificationProvider: notificationProvider,
+    );
   }
 
   @override

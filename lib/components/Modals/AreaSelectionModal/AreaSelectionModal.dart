@@ -23,19 +23,22 @@ class AreaSelectionModal extends StatelessWidget {
   static void show(BuildContext context, double fem, String selectedAreaId,
       Function(Area) onAreaSelected) {
     final localizations = AppLocalizations.of(context);
+
+    // Use the GLOBAL AreaProvider registered in main.dart — creating a local
+    // provider here caused "used after being disposed" crashes because the
+    // local instance was disposed by Flutter when the sheet closed while
+    // fetchAreas was still in-flight.
+    Provider.of<AreaProvider>(context, listen: false)
+        .fetchAreas(localizations.locale.languageCode, '1');
+
     showModalBottomSheet(
       context: context,
-      builder: (context) => ChangeNotifierProvider(
-        create: (_) => AreaProvider()
-          ..fetchAreas(localizations.locale.languageCode,
-              '1'), // Pass the appropriate governate_id
-        child: AreaSelectionModal(
-          fem: fem,
-          selectedAreaId: selectedAreaId,
-          onAreaSelected: onAreaSelected,
-        ),
+      builder: (context) => AreaSelectionModal(
+        fem: fem,
+        selectedAreaId: selectedAreaId,
+        onAreaSelected: onAreaSelected,
       ),
-      isScrollControlled: true, // Allow full-screen height
+      isScrollControlled: true,
     );
   }
 

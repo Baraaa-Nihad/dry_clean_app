@@ -24,18 +24,20 @@ class UserService {
 
   Future<void> signIn(User user) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isSignedIn', true);
-    await prefs.setString('firstName', user.firstName);
-    await prefs.setString('lastName', user.lastName);
-    await prefs.setString('email', user.email);
-    await prefs.setString('phoneNumber', user.phoneNumber);
-    await prefs.setString('id', user.id);
-    await prefs.setString('gender', user.gender);
-    await prefs.setString('dateOfBirth', user.dateOfBirth);
-    await prefs.setBool('isVerified', user.isVerified);
-    await prefs.setString('addresses', json.encode(user.addresses));
-    await prefs.setString(
-        'deviceTokens', json.encode(user.deviceTokens)); // Save device tokens
+    // All keys are independent — write them in parallel
+    await Future.wait([
+      prefs.setBool('isSignedIn', true),
+      prefs.setString('firstName', user.firstName),
+      prefs.setString('lastName', user.lastName),
+      prefs.setString('email', user.email),
+      prefs.setString('phoneNumber', user.phoneNumber),
+      prefs.setString('id', user.id),
+      prefs.setString('gender', user.gender),
+      prefs.setString('dateOfBirth', user.dateOfBirth),
+      prefs.setBool('isVerified', user.isVerified),
+      prefs.setString('addresses', json.encode(user.addresses)),
+      prefs.setString('deviceTokens', json.encode(user.deviceTokens)),
+    ]);
   }
 
   Future<void> signOut() async {

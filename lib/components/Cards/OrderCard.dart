@@ -31,39 +31,23 @@ class OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // Determine if the order is delayed
     bool isDelayed = false;
-    print("chack is delayeed");
-    print(order?.status);
     if (order != null) {
       final DateTime now = DateTime.now().toLocal(); // Current local time
       final DateTime createdAt =
           order!.createdAt.toLocal(); // Order creation time
 
-      if (order!.status == "Waiting for collection") {
-        print("order!.collectionTime,");
-        print(order!.collectionTime);
-        // Parse the end time of the pickup time range
+      // Check against both current DB values and legacy strings
+      if (order!.status == "Awaiting Collection" ||
+          order!.status == "Waiting for collection") {
         DateTime? pickupEndTime =
             _parseEndTime(order!.collectionTime, createdAt);
-        print("Parsed pickupEndTime: ${pickupEndTime.toString()}");
-
-        if (pickupEndTime == null) {
-          print(
-              "pickupEndTime is null, check order!.collectionTime or _parseEndTime logic");
-        } else {
-          print("pickupEndTime calculated correctly");
-        }
         if (pickupEndTime != null && now.isAfter(pickupEndTime)) {
           isDelayed = true;
         }
-      } else if (order!.status == "Waiting for Delivery") {
-        print('Waiting for delivery');
-        print(order!.status);
-        // Parse the end time of the delivery time range
+      } else if (order!.status == "Out for Delivery" ||
+          order!.status == "Waiting for Delivery") {
         DateTime? deliveryEndTime =
             _parseEndTime(order!.deliveryTime, createdAt);
-        print("deliveryEndTime");
-        print(deliveryEndTime.toString());
-        print(deliveryEndTime != null && now.isAfter(deliveryEndTime));
         if (deliveryEndTime != null && now.isAfter(deliveryEndTime)) {
           isDelayed = true;
         }
@@ -134,40 +118,20 @@ class OrderCard extends StatelessWidget {
     if (timeRange == null || timeRange.isEmpty) {
       return null;
     }
-    print("timeRange");
-    print(timeRange);
     try {
-      // Split the range string into start and end times
-      List<String> times = timeRange.split(' - ');
-      if (times.length != 2) {
-        throw FormatException("Invalid time range format");
-      }
+      final List<String> times = timeRange.split(' - ');
+      if (times.length != 2) throw FormatException("Invalid time range format");
 
-      // Extract the end time from the range
-      String endTimeStr = times[1]; // '9:00' part of 'AM 8:00 - 9:00'
-      print("object");
-      print(endTimeStr);
-      // Assuming the same AM/PM format as the start time
+      final String endTimeStr = times[1]; // e.g. '9:00' from 'AM 8:00 - 9:00'
+      final String amPmPrefix = times[0].split(' ')[0]; // 'AM' or 'PM'
+      final String formattedEndTime = '$amPmPrefix $endTimeStr';
 
-      String amPmPrefix =
-          times[0].split(' ')[0]; // Extract 'AM' or 'PM' from 'AM 8:00'
-      print("amPmPrefix");
-      print(amPmPrefix);
-      // Append the AM/PM prefix to the end time
-      String formattedEndTime = '$amPmPrefix $endTimeStr';
-      print("formattedEndTime");
-      print(formattedEndTime);
-      // Parse the end time string to DateTime using the same date as `createdAt`
-      DateFormat timeFormat = DateFormat('a h:mm');
-      print("before parse");
-      DateTime parsedEndTime = timeFormat.parse(formattedEndTime);
-      print("parsedEndTime");
-      print(parsedEndTime);
-      // Combine parsed end time with the date part from createdAt
+      final DateFormat timeFormat = DateFormat('a h:mm');
+      final DateTime parsedEndTime = timeFormat.parse(formattedEndTime);
+
       return DateTime(createdAt.year, createdAt.month, createdAt.day,
           parsedEndTime.hour, parsedEndTime.minute);
     } catch (e) {
-      print('Error parsing time: $timeRange - $e');
       return null;
     }
   }

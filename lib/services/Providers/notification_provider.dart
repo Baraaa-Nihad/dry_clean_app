@@ -1,25 +1,26 @@
 // lib/services/providers/notification_provider.dart
 
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:saleem_dry_clean/screens/NotificationPage/NotificationModel.dart';
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
+import 'package:saleem_dry_clean/services/User/UserService.dart';
+import 'package:saleem_dry_clean/utils/app_version_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:saleem_dry_clean/utils/navigator_key.dart';
 import 'package:saleem_dry_clean/utils/route_names.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/services/User/TokenService.dart';
 import 'package:saleem_dry_clean/services/ApiClient/ApiClient.dart';
 
 class NotificationProvider with ChangeNotifier {
-  static const String _notificationsKey = 'notifications';
-  static const String _notificationCountKey = 'notificationCount';
+  // Per-user SharedPreferences key — notifications are isolated per user ID.
+  static String _userKey(String userId) => 'notifications_$userId';
 
   List<NotificationModel> _notifications = [];
   List<NotificationModel> get notifications =>
@@ -27,6 +28,10 @@ class NotificationProvider with ChangeNotifier {
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
+
+  /// The user ID whose notifications are currently loaded.
+  /// Null means no user is signed in — notifications are hidden.
+  String? _currentUserId;
 
   int get notificationCount =>
       _notifications.where((notification) => notification.isNew).length;
@@ -38,35 +43,73 @@ class NotificationProvider with ChangeNotifier {
   final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  // TokenService instance (ensure it's provided correctly)
   final TokenService _tokenService;
+  final DeviceInfoPlugin _deviceInfoPlugin = DeviceInfoPlugin();
 
   NotificationProvider(this._tokenService) {
-    _initializePreferences();
     _initializeFCM();
     _initializeLocalNotifications();
+    // Restore notifications for a previously-saved login session (e.g. app
+    // restart). We read UserService directly here to avoid a circular
+    // Provider dependency — UserProvider is not available in the constructor.
+    _restoreSessionIfLoggedIn();
   }
 
-  // Initialize SharedPreferences and load existing notifications
-  Future<void> _initializePreferences() async {
+  // ---------------------------------------------------------------------------
+  // Public lifecycle hooks — called by UserProvider on sign-in / sign-out
+  // ---------------------------------------------------------------------------
+
+  /// Load this user's notifications from persistent storage.
+  /// Call this immediately after a successful sign-in.
+  Future<void> loadForUser(String userId) async {
+    _currentUserId = userId;
+    await _loadFromPrefs(userId);
+  }
+
+  /// Clear in-memory notifications when the user signs out.
+  /// Notifications are kept on disk so they are restored on the next login.
+  void clearOnSignOut() {
+    _currentUserId = null;
+    _notifications = [];
+    _isInitialized = false;
+    notifyListeners();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Private helpers
+  // ---------------------------------------------------------------------------
+
+  /// Restores a persisted login session on app start (no BuildContext needed).
+  Future<void> _restoreSessionIfLoggedIn() async {
+    try {
+      final userService = UserService();
+      final isSignedIn = await userService.isUserSignedIn();
+      if (isSignedIn) {
+        final user = await userService.getUser();
+        if (user != null) {
+          await loadForUser(user.id);
+          return; // loadForUser already sets _isInitialized = true
+        }
+      }
+    } catch (_) {
+      // Notifications are non-critical — silently ignore any startup errors.
+    }
+    // No signed-in user — mark as initialized with empty list so the
+    // NotificationPage shows the empty state instead of an infinite spinner.
+    _isInitialized = true;
+    notifyListeners();
+  }
+
+  Future<void> _loadFromPrefs(String userId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final String? notificationsJson = prefs.getString(_notificationsKey);
-
-      if (notificationsJson == null) {
-        // Initialize with demo data if no notifications are stored
-        _notifications = _getDemoNotifications();
-
-        await _saveNotifications(prefs);
-      } else {
-        _notifications = _loadNotificationsFromJson(notificationsJson);
-      }
-    } catch (e) {
-      // Handle error gracefully, possibly logging it
-      _notifications = _getDemoNotifications();
-      await _saveNotifications();
+      final String? notificationsJson = prefs.getString(_userKey(userId));
+      _notifications = notificationsJson == null
+          ? []
+          : _loadNotificationsFromJson(notificationsJson);
+    } catch (_) {
+      _notifications = [];
     }
-
     _isInitialized = true;
     notifyListeners();
   }
@@ -74,7 +117,6 @@ class NotificationProvider with ChangeNotifier {
   // Initialize Firebase Cloud Messaging
   Future<void> _initializeFCM() async {
     try {
-      // Request notification permissions (iOS)
       NotificationSettings settings =
           await _firebaseMessaging.requestPermission(
         alert: true,
@@ -83,11 +125,8 @@ class NotificationProvider with ChangeNotifier {
       );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        print('User granted permission');
-
         // Handle foreground messages
         FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-          print('Received a message in the foreground!');
           if (message.notification != null) {
             _showLocalNotification(message);
           }
@@ -120,11 +159,9 @@ class NotificationProvider with ChangeNotifier {
         _firebaseMessaging.onTokenRefresh.listen((String newToken) {
           _sendTokenToBackend(newToken);
         });
-      } else {
-        print('User declined or has not accepted permission');
       }
-    } catch (e) {
-      print('Error initializing FCM: $e');
+    } catch (_) {
+      // Silently ignore FCM init errors
     }
   }
 
@@ -134,11 +171,9 @@ class NotificationProvider with ChangeNotifier {
   static const String _channelDesc = 'Notifications about your order status';
 
   Future<void> _initializeLocalNotifications() async {
-    // 1. Android initialization — use the same channel ID everywhere
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // 2. iOS (Darwin) initialization
     const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
       requestAlertPermission: false,
@@ -146,14 +181,12 @@ class NotificationProvider with ChangeNotifier {
       requestSoundPermission: false,
     );
 
-    // 3. Combine
     const InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
     );
 
-    // 4. Initialize with tap handler
     await _localNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
@@ -169,7 +202,6 @@ class NotificationProvider with ChangeNotifier {
       },
     );
 
-    // 5. Create the Android notification channel (required on Android 8+)
     final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
         _localNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
@@ -221,57 +253,56 @@ class NotificationProvider with ChangeNotifier {
 
   // Handle message navigation
   void _handleMessage(RemoteMessage message) {
-    print('Message clicked!: ${message.messageId}');
-    // Navigate to a specific screen based on message data
     navigatorKey.currentState
         ?.pushNamed(RouteNames.notifications, arguments: message.data);
   }
 
-  // Add FCM notification to the list
+  /// Stores an incoming FCM notification for the current user.
+  /// Silently discarded when no user is signed in.
   Future<void> _addFCMNotification(RemoteMessage message) async {
-    final notificationData = message.data;
+    if (_currentUserId == null) return; // No signed-in user — discard
 
-    // Map FCM message data to NotificationModel
+    final notificationData = message.data;
     final notification = NotificationModel(
-      orderNumber: notificationData['orderNumber'] ?? 'N/A',
+      orderNumber: notificationData['orderId'] ?? notificationData['orderNumber'] ?? 'N/A',
       status: notificationData['status'] ?? 'unknown',
-      dateTime: DateTime.now(), // Use current time or parse from data
+      dateTime: DateTime.now(),
       isNew: true,
     );
 
-    _notifications.insert(0, notification); // Insert at the beginning
+    _notifications.insert(0, notification);
     notifyListeners();
 
-    // Save updated notifications to SharedPreferences
     await _saveNotifications();
   }
 
-  // Load notifications from JSON
+  // Load notifications from JSON — returns empty list on any parse error
   List<NotificationModel> _loadNotificationsFromJson(String jsonString) {
     try {
       final List<dynamic> decodedList = json.decode(jsonString);
       return decodedList
           .map((item) => NotificationModel.fromMap(item))
           .toList();
-    } catch (e) {
-      // Handle parsing error, return empty list or demo data
-      return _getDemoNotifications();
+    } catch (_) {
+      return [];
     }
   }
 
-  // Save notifications to SharedPreferences
+  /// Persists the current notification list under the signed-in user's key.
+  /// No-op when no user is signed in.
   Future<void> _saveNotifications([SharedPreferences? prefs]) async {
+    if (_currentUserId == null) return;
     final SharedPreferences preferences =
         prefs ?? await SharedPreferences.getInstance();
     final String encodedData = json.encode(
       _notifications.map((notification) => notification.toMap()).toList(),
     );
-    await preferences.setString(_notificationsKey, encodedData);
+    await preferences.setString(_userKey(_currentUserId!), encodedData);
   }
 
   // Add a new notification (local)
   Future<void> addNotification(NotificationModel notification) async {
-    _notifications.insert(0, notification); // Insert at the beginning
+    _notifications.insert(0, notification);
     await _saveNotifications();
     notifyListeners();
   }
@@ -310,59 +341,37 @@ class NotificationProvider with ChangeNotifier {
     }
   }
 
-  // Initialize with demo notifications
-  List<NotificationModel> _getDemoNotifications() {
-    return [
-      NotificationModel(
-          orderNumber: '12345',
-          status: 'shipped',
-          dateTime: DateTime.parse('2024-04-25T10:30:00'),
-          isNew: true),
-      NotificationModel(
-        orderNumber: '12346',
-        status: 'delivered',
-        dateTime: DateTime.parse('2024-04-26T14:15:00'),
-      ),
-      NotificationModel(
-        orderNumber: '12347',
-        status: 'processing',
-        dateTime: DateTime.parse('2024-04-27T09:00:00'),
-      ),
-      NotificationModel(
-        orderNumber: '12348',
-        status: 'shipped',
-        dateTime: DateTime.parse('2024-04-25T10:30:00'),
-      ),
-      NotificationModel(
-        orderNumber: '12349',
-        status: 'delivered',
-        dateTime: DateTime.parse('2024-04-26T14:15:00'),
-      ),
-      NotificationModel(
-        orderNumber: '12350',
-        status: 'processing',
-        dateTime: DateTime.parse('2024-04-27T09:00:00'),
-      ),
-      NotificationModel(
-        orderNumber: '12351',
-        status: 'processing',
-        dateTime: DateTime.parse('2024-05-27T09:00:00'),
-        isNew: true,
-      ),
-    ];
-  }
-
   // Send device token to backend
   Future<void> _sendTokenToBackend(String token) async {
-    final String apiEndpoint = '${Config.deviceRegistration}';
+    final String apiEndpoint = Config.deviceRegistration;
 
     try {
-      // Retrieve JWT token from your UserProvider or secure storage
-      String jwtToken = await _getJwtToken();
+      String deviceType;
+      String osVersion;
+      String model;
+
+      if (Platform.isAndroid) {
+        final androidInfo = await _deviceInfoPlugin.androidInfo;
+        deviceType = 'Android';
+        osVersion = androidInfo.version.release;
+        model = androidInfo.model;
+      } else if (Platform.isIOS) {
+        final iosInfo = await _deviceInfoPlugin.iosInfo;
+        deviceType = 'iOS';
+        osVersion = iosInfo.systemVersion;
+        model = iosInfo.utsname.machine;
+      } else {
+        deviceType = 'Unknown';
+        osVersion = 'Unknown';
+        model = 'Unknown';
+      }
+
+      final String appVersion = await AppVersionHelper.getAppVersion();
+      final String jwtToken = await _getJwtToken();
 
       final client = ApiClient.createClient(_tokenService);
 
-      final response = await client.post(
+      await client.post(
         Uri.parse(apiEndpoint),
         headers: {
           'Content-Type': 'application/json',
@@ -370,16 +379,14 @@ class NotificationProvider with ChangeNotifier {
         },
         body: jsonEncode({
           'deviceToken': token,
+          'deviceType': deviceType,
+          'osVersion': osVersion,
+          'model': model,
+          'appVersion': appVersion,
         }),
       );
-
-      if (response.statusCode == 200) {
-        print('Device token sent successfully to backend.');
-      } else {
-        print('Failed to send device token: ${response.body}');
-      }
-    } catch (e) {
-      print('Error sending device token to backend: $e');
+    } catch (_) {
+      // Silently ignore token registration errors
     }
   }
 

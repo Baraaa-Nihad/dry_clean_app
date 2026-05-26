@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -18,6 +19,13 @@ class OrderProvider with ChangeNotifier {
   String? _collectionDay;
   String? _deliveryDay;
 
+  // Cached totals — recomputed only when cart mutates, not on every getter read
+  double _cachedSubtotal = 0.0;
+  int _cachedTotalQuantity = 0;
+
+  // Debounce timer — collapses rapid cart mutations into a single disk write
+  Timer? _saveDebounce;
+
   List<BasketItemData> get cart => _cart;
   Map<String, dynamic>? get address => _address;
   String? get pickupTime => _pickupTime;
@@ -28,24 +36,28 @@ class OrderProvider with ChangeNotifier {
   String? get collectionDay => _collectionDay;
   String? get deliveryDay => _deliveryDay;
 
-  // Calculating subtotal based on item details
-  double get subtotal => _cart.fold(0.0, (sum, item) {
-        double itemSubtotal;
-        double areaValue = double.tryParse(item.area) ?? 0.0;
+  // O(1) reads — cache is updated by _invalidateCache() on every mutation
+  double get subtotal => _cachedSubtotal;
+  double get total => _cachedSubtotal + _deliveryFees;
+  int get totalQuantity => _cachedTotalQuantity;
 
-        if (item.unit == 'Square meter') {
-          itemSubtotal = areaValue * item.price * item.quantity;
-        } else {
-          itemSubtotal = item.price * item.quantity;
-        }
-        return sum + itemSubtotal;
-      });
+  /// Recomputes cached totals. Call after any change to _cart or _deliveryFees.
+  void _invalidateCache() {
+    _cachedSubtotal = _cart.fold(0.0, (sum, item) => sum + item.subtotal);
+    _cachedTotalQuantity = _cart.fold(0, (sum, item) => sum + item.quantity);
+  }
 
-  // Total amount including delivery fees
-  double get total => subtotal + _deliveryFees;
+  /// Debounced persist — collapses rapid taps into one SharedPreferences write.
+  void _scheduleSave() {
+    _saveDebounce?.cancel();
+    _saveDebounce = Timer(const Duration(milliseconds: 500), saveCartToSession);
+  }
 
-  // Total quantity of all items in the cart
-  int get totalQuantity => _cart.fold(0, (sum, item) => sum + item.quantity);
+  @override
+  void dispose() {
+    _saveDebounce?.cancel();
+    super.dispose();
+  }
 
   // Adds a product to the cart and calculates subtotal for the item
   void addProduct(BasketItemData newItem) {
@@ -78,9 +90,6 @@ class OrderProvider with ChangeNotifier {
         area: existingItem.area,
         subtotal: updatedSubtotal,
       );
-
-      print(
-          "Updated item: ${existingItem.productName}, New Quantity: $updatedQuantity, New Subtotal: $updatedSubtotal");
     } else {
       // Item does not exist, add as a new entry
       double calculatedSubtotal = BasketItemData.calculateSubtotal(
@@ -90,7 +99,7 @@ class OrderProvider with ChangeNotifier {
         newItem.area,
       );
 
-      BasketItemData itemToAdd = BasketItemData(
+      _cart.add(BasketItemData(
         productId: newItem.productId,
         productName: newItem.productName,
         category: newItem.category,
@@ -102,16 +111,12 @@ class OrderProvider with ChangeNotifier {
         subCategory: newItem.subCategory,
         area: newItem.area,
         subtotal: calculatedSubtotal,
-      );
-
-      _cart.add(itemToAdd);
-
-      print(
-          "Added new item: ${itemToAdd.productName}, Quantity: ${itemToAdd.quantity}, Subtotal: ${itemToAdd.subtotal}");
+      ));
     }
 
-    saveCartToSession(); // Save updated cart to session storage
-    notifyListeners(); // Notify listeners of state change
+    _invalidateCache();
+    _scheduleSave();
+    notifyListeners();
   }
 
   // Rest of the OrderProvider remains unchanged...
@@ -119,43 +124,45 @@ class OrderProvider with ChangeNotifier {
   // Removes a product from the cart
   void removeProduct(BasketItemData item) {
     _cart.remove(item);
-    saveCartToSession(); // Save updated cart to session storage
-    notifyListeners(); // Notify listeners of state change
+    _invalidateCache();
+    _scheduleSave();
+    notifyListeners();
   }
 
   // Clears all items from the cart
   void clearCart() {
     _cart.clear();
-    saveCartToSession(); // Save updated cart to session storage
-    notifyListeners(); // Notify listeners of state change
+    _invalidateCache();
+    _scheduleSave();
+    notifyListeners();
   }
 
   // Sets the delivery address
   void setAddress(Map<String, dynamic> address) {
     _address = address;
-    saveCartToSession(); // Save updated cart to session storage
-    notifyListeners(); // Notify listeners of state change
+    _scheduleSave();
+    notifyListeners();
   }
 
   // Sets the pickup time
   void setPickupTime(String pickupTime) {
     _pickupTime = pickupTime;
-    saveCartToSession(); // Save updated cart to session storage
-    notifyListeners(); // Notify listeners of state change
+    _scheduleSave();
+    notifyListeners();
   }
 
   // Sets the delivery time
   void setDeliveryTime(String deliveryTime) {
     _deliveryTime = deliveryTime;
-    saveCartToSession(); // Save updated cart to session storage
-    notifyListeners(); // Notify listeners of state change
+    _scheduleSave();
+    notifyListeners();
   }
 
   // Sets the delivery fees
   void setDeliveryFees(double fees) {
     _deliveryFees = fees;
-    saveCartToSession(); // Save updated cart to session storage
-    notifyListeners(); // Notify listeners of state change
+    _scheduleSave();
+    notifyListeners();
   }
 
   // Sets the collection date
@@ -212,11 +219,10 @@ class OrderProvider with ChangeNotifier {
     _deliveryDate = null;
     _collectionDay = null;
     _deliveryDay = null;
-
-    // Clear saved cart in session
+    _invalidateCache();
+    _saveDebounce?.cancel();
     clearCartFromSession();
-
-    notifyListeners(); // Notify listeners to update UI
+    notifyListeners();
   }
 
   // Loads the cart and its details from session storage
@@ -231,7 +237,8 @@ class OrderProvider with ChangeNotifier {
       _pickupTime = jsonMap['pickupTime'];
       _deliveryTime = jsonMap['deliveryTime'];
       _deliveryFees = jsonMap['deliveryFees'] ?? 0.0;
-      notifyListeners(); // Notify listeners of state change
+      _invalidateCache();
+      notifyListeners();
     }
   }
 

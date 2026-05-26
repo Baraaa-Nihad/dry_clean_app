@@ -12,8 +12,10 @@ class TokenService {
   }
 
   Future<void> saveTokens(String accessToken, String refreshToken) async {
-    await _storage.write(key: 'accessToken', value: accessToken);
-    await _storage.write(key: 'refreshToken', value: refreshToken);
+    await Future.wait([
+      _storage.write(key: 'accessToken', value: accessToken),
+      _storage.write(key: 'refreshToken', value: refreshToken),
+    ]);
   }
 
   Future<void> clearTokens() async {

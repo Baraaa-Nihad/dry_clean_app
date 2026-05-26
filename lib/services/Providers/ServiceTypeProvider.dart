@@ -113,12 +113,19 @@ class ServiceTypeProvider with ChangeNotifier {
 
   Future<void> fetchServiceTypes(String serviceTypeId,
       {bool forceRefresh = false, String categoryId = ''}) async {
+    // Cache hit: same service type already loaded and no forced refresh
+    if (!forceRefresh &&
+        _groups != null &&
+        _currentServiceTypeId == serviceTypeId &&
+        categoryId.isEmpty) {
+      return;
+    }
+
     _isLoading = true;
     _isLoadingCategories = true;
     _errorMessage = null;
     _currentServiceTypeId = serviceTypeId;
-    _groups = null;
-    _categories = [];
+    // Keep stale data visible while loading — only clear when we have fresh data
     notifyListeners();
 
     try {
@@ -179,8 +186,9 @@ class ServiceTypeProvider with ChangeNotifier {
 
   void refetchData() {
     if (_currentServiceTypeId != null) {
-      fetchServiceTypes(_currentServiceTypeId!);
-      fetchCategories(_currentServiceTypeId!);
+      // fetchServiceTypes already rebuilds _categories from the response —
+      // calling fetchCategories separately would hit the same endpoint twice.
+      fetchServiceTypes(_currentServiceTypeId!, forceRefresh: true);
     }
   }
 

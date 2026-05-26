@@ -160,6 +160,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
     final localizations = AppLocalizations.of(context);
     final isRtl = Directionality.of(context) == TextDirection.rtl;
     double fem = MediaQuery.of(context).size.width / 428;
+    final signUpProvider = Provider.of<SignUpProvider>(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -487,10 +488,12 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                           buttonText: localizations?.translate(
                                                   'create_account') ??
                                               'Create account',
-                                          onPressed: isButtonDisabled
+                                          onPressed: isButtonDisabled ||
+                                                  signUpProvider.isLoading
                                               ? null
                                               : _handleContinue,
                                           isDisabled: isButtonDisabled,
+                                          isLoading: signUpProvider.isLoading,
                                         ),
                                       ),
                                     ],

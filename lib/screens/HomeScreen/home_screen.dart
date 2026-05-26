@@ -36,9 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final bannerProvider = Provider.of<BannerProvider>(context);
     List<String> imagePaths = bannerProvider.bannerImages;
-    print('imagePaths');
-    print(imagePaths);
-
     // Determine which images to display: fetched images or default image
     List<String> displayImagePaths = imagePaths.isNotEmpty
         ? imagePaths

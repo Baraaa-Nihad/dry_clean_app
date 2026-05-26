@@ -14,6 +14,7 @@ import 'package:saleem_dry_clean/services/Models/OrderItem.dart';
 import 'package:saleem_dry_clean/services/Models/user.dart';
 import 'package:saleem_dry_clean/services/User/TokenService.dart';
 import 'package:saleem_dry_clean/services/User/UserService.dart';
+import 'package:saleem_dry_clean/services/Providers/notification_provider.dart';
 import 'package:saleem_dry_clean/services/extensions/list_extensions.dart';
 import 'package:saleem_dry_clean/services/orderService/OrderData.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -183,15 +184,12 @@ class UserProvider with ChangeNotifier {
     final cleanedPhoneNumber = cleanPhoneNumber(phoneNumber);
     final fullPhoneNumber = selectedCountryCode + cleanedPhoneNumber;
     final url = Uri.parse('${Config.signInApi}');
-    print('Attempting to sign in with URL: $url');
 
     try {
       final client = ApiClient.createClient(_tokenService);
       final response = await client.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'phoneNumber': fullPhoneNumber,
           'password': password,
@@ -200,24 +198,29 @@ class UserProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        final userJson = responseData['user'];
-        final tokens = responseData['tokens'];
+        final user = User.fromJson(responseData['user']);
+        final tokens = responseData['tokens'] as Map<String, dynamic>;
 
-        final user = User.fromJson(userJson);
-        final userService = UserService();
-        await userService.signIn(user);
-        await _tokenService.saveTokens(
-            tokens['accessToken'], tokens['refreshToken']);
-
+        // Update in-memory state immediately so the UI can react
         _userSignedIn = true;
         setUser(user);
 
-        await fetchUserAddress(
-            _user!.id, 'en', context); // Fetch addresses on sign in
+        // SharedPreferences + Keystore writes are independent storage backends
+        await Future.wait([
+          UserService().signIn(user),
+          _tokenService.saveTokens(
+              tokens['accessToken'] as String, tokens['refreshToken'] as String),
+        ]);
 
-        // Register device token with additional details after successful sign-in
-        await registerDeviceToken(
-            deviceToken, deviceType, osVersion, model, appVersion);
+        // Load per-user notifications for the signed-in user
+        Provider.of<NotificationProvider>(context, listen: false)
+            .loadForUser(user.id);
+
+        // Address fetch + device token registration are independent HTTP calls
+        await Future.wait([
+          fetchUserAddress(_user!.id, 'en', context),
+          registerDeviceToken(deviceToken, deviceType, osVersion, model, appVersion),
+        ]);
       } else {
         final errorResponse = json.decode(response.body);
         throw Exception('Failed to sign in: ${errorResponse['message']}');
@@ -254,23 +257,22 @@ class UserProvider with ChangeNotifier {
 
     if (Platform.isAndroid) {
       var androidInfo = await _deviceInfoPlugin.androidInfo;
-      deviceType = 'android';
+      deviceType = 'Android';
       osVersion = androidInfo.version.release ?? 'Unknown';
       model = androidInfo.model ?? 'Unknown';
     } else if (Platform.isIOS) {
       var iosInfo = await _deviceInfoPlugin.iosInfo;
-      deviceType = 'ios';
+      deviceType = 'iOS';
       osVersion = iosInfo.systemVersion ?? 'Unknown';
       model = iosInfo.utsname.machine ?? 'Unknown';
     } else {
-      deviceType = 'unknown';
-      osVersion = 'unknown';
-      model = 'unknown';
+      deviceType = 'Unknown';
+      osVersion = 'Unknown';
+      model = 'Unknown';
     }
 
     // Fetch app version
     appVersion = await AppVersionHelper.getAppVersion();
-    print(appVersion);
     await registerDeviceToken(_token, deviceType, osVersion, model, appVersion);
   }
 
@@ -314,16 +316,18 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  Future<void> signOut(BuildContext context, String deviceToken) async {
+  Future<void> signOut(BuildContext context, String deviceToken,
+      {NotificationProvider? notificationProvider}) async {
     final userService = UserService();
 
-    // Step 2: Sign out the user
-    await userService.signOut();
+    // Clear per-user notifications from memory before wiping the session.
+    // The caller should pass a valid notificationProvider captured while the
+    // context was still alive (Provider.of fails on stale/disposed contexts).
+    notificationProvider?.clearOnSignOut();
 
-    // Step 3: Clear JWT tokens
+    await userService.signOut();
     await _tokenService.clearTokens();
 
-    // Step 4: Update user state
     _userSignedIn = false;
     clearUser();
   }
@@ -334,7 +338,6 @@ class UserProvider with ChangeNotifier {
     String? lang,
     required BuildContext context,
   }) async {
-    print('UserProvider: fetchOrders called with page: $page, lang: $lang');
 
     final connectivityService =
         Provider.of<ConnectivityService>(context, listen: false);

@@ -14,7 +14,6 @@ import 'package:saleem_dry_clean/components/Notification/NotificationButton.dart
 import 'package:saleem_dry_clean/services/BasketItemData.dart';
 import 'package:saleem_dry_clean/services/Providers/NavigationProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/OrderProvider.dart';
-import 'package:saleem_dry_clean/services/Providers/AddressesProvider.dart'; // Import AddressesProvider
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 
@@ -48,8 +47,6 @@ class BasketPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final orderProvider = Provider.of<OrderProvider>(context);
-    final addressesProvider = Provider.of<AddressesProvider>(context,
-        listen: false); // Access AddressesProvider
     final groupedData = groupItemsByCategoryAndServiceType(orderProvider.cart);
     final localizations = AppLocalizations.of(context);
     bool isRtl = Directionality.of(context) == TextDirection.rtl;

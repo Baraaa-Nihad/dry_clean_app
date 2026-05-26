@@ -48,13 +48,9 @@ class OrdersSummary extends StatelessWidget {
             validationUtils.formatDateTime(
               orderProvider.deliveryDate ?? '',
             );
-        print("addressNameaddressNameaddressNameaddressNameaddressName");
-        print(orderProvider.address);
         String addressName = isArabic
             ? (orderProvider.address?['addressName_ar'] ?? 'Unknown Address')
             : (orderProvider.address?['addressName_en'] ?? 'Unknown Address');
-        print("orderProvider.address");
-        print(orderProvider.address);
         return Scaffold(
           body: Container(
             color: AppColors.white,

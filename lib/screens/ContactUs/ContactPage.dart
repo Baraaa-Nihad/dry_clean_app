@@ -49,6 +49,8 @@ class _ContactPageState extends State<ContactPage> {
   void dispose() {
     _messageController.dispose();
     _messageFocusNode.dispose();
+    mobileController.dispose();
+    mobileFocusNode.dispose();
     super.dispose();
   }
 

@@ -18,10 +18,8 @@ class PaymentMethod extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print(isPaid);
     final localizations =
         AppLocalizations.of(context); // Get the localization instance
-    print(paymentMethod);
     return Container(
       width: double.infinity, // Make the container full width
       padding: const EdgeInsets.all(24),

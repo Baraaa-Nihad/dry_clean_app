@@ -89,8 +89,6 @@ class _LoadingButtonState extends State<LoadingButton>
 
   @override
   Widget build(BuildContext context) {
-    print("widget.isDisabled");
-    print(widget.isDisabled);
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = _getWidth();
