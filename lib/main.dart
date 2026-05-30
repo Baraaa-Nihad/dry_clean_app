@@ -134,9 +134,31 @@ Future<void> main() async {
     navigateToErrorPage(details.exceptionAsString());
   };
 
+  // PlatformDispatcher.instance.onError = (error, stack) {
+  //   final errorStr = error.toString();
+  //   // Silently ignore image decoding errors — handled by widget errorBuilders
+  //   if (errorStr.contains('Invalid image data') ||
+  //       errorStr.contains('ImageCodecException') ||
+  //       errorStr.contains('Could not instantiate image codec') ||
+  //       errorStr.contains('unimplemented')) {
+  //     return true;
+  //   }
+  //   if (isNavigatorLockError(errorStr)) {
+  //     return true;
+  //   }
+  //   // Silently ignore widget lifecycle errors — async callbacks firing after dispose
+  //   if (errorStr.contains('widget has been unmounted') ||
+  //       errorStr.contains('no longer has a context') ||
+  //       errorStr.contains('deactivated widget')) {
+  //     return true;
+  //   }
+  //   print('Unhandled exception: $error');
+  //   navigateToErrorPage(errorStr);
+  //   return true;
+  // };
   PlatformDispatcher.instance.onError = (error, stack) {
     final errorStr = error.toString();
-    // Silently ignore image decoding errors — handled by widget errorBuilders
+
     if (errorStr.contains('Invalid image data') ||
         errorStr.contains('ImageCodecException') ||
         errorStr.contains('Could not instantiate image codec') ||
@@ -146,16 +168,23 @@ Future<void> main() async {
     if (isNavigatorLockError(errorStr)) {
       return true;
     }
-    // Silently ignore widget lifecycle errors — async callbacks firing after dispose
     if (errorStr.contains('widget has been unmounted') ||
         errorStr.contains('no longer has a context') ||
         errorStr.contains('deactivated widget')) {
       return true;
     }
+
+    // ✅ Ignore APNs token timing errors — handled by retry logic in _initializeFCM
+    if (errorStr.contains('apns-token-not-set') ||
+        errorStr.contains('APNS token has not been received')) {
+      return true;
+    }
+
     print('Unhandled exception: $error');
     navigateToErrorPage(errorStr);
     return true;
   };
+
 
   runApp(
     MultiProvider(

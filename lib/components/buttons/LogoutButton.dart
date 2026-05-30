@@ -93,17 +93,40 @@ class _LogoutButtonState extends State<LogoutButton> {
     );
   }
 
+  // Future<void> _performLogout(
+  //     BuildContext context, UserProvider userProvider,
+  //     {NotificationProvider? notificationProvider}) async {
+  //   String? deviceToken = await FirebaseMessaging.instance.getToken();
+  //
+  //   await userProvider.signOut(
+  //     context,
+  //     deviceToken ?? '',
+  //     notificationProvider: notificationProvider,
+  //   );
+  // }
+
   Future<void> _performLogout(
       BuildContext context, UserProvider userProvider,
       {NotificationProvider? notificationProvider}) async {
-    String? deviceToken = await FirebaseMessaging.instance.getToken();
+
+    String deviceToken;
+    try {
+      final token = await FirebaseMessaging.instance
+          .getToken()
+          .timeout(const Duration(seconds: 5));
+      deviceToken = token ?? '';
+    } catch (_) {
+      print("FCM getToken() timed out or failed during logout");
+      deviceToken = '';
+    }
 
     await userProvider.signOut(
       context,
-      deviceToken ?? '',
+      deviceToken,
       notificationProvider: notificationProvider,
     );
   }
+
 
   @override
   Widget build(BuildContext context) {

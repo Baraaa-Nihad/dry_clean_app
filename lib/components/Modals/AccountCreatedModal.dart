@@ -1,6 +1,7 @@
 // lib/components/Modals/AccountCreatedModal.dart
 
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
@@ -51,10 +52,111 @@ class AccountCreatedModal extends StatefulWidget {
 class _AccountCreatedModalState extends State<AccountCreatedModal> {
   bool _isLoading = false;
 
+  // Future<void> _handleStart(BuildContext context) async {
+  //   setState(() {
+  //     _isLoading = true;
+  //   });
+  //
+  //   final tokens = widget.responseData['tokens'];
+  //   final userJson = widget.responseData['user'];
+  //   final String? accessToken = tokens?['accessToken'];
+  //   final String? refreshToken = tokens?['refreshToken'];
+  //
+  //   if (accessToken == null || refreshToken == null) {
+  //     setState(() {
+  //       _isLoading = false;
+  //     });
+  //     // Handle the error, show a message to the user, etc.
+  //     return;
+  //   }
+  //
+  //   // Save tokens using TokenService
+  //   final TokenService tokenService = TokenService();
+  //   await tokenService.saveTokens(accessToken, refreshToken);
+  //
+  //   // Retrieve user credentials from session storage
+  //   final _secureStorage = FlutterSecureStorage();
+  //   final String? phoneNumber = await _secureStorage.read(key: 'phoneNumber');
+  //   final String? password = await _secureStorage.read(key: 'password');
+  //   final String? role = await _secureStorage.read(key: 'role');
+  //   print(phoneNumber);
+  //   print(password);
+  //   print(role);
+  //
+  //   if (phoneNumber == null || password == null || role == null) {
+  //     setState(() {
+  //       _isLoading = false;
+  //     });
+  //     // Handle the error, show a message to the user, etc.
+  //     return;
+  //   }
+  //
+  //   // Get the device token from Firebase Messaging
+  //   String? deviceToken = await FirebaseMessaging.instance.getToken();
+  //   if (deviceToken == null) {
+  //     print("Error fetching device token");
+  //     setState(() {
+  //       _isLoading = false;
+  //     });
+  //     return;
+  //   }
+  //
+  //   // Retrieve device information
+  //   String deviceType;
+  //   String osVersion;
+  //   String model;
+  //
+  //   if (Platform.isAndroid) {
+  //     AndroidDeviceInfo androidInfo = await DeviceInfoPlugin().androidInfo;
+  //     deviceType = 'Android';
+  //     osVersion = androidInfo.version.release ?? 'Unknown';
+  //     model = androidInfo.model ?? 'Unknown';
+  //   } else if (Platform.isIOS) {
+  //     IosDeviceInfo iosInfo = await DeviceInfoPlugin().iosInfo;
+  //     deviceType = 'iOS';
+  //     osVersion = iosInfo.systemVersion ?? 'Unknown';
+  //     model = iosInfo.utsname.machine ?? 'Unknown';
+  //   } else {
+  //     deviceType = 'Unknown';
+  //     osVersion = 'Unknown';
+  //     model = 'Unknown';
+  //   }
+  //
+  //   // Fetch app version
+  //   String appVersion = await AppVersionHelper.getAppVersion();
+  //
+  //   // Sign in the user
+  //   final user = User.fromJson(userJson);
+  //   final userProvider = Provider.of<UserProvider>(context, listen: false);
+  //   await userProvider.signIn(
+  //     selectedCountryCode: '',
+  //     phoneNumber: phoneNumber,
+  //     password: password,
+  //     context: context,
+  //     deviceToken: deviceToken, // Pass the device token
+  //     deviceType: deviceType, // Or 'ios' based on your app platform
+  //     osVersion: osVersion,
+  //     model: model,
+  //     appVersion: appVersion,
+  //   );
+  //
+  //   // Navigate to home page after saving tokens
+  //   Future.delayed(Duration(seconds: 1), () {
+  //     Navigator.pop(context); // Close the modal
+  //
+  //     NavigatorService.navigateTo(RouteNames.main);
+  //   });
+  //
+  //   setState(() {
+  //     _isLoading = false;
+  //   });
+  // }
   Future<void> _handleStart(BuildContext context) async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    // Capture context-dependent objects before any awaits
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
 
     final tokens = widget.responseData['tokens'];
     final userJson = widget.responseData['user'];
@@ -62,18 +164,15 @@ class _AccountCreatedModalState extends State<AccountCreatedModal> {
     final String? refreshToken = tokens?['refreshToken'];
 
     if (accessToken == null || refreshToken == null) {
-      setState(() {
-        _isLoading = false;
-      });
-      // Handle the error, show a message to the user, etc.
+      if (mounted) setState(() => _isLoading = false);
       return;
     }
 
-    // Save tokens using TokenService
+    // Save tokens
     final TokenService tokenService = TokenService();
     await tokenService.saveTokens(accessToken, refreshToken);
 
-    // Retrieve user credentials from session storage
+    // Retrieve user credentials
     final _secureStorage = FlutterSecureStorage();
     final String? phoneNumber = await _secureStorage.read(key: 'phoneNumber');
     final String? password = await _secureStorage.read(key: 'password');
@@ -83,22 +182,22 @@ class _AccountCreatedModalState extends State<AccountCreatedModal> {
     print(role);
 
     if (phoneNumber == null || password == null || role == null) {
-      setState(() {
-        _isLoading = false;
-      });
-      // Handle the error, show a message to the user, etc.
+      if (mounted) setState(() => _isLoading = false);
       return;
     }
 
-    // Get the device token from Firebase Messaging
-    String? deviceToken = await FirebaseMessaging.instance.getToken();
-    if (deviceToken == null) {
-      print("Error fetching device token");
-      setState(() {
-        _isLoading = false;
-      });
-      return;
+    // Get FCM device token with timeout fallback (works on both simulator and real device)
+    String deviceToken;
+    try {
+      final token = await FirebaseMessaging.instance
+          .getToken()
+          .timeout(const Duration(seconds: 10));
+      deviceToken = token ?? 'no-token';
+    } catch (_) {
+      print("FCM getToken() failed — using fallback token");
+      deviceToken = 'no-token';
     }
+    print("Device token: $deviceToken");
 
     // Retrieve device information
     String deviceType;
@@ -107,49 +206,54 @@ class _AccountCreatedModalState extends State<AccountCreatedModal> {
 
     if (Platform.isAndroid) {
       AndroidDeviceInfo androidInfo = await DeviceInfoPlugin().androidInfo;
-      deviceType = 'Android';
+      deviceType = 'android';
       osVersion = androidInfo.version.release ?? 'Unknown';
       model = androidInfo.model ?? 'Unknown';
     } else if (Platform.isIOS) {
       IosDeviceInfo iosInfo = await DeviceInfoPlugin().iosInfo;
-      deviceType = 'iOS';
+      deviceType = 'ios';
       osVersion = iosInfo.systemVersion ?? 'Unknown';
       model = iosInfo.utsname.machine ?? 'Unknown';
     } else {
-      deviceType = 'Unknown';
-      osVersion = 'Unknown';
-      model = 'Unknown';
+      deviceType = 'unknown';
+      osVersion = 'unknown';
+      model = 'unknown';
     }
 
     // Fetch app version
     String appVersion = await AppVersionHelper.getAppVersion();
 
     // Sign in the user
-    final user = User.fromJson(userJson);
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    await userProvider.signIn(
-      selectedCountryCode: '',
-      phoneNumber: phoneNumber,
-      password: password,
-      context: context,
-      deviceToken: deviceToken, // Pass the device token
-      deviceType: deviceType, // Or 'ios' based on your app platform
-      osVersion: osVersion,
-      model: model,
-      appVersion: appVersion,
-    );
+    try {
+      final user = User.fromJson(userJson);
+      await userProvider.signIn(
+        selectedCountryCode: '',
+        phoneNumber: phoneNumber,
+        password: password,
+        context: context,
+        deviceToken: deviceToken,
+        deviceType: deviceType,
+        osVersion: osVersion,
+        model: model,
+        appVersion: appVersion,
+      );
 
-    // Navigate to home page after saving tokens
-    Future.delayed(Duration(seconds: 1), () {
-      Navigator.pop(context); // Close the modal
+      // Navigate to home
+      Future.delayed(const Duration(seconds: 1), () {
+        if (!mounted) return;
+        Navigator.pop(context);
+        NavigatorService.navigateTo(RouteNames.main);
+      });
+    } catch (e) {
+      print("signIn error: $e");
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
 
-      NavigatorService.navigateTo(RouteNames.main);
-    });
-
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) setState(() => _isLoading = false);
   }
+
+
 
   @override
   Widget build(BuildContext context) {
