@@ -1,5 +1,8 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:saleem_dry_clean/components/CustomCheckbox/CustomCheckbox.dart';
+import 'package:saleem_dry_clean/screens/WebViewPage/web_view_page.dart';
+import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
@@ -21,6 +24,32 @@ class AgreementText extends StatefulWidget {
 class _AgreementTextState extends State<AgreementText> {
   bool _isChecked = false;
 
+  final TapGestureRecognizer _termsRecognizer = TapGestureRecognizer();
+  final TapGestureRecognizer _privacyRecognizer = TapGestureRecognizer();
+
+  @override
+  void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
+    super.dispose();
+  }
+
+  void _openWebView(BuildContext context, String url, String titleKey) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WebViewPage(
+          url: url,
+          titleKey: titleKey,
+          fem: widget.fem,
+          setLocale: (_) {},
+          userSignedIn: false,
+          currentLocale: Localizations.localeOf(context),
+        ),
+      ),
+    );
+  }
+
   void _toggleCheckbox(bool? value) {
     setState(() {
       _isChecked = value!;
@@ -32,6 +61,18 @@ class _AgreementTextState extends State<AgreementText> {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
     bool isRtl = Directionality.of(context) == TextDirection.rtl;
+    final String lang = isRtl ? 'ar' : 'en';
+
+    _termsRecognizer.onTap = () => _openWebView(
+          context,
+          '${Config.termsAndConditionsUrl}?lang=$lang',
+          'Terms of Use',
+        );
+    _privacyRecognizer.onTap = () => _openWebView(
+          context,
+          '${Config.privacyPolicyUrl}?lang=$lang',
+          'Privacy Policy',
+        );
 
     return Container(
       width: 380,
@@ -69,6 +110,7 @@ class _AgreementTextState extends State<AgreementText> {
                           height: 0,
                           color: AppColors.gray80),
                     ),
+                    recognizer: _termsRecognizer,
                   ),
                   TextSpan(
                     text:
@@ -93,6 +135,7 @@ class _AgreementTextState extends State<AgreementText> {
                           height: 0,
                           color: AppColors.gray80),
                     ),
+                    recognizer: _privacyRecognizer,
                   ),
                 ],
               ),

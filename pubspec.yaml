@@ -20,6 +20,7 @@ dependencies:
   carousel_slider: ^5.1.2
   smooth_page_indicator: ^2.0.1 # Add this line
   url_launcher: ^6.0.20
+  webview_flutter: ^4.4.0
   calendar_date_picker2: ^2.0.1
   shared_preferences: ^2.3.4
   provider: ^6.0.0

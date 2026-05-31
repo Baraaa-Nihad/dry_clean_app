@@ -3,6 +3,8 @@ import 'package:saleem_dry_clean/components/Cards/CustomCard.dart';
 import 'package:saleem_dry_clean/components/Modals/LangSelectionModal.dart';
 import 'package:saleem_dry_clean/screens/ContactUs/ContactPage.dart';
 import 'package:saleem_dry_clean/screens/Feedback/FeedbackPage.dart';
+import 'package:saleem_dry_clean/screens/WebViewPage/web_view_page.dart';
+import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
@@ -123,7 +125,22 @@ class OtherSettingsSection extends StatelessWidget {
           leadingIconPath: 'assets/Icons/privacy.svg',
           trailingIcon: true,
           trailingIconPath: 'assets/Icons/rightSmallArrow.svg',
-          onTap: () {},
+          onTap: () {
+            final lang = currentLocale.languageCode == 'ar' ? 'ar' : 'en';
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => WebViewPage(
+                  url: '${Config.privacyPolicyUrl}?lang=$lang',
+                  titleKey: 'Privacy Policy',
+                  fem: fem,
+                  setLocale: setLocale,
+                  userSignedIn: userSignedIn,
+                  currentLocale: currentLocale,
+                ),
+              ),
+            );
+          },
         ),
         SizedBox(height: 12),
         CustomCard(
@@ -133,7 +150,22 @@ class OtherSettingsSection extends StatelessWidget {
           leadingIconPath: 'assets/Icons/terms.svg',
           trailingIcon: true,
           trailingIconPath: 'assets/Icons/rightSmallArrow.svg',
-          onTap: () {},
+          onTap: () {
+            final lang = currentLocale.languageCode == 'ar' ? 'ar' : 'en';
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => WebViewPage(
+                  url: '${Config.termsAndConditionsUrl}?lang=$lang',
+                  titleKey: 'Terms of Use',
+                  fem: fem,
+                  setLocale: setLocale,
+                  userSignedIn: userSignedIn,
+                  currentLocale: currentLocale,
+                ),
+              ),
+            );
+          },
         ),
         SizedBox(height: 12),
         CustomCard(

@@ -39,6 +39,8 @@ import 'package:saleem_dry_clean/utils/connectivity_service.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 import 'package:saleem_dry_clean/utils/route_generator.dart';
 import 'package:saleem_dry_clean/utils/route_names.dart';
+import 'package:saleem_dry_clean/services/ContactServices/ContactProvider.dart';
+import 'package:saleem_dry_clean/services/FeedbackService/FeedbackProvider.dart';
 import 'firebase_options.dart';
 
 // Initialize services
@@ -187,6 +189,12 @@ Future<void> main() async {
         ChangeNotifierProvider(
             create: (_) =>
                 BannerProvider(tokenService)), // Add the BannerProvider here
+        ChangeNotifierProvider(
+            create: (ctx) =>
+                ContactProvider(tokenService, ctx.read<UserProvider>())),
+        ChangeNotifierProvider(
+            create: (ctx) =>
+                FeedbackProvider(tokenService, ctx.read<UserProvider>())),
       ],
       child: const MyApp(),
     ),

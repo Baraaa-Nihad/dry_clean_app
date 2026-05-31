@@ -73,6 +73,9 @@ class Config {
   static String get getBanners => '${fullApiUrl}banners/getAll';
   static String get getOnboardingApi => '${fullApiUrlNoPrivate}app/onboarding';
 
+  static String get privacyPolicyUrl => '${apiUrl}privacy-policy';
+  static String get termsAndConditionsUrl => '${apiUrl}terms-and-conditions';
+
   // Add the Change Password API endpoint
 
   static String get _placeholderUrl => 'assets/images/placeholder.jpg';
