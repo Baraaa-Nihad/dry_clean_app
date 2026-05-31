@@ -259,7 +259,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     TextField(
                       controller: _messageController,
                       focusNode: _messageFocusNode,
-                      maxLines: 10,
+                      minLines: 2,
+                      maxLines: 3,
+                      keyboardType: TextInputType.multiline,
                       decoration: InputDecoration(
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -282,10 +284,11 @@ class _FeedbackPageState extends State<FeedbackPage> {
                         labelStyle: AppTextStyles.getFontFamily(
                           context,
                           AppTextStyles.regular16Gray80(context).copyWith(
-                              fontSize: 16.0,
-                              fontWeight: FontWeight.w500,
-                              height: 0,
-                              color: AppColors.gray50),
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.w500,
+                            height: 0,
+                            color: AppColors.gray50,
+                          ),
                         ),
                       ),
                     ),
