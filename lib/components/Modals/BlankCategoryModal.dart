@@ -106,8 +106,6 @@ class _BlankCategoryModalState extends State<BlankCategoryModal> {
   void _handleAddToBasket() {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     widget.services.forEach((service, details) {
-      print("object");
-      print(service);
       int quantity = serviceQuantities[service] ?? 0;
       if (quantity > 0) {
         final int? productId = details['productId'] as int?;
@@ -147,14 +145,16 @@ class _BlankCategoryModalState extends State<BlankCategoryModal> {
 
   @override
   Widget build(BuildContext context) {
-    double modalHeight = MediaQuery.of(context).size.height - 56;
+    // الحصول على الـ bottom inset (safe area على iPhone)
+    final double bottomInset = MediaQuery.of(context).padding.bottom;
+    // ارتفاع المودال = كامل الشاشة - 56 - safe area
+    final double modalHeight =
+        MediaQuery.of(context).size.height - 56 - bottomInset;
     final localizations = AppLocalizations.of(context);
-    print(widget.area);
 
-    // تم تغليف الـ Container بـ SafeArea لحماية المساحة السفلية من التداخل مع أزرار النظام
-    return SafeArea(
-      top: false,
-      bottom: true,
+    return Padding(
+      // هذا يرفع المودال بمقدار الـ safe area تلقائياً على iPhone
+      padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
         height: modalHeight,
         decoration: BoxDecoration(
