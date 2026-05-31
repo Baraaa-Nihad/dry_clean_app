@@ -150,7 +150,15 @@ class NotificationProvider with ChangeNotifier {
         });
 
         // Get the device token and send it to the backend
-        String? token = await _firebaseMessaging.getToken();
+        String? token;
+        try {
+          token = await _firebaseMessaging
+              .getToken()
+              .timeout(const Duration(seconds: 10));
+        } catch (_) {
+          print("FCM getToken() failed in notification_provider");
+          token = 'no-token';
+        }
         if (token != null) {
           await _sendTokenToBackend(token);
         }

@@ -70,7 +70,10 @@ class _SignInState extends State<SignIn> {
     _passwordController.addListener(() => _onInputChange(true));
     // Start fetching in the background immediately — by the time the user
     // finishes typing and hits Login these will already be resolved.
-    _fcmTokenFuture = FirebaseMessaging.instance.getToken();
+    _fcmTokenFuture = FirebaseMessaging.instance
+        .getToken()
+        .timeout(const Duration(seconds: 10))
+        .catchError((_) => 'no-token');
     _deviceInfoFuture = _fetchDeviceInfo();
   }
 
@@ -146,15 +149,9 @@ class _SignInState extends State<SignIn> {
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-      // Both futures were started in initState — await them together so
-      // if either is still in-flight they finish in parallel, not sequentially.
       final results = await Future.wait([_fcmTokenFuture, _deviceInfoFuture]);
-      final deviceToken = results[0] as String?;
+      final deviceToken = (results[0] as String?) ?? 'no-token';
       final deviceInfo = results[1] as Map<String, String>;
-
-      if (deviceToken == null) {
-        throw Exception('Failed to retrieve device token');
-      }
 
       await userProvider.signIn(
         selectedCountryCode: _selectedCountryCode,
@@ -170,16 +167,18 @@ class _SignInState extends State<SignIn> {
 
       NavigatorService.navigateTo(RouteNames.main);
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _hasError = true;
-        _errorMessage = AppLocalizations.of(context)
-                ?.translate('password_or_mobile_incorrect') ??
-            'Password or mobile number is incorrect';
-      });
+      print("signIn error: $e");
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+          _errorMessage = AppLocalizations.of(context)
+              ?.translate('password_or_mobile_incorrect') ??
+              'Password or mobile number is incorrect';
+        });
+      }
     }
   }
-
   @override
   void dispose() {
     _mobileNumberController.dispose();

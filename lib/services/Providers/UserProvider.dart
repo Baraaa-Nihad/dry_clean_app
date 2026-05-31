@@ -130,7 +130,8 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<void> registerDeviceToken(String deviceToken, String deviceType,
-      String osVersion, String model, String appVersion) async {
+      String osVersion, String model, String appVersion)
+  async {
     if (_user == null) {
       print('No user is signed in. Cannot register device token.');
       return;
@@ -167,19 +168,24 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+
   Future<void> signIn({
     required String selectedCountryCode,
     required String phoneNumber,
     required String password,
     required BuildContext context,
-    required String deviceToken, // Pass device token
-    required String deviceType, // e.g., 'android' or 'ios'
-    required String osVersion, // e.g., '14.0'
-    required String model, // e.g., 'iPhone 12'
-    required String appVersion, // New Parameter
+    required String deviceToken,
+    required String deviceType,
+    required String osVersion,
+    required String model,
+    required String appVersion,
   }) async {
     _isLoading = true;
     notifyListeners();
+
+    // Capture context-dependent providers before any awaits
+    final notificationProvider =
+    Provider.of<NotificationProvider>(context, listen: false);
 
     final cleanedPhoneNumber = cleanPhoneNumber(phoneNumber);
     final fullPhoneNumber = selectedCountryCode + cleanedPhoneNumber;
@@ -209,17 +215,24 @@ class UserProvider with ChangeNotifier {
         await Future.wait([
           UserService().signIn(user),
           _tokenService.saveTokens(
-              tokens['accessToken'] as String, tokens['refreshToken'] as String),
+            tokens['accessToken'] as String,
+            tokens['refreshToken'] as String,
+          ),
         ]);
 
         // Load per-user notifications for the signed-in user
-        Provider.of<NotificationProvider>(context, listen: false)
-            .loadForUser(user.id);
+        notificationProvider.loadForUser(user.id);
 
         // Address fetch + device token registration are independent HTTP calls
         await Future.wait([
           fetchUserAddress(_user!.id, 'en', context),
-          registerDeviceToken(deviceToken, deviceType, osVersion, model, appVersion),
+          registerDeviceToken(
+            deviceToken,
+            deviceType,
+            osVersion,
+            model,
+            appVersion,
+          ),
         ]);
       } else {
         final errorResponse = json.decode(response.body);
@@ -236,14 +249,18 @@ class UserProvider with ChangeNotifier {
 
   Future<void> _getToken() async {
     try {
-      String? token = await FirebaseMessaging.instance.getToken();
+      final token = await FirebaseMessaging.instance
+          .getToken()
+          .timeout(const Duration(seconds: 10));
       if (token != null) {
         _token = token;
       } else {
         print('Failed to obtain FCM token');
+        _token = 'no-token';
       }
     } catch (e) {
       print('Error fetching FCM token: $e');
+      _token = 'no-token';
     }
   }
 
