@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/buttons/LoadingButton.dart';
-import 'package:saleem_dry_clean/screens/Checkout/Checkout.dart';
-import 'package:saleem_dry_clean/screens/SignInPage/SignIn.dart';
 import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 import 'package:saleem_dry_clean/services/Providers/UserProvider.dart';
 import 'package:saleem_dry_clean/components/Modals/SmallModal.dart';
-import 'package:saleem_dry_clean/utils/navigator_key.dart';
-import 'package:saleem_dry_clean/utils/route_names.dart'; // Import the SmallModal
+import 'package:saleem_dry_clean/utils/route_names.dart';
 
 class CheckoutSection extends StatelessWidget {
   final double fem;
@@ -25,8 +22,9 @@ class CheckoutSection extends StatelessWidget {
   }) : super(key: key);
 
   void _handleCheckout(BuildContext context, UserProvider userProvider) {
+    final localizations = AppLocalizations.of(context);
+
     if (!userProvider.userSignedIn) {
-      // Show sign-in modal
       SmallModal.show(
         isLoading: false,
         context,
@@ -37,7 +35,7 @@ class CheckoutSection extends StatelessWidget {
         },
         onPressed: () {
           Navigator.pop(context);
-          Future.delayed(Duration(milliseconds: 300), () {
+          Future.delayed(const Duration(milliseconds: 300), () {
             NavigatorService.navigateTo(RouteNames.signIn);
           });
         },
@@ -45,18 +43,11 @@ class CheckoutSection extends StatelessWidget {
           Navigator.pop(context);
         },
         fem: fem,
-        title: 'Login Required',
-        message: 'Please login to continue and send your message to support.',
+        title: localizations?.translate('login_required') ?? 'Login Required',
+        message: localizations?.translate('please_login_to_continue') ??
+            'Please login to continue and send your message to support.',
       );
     } else {
-      // Navigator.push(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder: (context) => CheckoutAddress(
-      //       fem: fem,
-      //     ),
-      //   ),
-      // );
       NavigatorService.navigateTo(RouteNames.checkout);
     }
   }
@@ -71,7 +62,7 @@ class CheckoutSection extends StatelessWidget {
         return Container(
           height: 88,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          decoration: BoxDecoration(color: AppColors.white),
+          decoration: const BoxDecoration(color: AppColors.white),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -108,8 +99,9 @@ class CheckoutSection extends StatelessWidget {
                             style: AppTextStyles.getFontFamily(
                               context,
                               AppTextStyles.bold16Gray80(context).copyWith(
-                                  fontSize: 18.0 * fem,
-                                  fontWeight: FontWeight.w600),
+                                fontSize: 18.0 * fem,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 2),
@@ -118,8 +110,9 @@ class CheckoutSection extends StatelessWidget {
                             style: AppTextStyles.getFontFamily(
                               context,
                               AppTextStyles.bold16Gray80(context).copyWith(
-                                  fontSize: 18.0 * fem,
-                                  fontWeight: FontWeight.w600),
+                                fontSize: 18.0 * fem,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
@@ -128,7 +121,7 @@ class CheckoutSection extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(width: 24 * fem), // Add spacing between total and button
+              SizedBox(width: 24 * fem),
               Expanded(
                 child: LoadingButton(
                   buttonWidth: "large",

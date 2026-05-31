@@ -30,7 +30,8 @@ class BirdieLogo extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: [
                 Text(
                   localizations?.translate('By') ?? 'By',
@@ -44,15 +45,14 @@ class BirdieLogo extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SvgPicture.asset(
-                      'assets/vectors/birdieLogo.svg', // Ensure this path is correct
-                      width: 24,
-                      height: 24,
-                    ),
-                  ],
+                Baseline(
+                  baseline: 12,
+                  baselineType: TextBaseline.alphabetic,
+                  child: SvgPicture.asset(
+                    'assets/vectors/birdieLogo.svg',
+                    width: 29,
+                    height: 29,
+                  ),
                 ),
               ],
             ),

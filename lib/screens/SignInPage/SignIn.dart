@@ -294,7 +294,7 @@ class _SignInState extends State<SignIn> {
                           SizedBox(height: 8.h),
                           if (_hasError)
                             Align(
-                              alignment: Alignment.centerLeft,
+                              alignment: Alignment.centerRight,
                               child: Text(
                                 _errorMessage,
                                 style: AppTextStyles.getFontFamily(

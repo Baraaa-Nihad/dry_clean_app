@@ -56,6 +56,7 @@ class TextCustomInput extends StatefulWidget {
 class _TextCustomInputState extends State<TextCustomInput> {
   bool _isFocused = false;
   bool _isValid = true;
+  bool _isDirty = false;
   String? _errorMessage;
 
   @override
@@ -89,6 +90,9 @@ class _TextCustomInputState extends State<TextCustomInput> {
   void _handleFocusChange() {
     setState(() {
       _isFocused = widget.focusNode.hasFocus;
+      if (!widget.focusNode.hasFocus) {
+        _isDirty = true;
+      }
     });
   }
 
@@ -188,7 +192,7 @@ class _TextCustomInputState extends State<TextCustomInput> {
             ),
           ),
         ),
-        if (_errorMessage != null)
+        if (_errorMessage != null && _isDirty)
           Padding(
             padding: const EdgeInsets.only(top: 4.0),
             child: Text(

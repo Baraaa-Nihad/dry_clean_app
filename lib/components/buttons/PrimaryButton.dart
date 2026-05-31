@@ -12,7 +12,7 @@ class PrimaryButton extends StatelessWidget {
   final bool isLoading;
   final double fem;
   final String buttonWidth;
-  final String? prefixIcon; // Add prefixIcon parameter
+  final String? prefixIcon;
 
   const PrimaryButton({
     Key? key,
@@ -21,8 +21,8 @@ class PrimaryButton extends StatelessWidget {
     this.isDisabled = false,
     this.isLoading = false,
     required this.fem,
-    this.buttonWidth = 'full', // Default to 'full'
-    this.prefixIcon, // Initialize prefixIcon
+    this.buttonWidth = 'full',
+    this.prefixIcon,
   }) : super(key: key);
 
   double _getWidth() {
@@ -32,9 +32,9 @@ class PrimaryButton extends StatelessWidget {
       case 'petiteMedium':
         return 173;
       case 'medium':
-        return 182; // Adjust this if you need a different medium width
+        return 182;
       case 'large':
-        return 272; // Adjust this if you need a different medium width
+        return 272;
       case 'full':
       default:
         return 380;
@@ -47,14 +47,14 @@ class PrimaryButton extends StatelessWidget {
       builder: (context, constraints) {
         return ConstrainedBox(
           constraints: BoxConstraints(
-            minHeight: 56 * fem, // Minimum height for the button
-            maxHeight: 56 * fem, // Maximum height for the button
+            minHeight: 56 * fem,
+            maxHeight: 56 * fem,
           ),
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Container(
-              width: _getWidth(), // Adjust width based on buttonWidth
-              height: 56 * fem, // Fixed height for the button
+              width: _getWidth(),
+              height: 56 * fem,
               decoration: AppPrimaryButtonStyles.getDecoration(isDisabled),
               child: ElevatedButton(
                 onPressed: isDisabled ? null : onPressed,
@@ -67,19 +67,18 @@ class PrimaryButton extends StatelessWidget {
                         children: [
                           if (prefixIcon != null) ...[
                             SvgPicture.asset(prefixIcon!),
-                            SizedBox(
-                                width:
-                                    8 * fem), // Spacing between icon and text
+                            SizedBox(width: 8 * fem),
                           ],
                           Text(
                             text,
                             style: AppTextStyles.getFontFamily(
                               context,
                               AppTextStyles.regular16Gray80(context).copyWith(
-                                  fontSize: 16.0,
-                                  fontWeight: FontWeight.w600,
-                                  height: 0,
-                                  color: AppColors.white),
+                                fontSize: 16.0,
+                                fontWeight: FontWeight.w600,
+                                height: 0,
+                                color: AppColors.white,
+                              ),
                             ),
                           ),
                         ],

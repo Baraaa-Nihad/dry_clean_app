@@ -79,6 +79,10 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
           Expanded(
             child: TextField(
               controller: _controller,
+              // إضافة هذه الخاصية للتوسيط الأفقي
+              textAlign: TextAlign.center,
+              // هذه تتحكم في التوسيط الرأسي (أنت بالفعل قمت بضبطها)
+              textAlignVertical: TextAlignVertical.center,
               style: AppTextStyles.getFontFamily(
                 context,
                 AppTextStyles.bold16Gray80(context).copyWith(
@@ -86,12 +90,10 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
                 ),
               ),
               onChanged: _onSearchChanged,
-              textAlignVertical:
-                  TextAlignVertical.center, // Align the text vertically
-
               decoration: InputDecoration(
                 hintText: localizations.translate('search'),
                 border: InputBorder.none,
+                // تأكد أن hintStyle لا يحتوي على padding أو إزاحة جانبية
                 hintStyle: AppTextStyles.regular16Gray80(context).copyWith(
                   fontSize: 14.0,
                   fontWeight: FontWeight.w500,

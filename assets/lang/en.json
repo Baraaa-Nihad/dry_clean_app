@@ -1,5 +1,5 @@
 {
-  "sign_in": "Sign In",
+  
   "welcome_back": "Welcome back! Sign in to your account\n to access all our services",
   "mobile_number": "Mobile Number",
   "password": "Password",
@@ -243,6 +243,8 @@
   "back_to_home": "Back To Home",
   "items_details": "Items Details",
   "go_to_my_orders": "Go To my orders",
+  "login_required": "Login Required",
+"login_required_message": "Please login to continue and send your message to support.",
   "no_available_time_slots": "No available time slots for this area",
   "area_id_missing": "Area ID is missing for the selected address",
   "please_complete_step": "Please complete the current step",

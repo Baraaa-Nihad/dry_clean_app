@@ -197,32 +197,29 @@ class _ContactPageState extends State<ContactPage> {
                     TextField(
                       controller: _messageController,
                       focusNode: _messageFocusNode,
-                      maxLines: 10,
+                      minLines: 2,
+                      maxLines: 3,
                       decoration: InputDecoration(
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(
-                            color: AppColors.gray30,
-                            width: 1.0,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(
-                            color: AppColors.gray20,
-                            width: 1.0,
-                          ),
-                        ),
-                        floatingLabelBehavior: FloatingLabelBehavior.auto,
-                        labelText: localizations?.translate('enter_message') ??
+                        hintText: localizations?.translate('enter_message') ??
                             'Enter your message here',
-                        alignLabelWithHint: true,
-                        labelStyle: AppTextStyles.getFontFamily(
+                        hintStyle: AppTextStyles.getFontFamily(
                           context,
                           AppTextStyles.regular16Gray80(context).copyWith(
                               fontSize: 16.0,
                               fontWeight: FontWeight.w500,
                               color: AppColors.gray50),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 16),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide:
+                              BorderSide(color: AppColors.gray30, width: 1.0),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide:
+                              BorderSide(color: AppColors.gray20, width: 1.0),
                         ),
                       ),
                     ),

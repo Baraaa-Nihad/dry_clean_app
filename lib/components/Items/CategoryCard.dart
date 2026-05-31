@@ -142,7 +142,7 @@ class MainCard extends StatelessWidget {
                                       context,
                                       AppTextStyles.regular16Gray70(context)
                                           .copyWith(
-                                              fontSize: 16.0 * fem,
+                                              fontSize: 18.0 * fem,
                                               fontWeight: FontWeight.w500,
                                               height: 2.4),
                                     ),

@@ -341,7 +341,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                       fem: 1,
                                       buttonWidth: "full",
                                       isDisabled: false,
-                                      text: localizations.translate('start'),
+                                      text: localizations.translate('Start'),
                                       onPressed: () async {
                                         await _navigateToMain(
                                             onboardingProvider);

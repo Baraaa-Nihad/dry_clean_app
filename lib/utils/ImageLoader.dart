@@ -4,12 +4,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 
-/// A drop-in image widget that:
-/// - Caches network images to disk via [CachedNetworkImage] (instant on repeat views)
-/// - Shows a shimmer placeholder while the image loads
-/// - Shows a gallery-icon placeholder on error
-/// - Uses the local placeholder for remote SVGs to avoid uncaught HTTP errors
-/// - Falls back to [Image.asset] / [SvgPicture.asset] for local asset paths
 class ImageLoader extends StatelessWidget {
   final String imageUrl;
   final double height;
@@ -64,29 +58,30 @@ class ImageLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: _buildImage(),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: AppColors.gray20, width: 1),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: _buildImage(),
+      ),
     );
   }
 
   Widget _buildImage() {
-    // ── Network SVG ──────────────────────────────────────────────────────────
-    // flutter_svg 2.0.9 does not expose an errorBuilder for network SVGs.
-    // Avoid letting HTTP errors escape to FlutterError.onError.
     if (_isNetwork && _isSvg) {
       debugPrint('ImageLoader: remote SVG skipped $imageUrl');
       return _errorPlaceholder();
     }
 
-    // ── Network raster image ─────────────────────────────────────────────────
     if (_isNetwork) {
       return CachedNetworkImage(
         imageUrl: imageUrl,
         height: height,
         width: width,
         fit: BoxFit.cover,
-        // No fade animations — the shimmer itself communicates loading state.
         fadeInDuration: Duration.zero,
         fadeOutDuration: Duration.zero,
         placeholder: (context, url) => _shimmer(),
@@ -97,7 +92,6 @@ class ImageLoader extends StatelessWidget {
       );
     }
 
-    // ── Local asset SVG ──────────────────────────────────────────────────────
     if (_isSvg) {
       return SvgPicture.asset(
         imageUrl,
@@ -107,7 +101,6 @@ class ImageLoader extends StatelessWidget {
       );
     }
 
-    // ── Local asset raster ───────────────────────────────────────────────────
     return Image.asset(
       imageUrl,
       fit: BoxFit.cover,
