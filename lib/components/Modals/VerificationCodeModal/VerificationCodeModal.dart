@@ -48,6 +48,17 @@ class _VerificationCodeModalState extends State<VerificationCodeModal> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final signUpProvider =
+          Provider.of<SignUpProvider>(context, listen: false);
+      await signUpProvider.loadMobileNumber();
+      if (mounted) {
+        setState(() {
+          mobileNumber = signUpProvider.mobileNumber;
+        });
+      }
+    });
     // Auto-submit the bypass OTP after a short delay so the modal fully renders first.
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
@@ -169,12 +180,6 @@ class _VerificationCodeModalState extends State<VerificationCodeModal> {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
-    final signUpProvider = Provider.of<SignUpProvider>(context, listen: false);
-    signUpProvider.loadMobileNumber().then((value) {
-      setState(() {
-        mobileNumber = signUpProvider.mobileNumber;
-      });
-    });
 
     return Container(
       decoration: BoxDecoration(

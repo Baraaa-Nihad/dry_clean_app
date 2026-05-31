@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,7 +22,10 @@ class LanguageProvider with ChangeNotifier {
       if (languageCode != null) {
         _locale = Locale(languageCode);
       } else {
-        _locale = WidgetsBinding.instance.window.locale ?? Locale('en');
+        const supportedCodes = ['en', 'ar'];
+        final systemCode =
+            PlatformDispatcher.instance.locale.languageCode;
+        _locale = Locale(supportedCodes.contains(systemCode) ? systemCode : 'en');
         await _saveLocale(_locale.languageCode);
       }
     } catch (e) {
