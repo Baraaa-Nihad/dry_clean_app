@@ -73,8 +73,8 @@ class Config {
   static String get getBanners => '${fullApiUrl}banners/getAll';
   static String get getOnboardingApi => '${fullApiUrlNoPrivate}app/onboarding';
 
-  static String get privacyPolicyUrl => '${apiUrl}privacy-policy';
-  static String get termsAndConditionsUrl => '${apiUrl}terms-and-conditions';
+  static String get privacyPolicyUrl => '${fullApiUrlNoPrivate}legal/privacy_policy/view';
+  static String get termsAndConditionsUrl => '${fullApiUrlNoPrivate}legal/terms_and_conditions/view';
 
   // Add the Change Password API endpoint
 
