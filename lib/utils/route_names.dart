@@ -27,6 +27,9 @@ class RouteNames {
   //
   // اختيار المغسلة صار الخطوة الأولى في الطلب لا خطوة عند الدفع:
   // لكل محل أسعاره، فالسلّة قبل المحل بلا سعر تُحسب به.
+  /// اختيار المدينة والمنطقة — بعد الأونبوردينج وقبل الرئيسية
+  static const String locationScope = '/location_scope';
+
   static const String stores = '/stores';
   static const String storeCatalog = '/store_catalog';
 

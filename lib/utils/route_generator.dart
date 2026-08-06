@@ -6,6 +6,7 @@ import 'package:saleem_dry_clean/screens/Checkout/Checkout.dart';
 import 'package:saleem_dry_clean/screens/DecisionScreen.dart';
 import 'package:saleem_dry_clean/screens/ErrorPage/ErrorPage.dart';
 import 'package:saleem_dry_clean/screens/HomeScreen/home_screen.dart';
+import 'package:saleem_dry_clean/screens/Location/location_scope_screen.dart';
 import 'package:saleem_dry_clean/screens/MorePage/more_page.dart';
 import 'package:saleem_dry_clean/screens/NotificationPage/notificationPage.dart';
 import 'package:saleem_dry_clean/screens/Onboarding/onboarding_screen.dart';
@@ -112,6 +113,17 @@ class RouteGenerator {
         );
 
       // ── نموذج الوسيط ────────────────────────────────────────────
+
+      case RouteNames.locationScope:
+        return MaterialPageRoute(
+          builder: (_) => LocationScopeScreen(
+            // بعد الاختيار تُستبدل الشاشة بالرئيسية لا تُكدَّس فوقها:
+            // زرّ الرجوع بعدها يجب أن يخرج من التطبيق لا يعيد السؤال
+            onDone: () => NavigatorService.navigateToAndRemoveUntil(
+              RouteNames.main,
+            ),
+          ),
+        );
 
       // قائمة المغاسل. تفتح الكتالوج عند الاختيار بدل أن تعرف الشاشة
       // مسارها بنفسها — الشاشة تُستعمل أيضاً من التصفّح لا من الطلب فقط

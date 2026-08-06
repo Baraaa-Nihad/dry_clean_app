@@ -20,6 +20,7 @@ import 'package:saleem_dry_clean/services/Providers/AddressCategoriesProvider.da
 import 'package:saleem_dry_clean/services/Providers/AreaProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/BannerProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/DryCleanProvider.dart';
+import 'package:saleem_dry_clean/services/Providers/LocationScopeProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/OrderTrackingProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/StoreCatalogProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/StoresProvider.dart';
@@ -194,7 +195,6 @@ Future<void> main() async {
     return true;
   };
 
-
   runApp(
     MultiProvider(
       providers: [
@@ -211,6 +211,8 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => DryCleanProvider()),
         // قائمة المغاسل للاختيار — منفصل عن DryCleanProvider الذي يحفظ
         // المحل المختار: الاختيار قرار يبقى، والقائمة حالة عابرة
+        // نطاق الزبون (مدينة ومنطقة) — يُقرأ قبل الرئيسية، فليس lazy
+        ChangeNotifierProvider(create: (_) => LocationScopeProvider()),
         ChangeNotifierProvider(create: (_) => StoresProvider(tokenService)),
         // كتالوج المحل المفتوح — lazy لأن الزبون يمرّ بالقائمة أولاً
         ChangeNotifierProvider(

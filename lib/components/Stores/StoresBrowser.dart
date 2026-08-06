@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/StoreCard.dart';
 import 'package:saleem_dry_clean/services/Models/Store.dart';
 import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
+import 'package:saleem_dry_clean/services/Providers/LocationScopeProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/StoresProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
@@ -95,6 +96,11 @@ class _StoresBrowserState extends State<StoresBrowser> {
                 ),
               ),
             ),
+          // المنطقة المختارة وزرّ تغييرها.
+          //
+          // الزبون ينتقل ويزور أهله ويطلب من مدينة أخرى، وقفل المنطقة
+          // على اختيار أوّل مرّة يجعله يحذف التطبيق ليعيد السؤال.
+          const SliverToBoxAdapter(child: _AreaBar()),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
@@ -171,6 +177,49 @@ class _StoresBrowserState extends State<StoresBrowser> {
             );
           },
           childCount: p.stores.length,
+        ),
+      ),
+    );
+  }
+}
+
+/// شريط المنطقة — يعرض المختارة ويفتح شاشة التغيير.
+class _AreaBar extends StatelessWidget {
+  const _AreaBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = context.watch<LocationScopeProvider>();
+    final area = scope.area;
+    if (area == null) return const SizedBox.shrink();
+
+    final city = scope.governate?.name;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => NavigatorService.navigateTo(RouteNames.locationScope),
+        child: Row(
+          children: [
+            const Icon(Icons.location_on_outlined,
+                size: 17, color: AppColors.green),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                city == null ? area.name : '${area.name}، $city',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.sfarabicMedium
+                    .copyWith(fontSize: 13, color: AppColors.gray70),
+              ),
+            ),
+            Text(
+              'تغيير',
+              style: AppTextStyles.sfarabicMedium
+                  .copyWith(fontSize: 12.5, color: AppColors.green),
+            ),
+          ],
         ),
       ),
     );
