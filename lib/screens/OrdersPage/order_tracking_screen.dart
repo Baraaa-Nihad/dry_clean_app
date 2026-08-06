@@ -7,6 +7,7 @@ import 'package:saleem_dry_clean/services/Models/OrderTracking.dart';
 import 'package:saleem_dry_clean/services/Providers/OrderTrackingProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// تتبّع الطلب — أين وصل، ومتى، وماذا بقي.
 ///
@@ -111,6 +112,12 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
         _CurrentCard(tracking: t),
+        // بطاقة السائق (٢.١.٥) — تحت الحالة مباشرة لأنها جواب السؤال
+        // الثاني بعد «أين طلبي»: «مين جاي؟»
+        if (t.driver != null) ...[
+          const SizedBox(height: 12),
+          _DriverCard(driver: t.driver!),
+        ],
         const SizedBox(height: 18),
         if (t.history.isNotEmpty) ...[
           Text(
@@ -181,6 +188,168 @@ class _CurrentCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// بطاقة السائق: اسمه وتقييمه وزرّ اتصال وموقعه على الخريطة.
+class _DriverCard extends StatelessWidget {
+  const _DriverCard({required this.driver});
+  final TrackingDriver driver;
+
+  Future<void> _call(BuildContext context) async {
+    final phone = driver.phone;
+    if (phone == null || phone.isEmpty) return;
+
+    final uri = Uri(scheme: 'tel', path: phone);
+    // canLaunchUrl قبل النداء: جهاز بلا تطبيق اتصال (جهاز لوحي) يرمي
+    // استثناءً لا يفهمه الزبون
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'رقم السائق: $phone',
+            style: AppTextStyles.sfarabicMedium.copyWith(color: AppColors.white),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _openMap() async {
+    if (!driver.hasLocation) return;
+    final uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=${driver.latitude},${driver.longitude}');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  color: AppColors.blueCardBackgourd,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.person_outline,
+                    color: AppColors.blueCard, size: 24),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      driver.isPickup
+                          ? 'سائق الاستلام'
+                          : 'سائق التوصيل',
+                      style: AppTextStyles.sfarabicRegular.copyWith(
+                          fontSize: 11.5,
+                          color: AppColors.secondaryTextColor),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            driver.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.sfarabicBold.copyWith(
+                                fontSize: 15.5, color: AppColors.gray80),
+                          ),
+                        ),
+                        if (driver.rating != null && driver.rating! > 0) ...[
+                          const SizedBox(width: 7),
+                          const Icon(Icons.star_rounded,
+                              size: 15, color: AppColors.orangeCard),
+                          const SizedBox(width: 2),
+                          Text(
+                            driver.rating!.toStringAsFixed(1),
+                            style: AppTextStyles.poppinsMedium.copyWith(
+                                fontSize: 12.5, color: AppColors.gray60),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if ((driver.phone ?? '').isNotEmpty)
+                Material(
+                  color: AppColors.green,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => _call(context),
+                    child: const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Icon(Icons.call,
+                          size: 20, color: AppColors.white),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (driver.hasLocation) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, thickness: 1, color: AppColors.stroke),
+            const SizedBox(height: 6),
+            InkWell(
+              onTap: _openMap,
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.my_location,
+                        size: 17, color: AppColors.green),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'تتبّع موقع السائق',
+                        style: AppTextStyles.sfarabicMedium.copyWith(
+                            fontSize: 13.5, color: AppColors.green),
+                      ),
+                    ),
+                    // عمر التحديث معروض: «منذ ٤ دقائق» تجعل الزبون
+                    // يفهم لماذا لم تتحرّك النقطة
+                    Text(
+                      _ageLabel(driver.locationAgeSeconds),
+                      style: AppTextStyles.sfarabicRegular.copyWith(
+                          fontSize: 11,
+                          color: AppColors.secondaryTextColor),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _ageLabel(int? seconds) {
+    if (seconds == null) return '';
+    if (seconds < 60) return 'الآن';
+    final m = (seconds / 60).round();
+    return 'منذ $m ${m == 1 ? "دقيقة" : "دقائق"}';
   }
 }
 

@@ -292,6 +292,9 @@ class _MetaRow extends StatelessWidget {
       if (store.averagePrice != null)
         _MetaItem(Icons.sell_outlined,
             'متوسّط ${store.averagePrice!.toStringAsFixed(0)}₪'),
+      // ساعات العمل (٢.١.٢) — آخر السطر لأنها الأطول نصّاً
+      if ((store.workingHours ?? '').isNotEmpty)
+        _MetaItem(Icons.access_time, store.workingHours!),
     ];
 
     if (items.isEmpty) return const SizedBox.shrink();

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:saleem_dry_clean/components/Stores/StoreRatingsSection.dart';
 import 'package:saleem_dry_clean/screens/Stores/product_size_sheet.dart';
+import 'package:saleem_dry_clean/services/Providers/StoresProvider.dart';
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/services/BasketItemData.dart';
 import 'package:saleem_dry_clean/services/Models/Service.dart';
@@ -160,6 +162,10 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
         slivers: [
           _CoverAppBar(store: widget.store),
           SliverToBoxAdapter(child: _StoreHeadline(store: widget.store)),
+          // كتلة التقييم (٢.١.٣) — تحت الترويسة وفوق اختيار الخدمة
+          SliverToBoxAdapter(
+            child: StoreRatingsSection(storeId: widget.store.id),
+          ),
           if (cat.services.length > 1)
             SliverToBoxAdapter(
               child: _ServiceTabs(
@@ -262,6 +268,23 @@ class _CoverAppBar extends StatelessWidget {
       backgroundColor: AppColors.white,
       foregroundColor: AppColors.gray80,
       elevation: 0,
+      actions: [
+        // زرّ المفضّلة في صفحة المحل — تطلبه الوثيقة (٢.١.٨) صراحةً.
+        // كان القلب في بطاقة القائمة وحدها، فمن يدخل الصفحة مباشرة من
+        // إشعار أو رابط لا يجد سبيلاً لحفظ المحل.
+        Consumer<StoresProvider>(
+          builder: (context, stores, _) {
+            final fav = stores.isFavorite(store.id);
+            return IconButton(
+              onPressed: () => stores.toggleFavorite(store.id),
+              icon: Icon(
+                fav ? Icons.favorite : Icons.favorite_border,
+                color: fav ? AppColors.red : AppColors.gray70,
+              ),
+            );
+          },
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
         background: Stack(
@@ -351,26 +374,30 @@ class _StoreHeadline extends StatelessWidget {
               ),
             ),
           ],
-          if (store.turnaroundLabel != null || store.minOrderTotal > 0) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                if (store.turnaroundLabel != null)
-                  _Pill(
-                    icon: Icons.schedule,
-                    label: 'الجاهزية ${store.turnaroundLabel}',
-                  ),
-                if (store.turnaroundLabel != null && store.minOrderTotal > 0)
-                  const SizedBox(width: 8),
-                if (store.minOrderTotal > 0)
-                  _Pill(
-                    icon: Icons.shopping_bag_outlined,
-                    label:
-                        'أقلّ طلب ${store.minOrderTotal.toStringAsFixed(0)}₪',
-                  ),
-              ],
-            ),
-          ],
+          // Wrap لا Row: ساعات العمل نصّ حرّ قد يطول، وRow يفيض
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (store.turnaroundLabel != null)
+                _Pill(
+                  icon: Icons.schedule,
+                  label: 'الجاهزية ${store.turnaroundLabel}',
+                ),
+              if (store.minOrderTotal > 0)
+                _Pill(
+                  icon: Icons.shopping_bag_outlined,
+                  label: 'أقلّ طلب ${store.minOrderTotal.toStringAsFixed(0)}₪',
+                ),
+              // ساعات العمل (٢.١.٢)
+              if ((store.workingHours ?? '').isNotEmpty)
+                _Pill(
+                  icon: Icons.access_time,
+                  label: store.workingHours!,
+                ),
+            ],
+          ),
         ],
       ),
     );

@@ -34,16 +34,65 @@ class TrackingStep {
       );
 }
 
+/// السائق المسنَد للمهمة الجارية (٢.١.٥).
+class TrackingDriver {
+  const TrackingDriver({
+    required this.name,
+    required this.taskType,
+    this.phone,
+    this.rating,
+    this.latitude,
+    this.longitude,
+    this.locationAgeSeconds,
+  });
+
+  final String name;
+
+  /// `pickup` أو `delivery` — يغيّر نصّ البطاقة: «قادم لاستلام غسيلك»
+  /// غير «في طريقه إليك بغسيلك»
+  final String taskType;
+  final String? phone;
+  final double? rating;
+
+  final double? latitude;
+  final double? longitude;
+
+  /// عمر آخر تحديث موقع — الخادم يُهمل ما تجاوز خمس دقائق فيصل null
+  final int? locationAgeSeconds;
+
+  bool get hasLocation => latitude != null && longitude != null;
+  bool get isPickup => taskType == 'pickup';
+
+  factory TrackingDriver.fromJson(Map<String, dynamic> j) {
+    final loc = j['location'];
+    final m = loc is Map ? Map<String, dynamic>.from(loc) : null;
+    return TrackingDriver(
+      name: (j['name'] ?? 'السائق').toString(),
+      taskType: (j['taskType'] ?? '').toString(),
+      phone: j['phone'] as String?,
+      rating: j['rating'] == null
+          ? null
+          : double.tryParse('${j['rating']}'),
+      latitude: m == null ? null : double.tryParse('${m['latitude']}'),
+      longitude: m == null ? null : double.tryParse('${m['longitude']}'),
+      locationAgeSeconds:
+          m == null ? null : int.tryParse('${m['ageSeconds'] ?? 0}'),
+    );
+  }
+}
+
 class OrderTracking {
   OrderTracking({
     required this.current,
     required this.history,
     this.view = 'customer',
+    this.driver,
   });
 
   final TrackingStep current;
   final List<TrackingStep> history;
   final String view;
+  final TrackingDriver? driver;
 
   /// الطلب المنتهي — لا خطوة قادمة بعده.
   ///
@@ -66,6 +115,9 @@ class OrderTracking {
       history: ((j['history'] as List?) ?? const [])
           .map((e) => TrackingStep.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
+      driver: j['driver'] is Map
+          ? TrackingDriver.fromJson(Map<String, dynamic>.from(j['driver'] as Map))
+          : null,
     );
   }
 }
