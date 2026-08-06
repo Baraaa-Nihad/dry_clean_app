@@ -650,6 +650,13 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
         // ويبقى الاشتقاق في الخادم مسانداً لسلّة قديمة بلا ربط.
         if (orderProvider.storeId != null)
           'dry_clean_id': orderProvider.storeId,
+        // الكود يُرسَل ولا تُرسَل قيمته: الخادم يعيد حسابها ويستهلك
+        // الكود داخل معاملة الطلب. إرسال القيمة يعني أن تعديلها في
+        // الطلب يخصم ما شاء
+        if ((orderProvider.promoCode ?? '').isNotEmpty)
+          'promoCode': orderProvider.promoCode,
+        if (orderProvider.customerNote.trim().isNotEmpty)
+          'customerNote': orderProvider.customerNote.trim(),
         'items': orderProvider.cart.map((item) => item.toJson()).toList(),
         'subtotal': orderProvider.subtotal,
         'deliveryFees': orderProvider.deliveryFees,

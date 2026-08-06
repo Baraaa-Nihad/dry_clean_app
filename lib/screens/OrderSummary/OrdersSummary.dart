@@ -4,7 +4,9 @@ import 'package:saleem_dry_clean/components/Cards/CollectionDelivery.dart';
 import 'package:saleem_dry_clean/components/Cards/ItemSummary.dart';
 import 'package:saleem_dry_clean/components/Cards/PaymentDetails.dart';
 import 'package:saleem_dry_clean/components/Cards/payment_method.dart';
+import 'package:saleem_dry_clean/components/Checkout/promo_and_note_section.dart';
 import 'package:saleem_dry_clean/components/LoadingDots/LoadingDots.dart';
+import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/services/Providers/DryCleanProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/OrderProvider.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
@@ -57,6 +59,12 @@ class OrdersSummary extends StatelessWidget {
             child: SingleChildScrollView(
               child: Column(
                 children: [
+                  // اسم المغسلة بوضوح (٢.١.٤).
+                  //
+                  // آخر شاشة قبل الدفع هي آخر فرصة للزبون كي يكتشف أنه
+                  // في المحل الخطأ. وقد اختاره قبل عدّة شاشات.
+                  if (orderProvider.storeName != null)
+                    _StoreLine(name: orderProvider.storeName!),
                   CollectionDelivery(
                     location: addressName,
                     collectionTime: orderProvider.pickupTime ?? 'Not set',
@@ -83,6 +91,9 @@ class OrdersSummary extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 6),
+                  // كود الخصم وملاحظة الزبون (٢.١.٤)
+                  const PromoAndNoteSection(),
+                  SizedBox(height: 6),
                   Container(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,6 +104,13 @@ class OrdersSummary extends StatelessWidget {
                               dryCleanProvider.dryClean?.deliveryFees ?? 0.0,
                           total: orderProvider.total,
                         ),
+                        // سطر الخصم يظهر فقط عند وجوده: صفر معروض يجعل
+                        // الزبون يبحث عن خصم لم يطلبه
+                        if (orderProvider.discount > 0)
+                          _DiscountLine(
+                            code: orderProvider.promoCode ?? '',
+                            amount: orderProvider.discount,
+                          ),
                         PaymentMethod(
                           paymentMethod:
                               localizations.translate('cash on delivery'),
@@ -110,4 +128,68 @@ class OrdersSummary extends StatelessWidget {
       },
     );
   }
+}
+
+/// اسم المغسلة أعلى الملخّص.
+class _StoreLine extends StatelessWidget {
+  const _StoreLine({required this.name});
+  final String name;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        color: AppColors.white,
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 4),
+        child: Row(
+          children: [
+            const Icon(Icons.storefront_outlined,
+                size: 20, color: AppColors.green),
+            const SizedBox(width: 9),
+            Expanded(
+              child: RichText(
+                text: TextSpan(
+                  style: AppTextStyles.sfarabicRegular.copyWith(
+                      fontSize: 13.5, color: AppColors.secondaryTextColor),
+                  children: [
+                    const TextSpan(text: 'طلبك من '),
+                    TextSpan(
+                      text: name,
+                      style: AppTextStyles.sfarabicBold
+                          .copyWith(fontSize: 14.5, color: AppColors.gray80),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+/// سطر الخصم أسفل تفاصيل الدفع.
+class _DiscountLine extends StatelessWidget {
+  const _DiscountLine({required this.code, required this.amount});
+  final String code;
+  final double amount;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                code.isEmpty ? 'الخصم' : 'الخصم ($code)',
+                style: AppTextStyles.sfarabicMedium
+                    .copyWith(fontSize: 13.5, color: AppColors.green),
+              ),
+            ),
+            Text(
+              '− ${amount.toStringAsFixed(2)}₪',
+              style: AppTextStyles.poppinsSemiBold
+                  .copyWith(fontSize: 14, color: AppColors.green),
+            ),
+          ],
+        ),
+      );
 }

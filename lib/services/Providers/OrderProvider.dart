@@ -23,6 +23,19 @@ class OrderProvider with ChangeNotifier {
   int? _storeId;
   String? _storeName;
 
+  /// كود الخصم بعد التحقّق منه، وقيمته كما حسبها الخادم.
+  ///
+  /// ★ القيمة من الخادم لا تُحسب هنا ★
+  ///
+  /// حساب النسبة في التطبيق يعني قاعدتين لنفس الرقم: واحدة تعرض
+  /// للزبون وأخرى تُحتسب عند الطلب. وتفترقان عند أول كود بحدّ أقصى أو
+  /// بشرط محل — فيرى الزبون خصماً ويُحاسَب بغيره.
+  String? _promoCode;
+  double _discount = 0;
+
+  /// ملاحظة الزبون على الطلب — «اتصل قبل الوصول» ونحوها
+  String _customerNote = '';
+
   Map<String, dynamic>? _address;
   String? _pickupTime;
   String? _deliveryTime;
@@ -42,6 +55,9 @@ class OrderProvider with ChangeNotifier {
   List<BasketItemData> get cart => _cart;
   int? get storeId => _storeId;
   String? get storeName => _storeName;
+  String? get promoCode => _promoCode;
+  double get discount => _discount;
+  String get customerNote => _customerNote;
   Map<String, dynamic>? get address => _address;
   String? get pickupTime => _pickupTime;
   String? get deliveryTime => _deliveryTime;
@@ -53,13 +69,31 @@ class OrderProvider with ChangeNotifier {
 
   // O(1) reads — cache is updated by _invalidateCache() on every mutation
   double get subtotal => _cachedSubtotal;
-  double get total => _cachedSubtotal + _deliveryFees;
+
+  /// الإجمالي بعد الخصم، ولا ينزل تحت الصفر — خصم يتجاوز قيمة الطلب
+  /// لا يجعل سليم تدفع للزبون
+  double get total {
+    final t = _cachedSubtotal + _deliveryFees - _discount;
+    return t < 0 ? 0 : t;
+  }
   int get totalQuantity => _cachedTotalQuantity;
 
   /// Recomputes cached totals. Call after any change to _cart or _deliveryFees.
   void _invalidateCache() {
     _cachedSubtotal = _cart.fold(0.0, (sum, item) => sum + item.subtotal);
     _cachedTotalQuantity = _cart.fold(0, (sum, item) => sum + item.quantity);
+
+    // ★ تغيّر السلّة يُبطل الخصم ★
+    //
+    // قيمة الخصم محسوبة على قيمة سلّة بعينها، وكثير من الأكواد لها حدّ
+    // أدنى. فزبون يضع كوداً على سلّة بستّين ثم يحذف نصفها يبقى خصمه
+    // معروضاً — ثم يرفض الخادم الكود عند الطلب فيفشل الطلب كلّه.
+    //
+    // الإبطال هنا لا في كل شاشة: الشاشات كثيرة والسلّة واحدة.
+    if (_promoCode != null) {
+      _promoCode = null;
+      _discount = 0;
+    }
   }
 
   /// Debounced persist — collapses rapid taps into one SharedPreferences write.
@@ -72,6 +106,26 @@ class OrderProvider with ChangeNotifier {
   void dispose() {
     _saveDebounce?.cancel();
     super.dispose();
+  }
+
+  /// تثبيت كود خصم تحقّق منه الخادم.
+  void applyPromo(String code, double discount) {
+    _promoCode = code;
+    _discount = discount < 0 ? 0 : discount;
+    _scheduleSave();
+    notifyListeners();
+  }
+
+  void clearPromo() {
+    _promoCode = null;
+    _discount = 0;
+    _scheduleSave();
+    notifyListeners();
+  }
+
+  void setCustomerNote(String note) {
+    _customerNote = note;
+    _scheduleSave();
   }
 
   /// هل تقبل السلّة صنفاً من هذا المحل؟
@@ -275,6 +329,9 @@ class OrderProvider with ChangeNotifier {
     _cart.clear();
     _storeId = null;
     _storeName = null;
+    _promoCode = null;
+    _discount = 0;
+    _customerNote = '';
     _address = null;
     _pickupTime = null;
     _deliveryTime = null;
