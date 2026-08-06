@@ -17,6 +17,7 @@ import 'package:saleem_dry_clean/services/ApiClient/DeviceService.dart';
 import 'package:saleem_dry_clean/services/Models/CheckoutModel.dart';
 import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
 import 'package:saleem_dry_clean/services/Providers/AddressCategoriesProvider.dart';
+import 'package:saleem_dry_clean/services/Providers/AccountExtrasProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/AreaProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/BannerProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/DryCleanProvider.dart';
@@ -222,6 +223,11 @@ Future<void> main() async {
         // التتبّع والتقييم والمطالبات — كلها بعد إنشاء الطلب
         ChangeNotifierProvider(
           create: (_) => OrderTrackingProvider(tokenService),
+          lazy: true,
+        ),
+        // سجلّ التقييمات وتفضيلات الإشعارات — شاشتان في More
+        ChangeNotifierProvider(
+          create: (_) => AccountExtrasProvider(tokenService),
           lazy: true,
         ),
         // TokenService is a global singleton (top of file); expose the same

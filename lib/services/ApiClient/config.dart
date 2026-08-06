@@ -85,6 +85,9 @@ class Config {
   // تتبّع الطلب والتقييمات ومطالبات التلف
   static String get orderTrackingApi => '${fullApiUrl}orders';
   static String get ratableTargetsApi => '${fullApiUrl}orders';
+
+  /// سجلّ تقييمات الزبون — صفحة الحساب (٢.١.٨)
+  static String get myRatingsApi => '${fullApiUrl}my-ratings';
   static String get damageClaimsApi => '${fullApiUrl}damage-claims';
   static String get updateAddressApi =>
       '${fullApiUrlNoPrivate}users/updateUserAddress';

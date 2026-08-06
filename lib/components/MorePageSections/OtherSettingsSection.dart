@@ -3,6 +3,9 @@ import 'package:saleem_dry_clean/components/Cards/CustomCard.dart';
 import 'package:saleem_dry_clean/components/Modals/LangSelectionModal.dart';
 import 'package:saleem_dry_clean/screens/ContactUs/ContactPage.dart';
 import 'package:saleem_dry_clean/screens/Feedback/FeedbackPage.dart';
+import 'package:saleem_dry_clean/screens/MorePage/favorite_stores_screen.dart';
+import 'package:saleem_dry_clean/screens/MorePage/my_ratings_screen.dart';
+import 'package:saleem_dry_clean/screens/MorePage/notification_settings_screen.dart';
 import 'package:saleem_dry_clean/screens/WebViewPage/web_view_page.dart';
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
@@ -63,6 +66,55 @@ class OtherSettingsSection extends StatelessWidget {
           ),
         ),
         SizedBox(height: 12),
+
+        // ── إضافات صفحة الحساب (٢.١.٨) ──
+        //
+        // الثلاثة تخصّ المسجَّلين وحدهم: تقييمات زائر لا وجود لها،
+        // ومفضّلته وإعداداته لا مكان يُحفظان فيه.
+        if (userSignedIn) ...[
+          CustomCard(
+            heightType: HeightType.normal,
+            title: 'المغاسل المفضّلة',
+            leadingIcon: true,
+            leadingIconPath: 'assets/Icons/comment.svg',
+            trailingIcon: true,
+            trailingIconPath: 'assets/Icons/rightSmallArrow.svg',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const FavoriteStoresScreen()),
+            ),
+          ),
+          SizedBox(height: 12),
+          CustomCard(
+            heightType: HeightType.normal,
+            title: 'تقييماتي',
+            leadingIcon: true,
+            leadingIconPath: 'assets/Icons/comment.svg',
+            trailingIcon: true,
+            trailingIconPath: 'assets/Icons/rightSmallArrow.svg',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MyRatingsScreen()),
+            ),
+          ),
+          SizedBox(height: 12),
+          CustomCard(
+            heightType: HeightType.normal,
+            title: 'إعدادات الإشعارات',
+            leadingIcon: true,
+            leadingIconPath: 'assets/Icons/comment.svg',
+            trailingIcon: true,
+            trailingIconPath: 'assets/Icons/rightSmallArrow.svg',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const NotificationSettingsScreen()),
+            ),
+          ),
+          SizedBox(height: 12),
+        ],
+
         CustomCard(
           heightType: HeightType.normal,
           title: localizations?.translate('App language') ?? "App language",
