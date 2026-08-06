@@ -29,6 +29,7 @@ class Store {
     this.phone,
     this.latitude,
     this.longitude,
+    this.workingHours,
   });
 
   final int id;
@@ -58,6 +59,13 @@ class Store {
   final String? phone;
   final double? latitude;
   final double? longitude;
+
+  /// ساعات العمل كما يكتبها المحل — نصّ حرّ لا بنية.
+  ///
+  /// الوثيقة (٢.١.٢) تطلب عرضها على الكرت. والحقل في القاعدة
+  /// `operation_time` نصّ يكتبه المحل بنفسه، فلا يُحلَّل هنا: تحليل نصّ
+  /// حرّ يفشل عند أول محل يكتب «من ٨ للـ٨ ما عدا الجمعة».
+  final String? workingHours;
 
   /// محل بلا أصناف مسعَّرة لا يستطيع تنفيذ طلب، فيُعرض معطَّلاً لا مخفياً:
   /// إخفاؤه يجعل الزبون يسأل «أين المحل الذي رأيته أمس».
@@ -100,5 +108,6 @@ class Store {
         phone: j['phone'] as String?,
         latitude: _d(j['latitude']),
         longitude: _d(j['longitude']),
+        workingHours: j['processingHours'] as String?,
       );
 }

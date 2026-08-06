@@ -13,7 +13,6 @@ import 'package:saleem_dry_clean/screens/OrdersPage/OrderBasketDetails.dart';
 import 'package:saleem_dry_clean/screens/OrdersPage/orders_page.dart';
 import 'package:saleem_dry_clean/screens/Receipt/OrderReceiptPage.dart';
 import 'package:saleem_dry_clean/screens/OrdersPage/order_tracking_screen.dart';
-import 'package:saleem_dry_clean/screens/ServicePage/ServicePage.dart';
 import 'package:saleem_dry_clean/screens/SignInPage/SignIn.dart';
 import 'package:saleem_dry_clean/screens/Stores/StoreCatalogScreen.dart';
 import 'package:saleem_dry_clean/screens/Stores/StoresScreen.dart';
@@ -84,30 +83,18 @@ class RouteGenerator {
         }
         return _errorRoute('Invalid arguments for OrderBasketDetails');
 
-      // Handle ServicePage
+      // ServicePage حُذفت مع الطريق القديم — اختيار الخدمة صار داخل
+      // صفحة المحل حيث للأسعار معنى. أي رابط قديم يقود إلى المغاسل بدل
+      // شاشة خطأ لا يفهمها الزبون.
       case RouteNames.service:
-        if (args is Map<String, dynamic>) {
-          final requiredKeys = [
-            'serviceName',
-            'generalUnit',
-            'pricePerUnit',
-            'serviceTypeId',
-          ];
-          for (var key in requiredKeys) {
-            if (!args.containsKey(key)) {
-              return _errorRoute('Missing "$key" argument for ServicePage');
-            }
-          }
-          return MaterialPageRoute(
-            builder: (_) => ServicePage(
-              serviceName: args['serviceName'],
-              generalUnit: args['generalUnit'],
-              pricePerUnit: args['pricePerUnit'],
-              serviceTypeId: args['serviceTypeId'],
+        return MaterialPageRoute(
+          builder: (_) => StoresScreen(
+            onStoreSelected: (store) => NavigatorService.navigateTo(
+              RouteNames.storeCatalog,
+              arguments: {'store': store},
             ),
-          );
-        }
-        return _errorRoute('Invalid arguments for ServicePage');
+          ),
+        );
 
       // Handle ErrorPage
       case RouteNames.error:

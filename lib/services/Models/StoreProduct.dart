@@ -22,6 +22,8 @@ class StoreProduct {
     this.imagePath,
     this.offerPrice,
     this.hasOffer = false,
+    this.unit = 'item',
+    this.sizes = const [],
   });
 
   final int productId;
@@ -42,6 +44,20 @@ class StoreProduct {
 
   final double? offerPrice;
   final bool hasOffer;
+
+  /// وحدة التسعير: `item` للقطعة أو `Square meter` للمتر المربّع.
+  ///
+  /// ★ لماذا تهمّ ★
+  ///
+  /// سجادة ٤×٦ بسعر ١٠ للمتر ثمنها ٢٤٠ لا ١٠. وبلا هذا الحقل يضيفها
+  /// التطبيق بسعر متر واحد — الزبون يدفع أقلّ بستّة وتسعين بالمئة،
+  /// والمحل يغسل سجادة بثمن منديل.
+  final String unit;
+
+  /// المقاسات الجاهزة — الزبون يختار منها بدل قياس سجادته بنفسه
+  final List<ProductSize> sizes;
+
+  bool get isPerSquareMeter => unit == 'Square meter';
 
   /// مفتاح السطر في السلّة: الصنف نفسه بخدمتين سطران لا سطر واحد
   String get key => '$productId-$serviceId';
@@ -73,8 +89,38 @@ class StoreProduct {
           j['effectivePrice'] == null ? price : _d(j['effectivePrice']),
       offerPrice: j['offerPrice'] == null ? null : _d(j['offerPrice']),
       hasOffer: j['hasOffer'] == true,
+      unit: (j['unit'] ?? 'item').toString(),
+      sizes: ((j['sizes'] as List?) ?? const [])
+          .map((e) => ProductSize.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
     );
   }
+}
+
+/// مقاس جاهز لصنف يُسعَّر بالمتر المربّع.
+class ProductSize {
+  const ProductSize({
+    required this.height,
+    required this.width,
+    required this.area,
+  });
+
+  final double height;
+  final double width;
+  final double area;
+
+  /// «٤ × ٦ م» — أوضح للزبون من «٢٤ م²» وحدها
+  String get label =>
+      '${_n(width)} × ${_n(height)} م  ·  ${_n(area)} م²';
+
+  static String _n(double v) =>
+      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2);
+
+  factory ProductSize.fromJson(Map<String, dynamic> j) => ProductSize(
+        height: double.tryParse('${j['height'] ?? 0}') ?? 0,
+        width: double.tryParse('${j['width'] ?? 0}') ?? 0,
+        area: double.tryParse('${j['area'] ?? 0}') ?? 0,
+      );
 }
 
 /// خدمة المحل وما تحتها من أصناف — بنية تبويب الشاشة.

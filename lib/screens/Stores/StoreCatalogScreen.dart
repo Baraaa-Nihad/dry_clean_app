@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:saleem_dry_clean/screens/Stores/product_size_sheet.dart';
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/services/BasketItemData.dart';
 import 'package:saleem_dry_clean/services/Models/Service.dart';
@@ -60,6 +61,18 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
   Future<void> _add(StoreProduct p) async {
     final order = context.read<OrderProvider>();
 
+    // ★ المساحة قبل السعر ★
+    //
+    // الصنف المسعَّر بالمتر لا يُضاف بضغطة واحدة: سجادة ٤×٦ بسعر ١٠
+    // للمتر ثمنها ٢٤٠. وإضافتها بلا مقاس تُدخلها السلّة بعشرة شواكل —
+    // الزبون يدفع جزءاً من ثمنها والمحل يكتشف الفرق عند الاستلام.
+    String area = '';
+    if (p.isPerSquareMeter) {
+      final chosen = await showProductSizeSheet(context, product: p);
+      if (chosen == null) return;
+      area = chosen.toString();
+    }
+
     if (!order.acceptsStore(widget.store.id)) {
       final ok = await _confirmSwitch(order.storeName);
       if (ok != true) return;
@@ -81,10 +94,19 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
       ),
       imagePath: p.imagePath ?? '',
       price: p.effectivePrice,
-      unit: 'piece',
+      unit: p.unit,
       quantity: 1,
-      subCategory: p.groupName ?? '',
-      subtotal: p.effectivePrice,
+      subCategory: p.name,
+      area: area,
+      // الحساب من دالة السلّة نفسها لا بضربٍ هنا: هي التي تعرف أن
+      // المتر المربّع يُضرب في المساحة، ونسخة ثانية من القاعدة تنفرد
+      // عنها عند أول تعديل
+      subtotal: BasketItemData.calculateSubtotal(
+        p.unit,
+        p.effectivePrice,
+        1,
+        area,
+      ),
     ));
   }
 
@@ -546,6 +568,17 @@ class _ProductTile extends StatelessWidget {
                       style: AppTextStyles.poppinsSemiBold
                           .copyWith(fontSize: 14, color: AppColors.green),
                     ),
+                    // «للمتر» بجانب السعر: بدونها يقرأ الزبون ١٠₪ ثمناً
+                    // للسجادة كاملة ثم يفاجئه ٢٤٠ في السلّة
+                    if (product.isPerSquareMeter) ...[
+                      const SizedBox(width: 3),
+                      Text(
+                        '/ م²',
+                        style: AppTextStyles.sfarabicRegular.copyWith(
+                            fontSize: 11,
+                            color: AppColors.secondaryTextColor),
+                      ),
+                    ],
                     if (discount != null) ...[
                       const SizedBox(width: 7),
                       Text(
@@ -577,13 +610,21 @@ class _ProductTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          _Stepper(
-            quantity: qty,
-            onAdd: onAdd,
-            onRemove: line == null
-                ? null
-                : () => context.read<OrderProvider>().removeProduct(line),
-          ),
+          // المسعَّر بالمتر: زرّ إضافة دائماً لا عدّاد.
+          //
+          // العدّاد يفترض أن كل الوحدات متطابقة، وسجاجيد الزبون
+          // بمقاسات مختلفة — كلٌّ سطر مستقلّ في السلّة. وعدّاد يعرض
+          // «٢» فوق سطرين مختلفَي المساحة يكذب على أيّهما نظر.
+          if (product.isPerSquareMeter)
+            _Stepper(quantity: 0, onAdd: onAdd, onRemove: null)
+          else
+            _Stepper(
+              quantity: qty,
+              onAdd: onAdd,
+              onRemove: line == null
+                  ? null
+                  : () => context.read<OrderProvider>().removeProduct(line),
+            ),
         ],
       ),
     );

@@ -105,9 +105,18 @@ class OrderProvider with ChangeNotifier {
   // Adds a product to the cart and calculates subtotal for the item
   void addProduct(BasketItemData newItem) {
     // Check if the item already exists in the cart based on productId and serviceType.id
+    // المطابقة تشمل المساحة.
+    //
+    // ★ لماذا ★
+    //
+    // سجادتان بنفس الصنف والخدمة لكن ٤×٦ و٢×٣ ليستا سطراً واحداً
+    // بكمية اثنين. الدمج بلا المساحة كان يُبقي مساحة الأولى ويضاعفها،
+    // فيدفع الزبون ثمن سجادتين كبيرتين وقد أرسل واحدة كبيرة وأخرى
+    // صغيرة. والمساحة فارغة للمسعَّر بالقطعة، فسلوكه لم يتغيّر.
     int existingIndex = _cart.indexWhere((item) =>
         item.productId == newItem.productId &&
-        item.serviceType.id == newItem.serviceType.id);
+        item.serviceType.id == newItem.serviceType.id &&
+        item.area == newItem.area);
 
     if (existingIndex != -1) {
       // Item exists, update the quantity and subtotal

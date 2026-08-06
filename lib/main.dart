@@ -25,7 +25,6 @@ import 'package:saleem_dry_clean/services/Providers/StoreCatalogProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/StoresProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/LanguageProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/NavigationProvider.dart';
-import 'package:saleem_dry_clean/services/Providers/ServiceTypeProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/ThemeProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/TimeSelectionProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/UserProvider.dart';
@@ -230,10 +229,6 @@ Future<void> main() async {
         ChangeNotifierProvider(
             create: (_) => NotificationProvider(tokenService)),
         ChangeNotifierProvider(create: (_) => OnboardingProvider()),
-        ChangeNotifierProvider<ServiceTypeProvider>(
-          create: (_) => ServiceTypeProvider(client, languageProvider),
-          lazy: true,
-        ),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(
