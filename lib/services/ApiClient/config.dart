@@ -58,11 +58,36 @@ class Config {
   static String get updateUserNameApi => '${fullApiUrlNoPrivate}editUserName/';
   static String get updateUserEmailApi =>
       '${fullApiUrlNoPrivate}editUserEmail/';
-  static String get getGovernatesApi => '${fullApiUrlNoPrivate}getGovernates/';
+  /// المحافظات.
+  ///
+  /// كان '${fullApiUrlNoPrivate}getGovernates/' — مسار لا وجود له في
+  /// الخادم إطلاقاً. لم يظهر العطل لأن لا شاشة تناديه بعد، لكنه فخّ
+  /// لأول من يبني شاشة عليه. الصحيح /private/governates.
+  static String get getGovernatesApi => '${fullApiUrl}governates';
   static String get addAddressApi => '${fullApiUrlNoPrivate}users/addAddress/';
   static String get getAddressNamesApi =>
       '${fullApiUrlNoPrivate}getAddressNames/';
   static String get changePasswordApi => '${fullApiUrl}change-password';
+
+  // ─────────── نموذج الوسيط: المحل أولاً ثم كتالوجه ───────────
+  //
+  // مسارات /customer/* الجديدة بدل /drycleans القديمة: الأخيرة تخدم
+  // شاشات الدفع القائمة ولوحة التحكم، وتغيير شكل ردّها يكسرهما.
+  static String get storesApi => '${fullApiUrl}customer/drycleans';
+  static String get storeDetailsApi => '${fullApiUrl}customer/drycleans';
+  static String get favoriteStoresApi => '${fullApiUrl}customer/favorites';
+
+  // أكواد الخصم وتفضيلات الإشعارات
+  static String get validatePromoApi => '${fullApiUrl}promo-codes/validate';
+  static String get notificationPrefsApi =>
+      '${fullApiUrl}notification-preferences';
+
+  // تتبّع الطلب والتقييمات ومطالبات التلف
+  static String get orderTrackingApi => '${fullApiUrl}orders';
+  static String get ratableTargetsApi => '${fullApiUrl}orders';
+  static String get damageClaimsApi => '${fullApiUrl}damage-claims';
+  static String get updateAddressApi =>
+      '${fullApiUrlNoPrivate}users/updateUserAddress';
 
   static String get getOrdersApi => '${fullApiUrlNoPrivate}users/UserOrders';
   static String get getOrderItemsApi => '${fullApiUrl}orders/items';

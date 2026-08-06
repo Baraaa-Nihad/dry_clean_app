@@ -13,7 +13,10 @@ import 'package:saleem_dry_clean/components/Cards/ShimmerOrderHeader.dart';
 import 'package:saleem_dry_clean/components/Cards/SkeletonOrderDetails.dart';
 import 'package:saleem_dry_clean/components/Cards/SkeletonOrderFooter.dart';
 import 'package:saleem_dry_clean/components/Cards/SkeletonOrderItems.dart';
+import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
 import 'package:saleem_dry_clean/services/orderService/OrderData.dart';
+import 'package:saleem_dry_clean/style/AppTextStyles.dart';
+import 'package:saleem_dry_clean/utils/route_names.dart';
 
 class OrderCard extends StatelessWidget {
   final OrderData? order;
@@ -103,6 +106,40 @@ class OrderCard extends StatelessWidget {
               : isLoadingItems
                   ? const SkeletonOrderFooter()
                   : OrderFooter(order: order!),
+
+          // تتبّع الطلب.
+          //
+          // في البطاقة لا في شاشة التفاصيل: «وين طلبي» أكثر ما يُسأل بعد
+          // الطلب، وإخفاؤه خلف ضغطتين يحوّل السؤال إلى مكالمة دعم.
+          if (!isOrderLoading && !isLoadingItems) ...[
+            Divider(color: AppColors.gray20, thickness: 1, height: 1),
+            InkWell(
+              onTap: () => NavigatorService.navigateTo(
+                RouteNames.orderTracking,
+                arguments: {
+                  'orderId': order!.orderId,
+                  'orderNumber': '#${order!.orderId}',
+                },
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.timeline,
+                        size: 18, color: AppColors.green),
+                    const SizedBox(width: 7),
+                    Text(
+                      'تتبّع الطلب',
+                      style: AppTextStyles.sfarabicBold
+                          .copyWith(fontSize: 13.5, color: AppColors.green),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

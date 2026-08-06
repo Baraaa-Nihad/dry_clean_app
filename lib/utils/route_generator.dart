@@ -12,8 +12,13 @@ import 'package:saleem_dry_clean/screens/Onboarding/onboarding_screen.dart';
 import 'package:saleem_dry_clean/screens/OrdersPage/OrderBasketDetails.dart';
 import 'package:saleem_dry_clean/screens/OrdersPage/orders_page.dart';
 import 'package:saleem_dry_clean/screens/Receipt/OrderReceiptPage.dart';
+import 'package:saleem_dry_clean/screens/OrdersPage/order_tracking_screen.dart';
 import 'package:saleem_dry_clean/screens/ServicePage/ServicePage.dart';
 import 'package:saleem_dry_clean/screens/SignInPage/SignIn.dart';
+import 'package:saleem_dry_clean/screens/Stores/StoreCatalogScreen.dart';
+import 'package:saleem_dry_clean/screens/Stores/StoresScreen.dart';
+import 'package:saleem_dry_clean/services/Models/Store.dart';
+import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
 import 'package:saleem_dry_clean/screens/main_navigation.dart';
 import 'package:saleem_dry_clean/screens/splashScreen/splash_screen.dart';
 import 'package:saleem_dry_clean/services/User/TokenService.dart';
@@ -118,6 +123,46 @@ class RouteGenerator {
             errorMessage: "",
           ),
         );
+
+      // ── نموذج الوسيط ────────────────────────────────────────────
+
+      // قائمة المغاسل. تفتح الكتالوج عند الاختيار بدل أن تعرف الشاشة
+      // مسارها بنفسها — الشاشة تُستعمل أيضاً من التصفّح لا من الطلب فقط
+      case RouteNames.stores:
+        return MaterialPageRoute(
+          builder: (_) => StoresScreen(
+            areaId: args is Map<String, dynamic> ? args['areaId'] as int? : null,
+            onStoreSelected: (store) => NavigatorService.navigateTo(
+              RouteNames.storeCatalog,
+              arguments: {'store': store},
+            ),
+          ),
+        );
+
+      case RouteNames.storeCatalog:
+        if (args is Map<String, dynamic> && args['store'] is Store) {
+          return MaterialPageRoute(
+            builder: (_) => StoreCatalogScreen(
+              store: args['store'] as Store,
+              onCheckout: () =>
+                  NavigatorService.navigateTo(RouteNames.basket),
+            ),
+          );
+        }
+        return _errorRoute('Invalid arguments for StoreCatalogScreen');
+
+      case RouteNames.orderTracking:
+        if (args is Map<String, dynamic> && args['orderId'] != null) {
+          final id = args['orderId'];
+          return MaterialPageRoute(
+            builder: (_) => OrderTrackingScreen(
+              // المعرّف قد يصل نصاً من حمولة الإشعار لا رقماً
+              orderId: id is int ? id : int.tryParse('$id') ?? 0,
+              orderNumber: args['orderNumber']?.toString(),
+            ),
+          );
+        }
+        return _errorRoute('Invalid arguments for OrderTrackingScreen');
 
       // Add more cases for additional routes
 

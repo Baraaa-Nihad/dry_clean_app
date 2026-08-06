@@ -20,6 +20,9 @@ import 'package:saleem_dry_clean/services/Providers/AddressCategoriesProvider.da
 import 'package:saleem_dry_clean/services/Providers/AreaProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/BannerProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/DryCleanProvider.dart';
+import 'package:saleem_dry_clean/services/Providers/OrderTrackingProvider.dart';
+import 'package:saleem_dry_clean/services/Providers/StoreCatalogProvider.dart';
+import 'package:saleem_dry_clean/services/Providers/StoresProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/LanguageProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/NavigationProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/ServiceTypeProvider.dart';
@@ -207,6 +210,19 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => SignUpProvider()),
         ChangeNotifierProvider(create: (_) => ConnectivityService()),
         ChangeNotifierProvider(create: (_) => DryCleanProvider()),
+        // قائمة المغاسل للاختيار — منفصل عن DryCleanProvider الذي يحفظ
+        // المحل المختار: الاختيار قرار يبقى، والقائمة حالة عابرة
+        ChangeNotifierProvider(create: (_) => StoresProvider(tokenService)),
+        // كتالوج المحل المفتوح — lazy لأن الزبون يمرّ بالقائمة أولاً
+        ChangeNotifierProvider(
+          create: (_) => StoreCatalogProvider(tokenService),
+          lazy: true,
+        ),
+        // التتبّع والتقييم والمطالبات — كلها بعد إنشاء الطلب
+        ChangeNotifierProvider(
+          create: (_) => OrderTrackingProvider(tokenService),
+          lazy: true,
+        ),
         // TokenService is a global singleton (top of file); expose the same
         // instance via Provider so widgets can access it without creating new
         // FlutterSecureStorage instances.

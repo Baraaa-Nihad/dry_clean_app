@@ -640,6 +640,16 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
         'deliveryDate': orderProvider.deliveryDate, // Ensure this is not null
         'pickupTime': orderProvider.pickupTime, // Ensure this is not null
         'deliveryTime': orderProvider.deliveryTime, // Ensure this is not null
+        // المحل الذي اختاره الزبون صراحةً.
+        //
+        // كان الخادم يشتقّه من منطقة العنوان — محل واحد لكل منطقة. وهذا
+        // ينهار في نموذج الوسيط: عدّة محلات تخدم المنطقة نفسها، والزبون
+        // اختار واحداً بعينه ورأى أسعاره. إرساله يمنع تسعير سلّته بأسعار
+        // محل لم يرَه.
+        //
+        // ويبقى الاشتقاق في الخادم مسانداً لسلّة قديمة بلا ربط.
+        if (orderProvider.storeId != null)
+          'dry_clean_id': orderProvider.storeId,
         'items': orderProvider.cart.map((item) => item.toJson()).toList(),
         'subtotal': orderProvider.subtotal,
         'deliveryFees': orderProvider.deliveryFees,

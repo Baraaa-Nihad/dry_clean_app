@@ -6,6 +6,7 @@ import 'package:saleem_dry_clean/components/ImageSlider/BottomCurvedClipper.dart
 import 'package:saleem_dry_clean/components/ImageSlider/ImageSlider.dart';
 import 'package:saleem_dry_clean/components/Notification/NotificationButton.dart';
 import 'package:saleem_dry_clean/components/Services/ServiceTypesCardsSection.dart';
+import 'package:saleem_dry_clean/components/Stores/HomeStoresSection.dart';
 import 'package:saleem_dry_clean/services/Providers/BannerProvider.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/services/Models/user.dart';
@@ -62,7 +63,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       ServiceTypesSection(fem: widget.fem),
-                      // Add more widgets as needed
+                      // المغاسل بعد أنواع الخدمات: الزبون يعرف ما يريد
+                      // غسله قبل أن يهمّه من يغسله
+                      HomeStoresSection(fem: widget.fem),
                     ],
                   ),
                 ),

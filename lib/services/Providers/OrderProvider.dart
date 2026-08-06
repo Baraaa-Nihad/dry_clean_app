@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/services/BasketItemData.dart';
 import 'package:saleem_dry_clean/services/Models/Order.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +9,20 @@ import 'UserProvider.dart';
 
 class OrderProvider with ChangeNotifier {
   List<BasketItemData> _cart = [];
+
+  /// المحل صاحب السلّة.
+  ///
+  /// ★ لماذا سلّة واحدة لمحل واحد ★
+  ///
+  /// كانت سليم هي من تغسل، فالسعر واحد والسلّة تجمع ما تشاء. أمّا وقد
+  /// صار كل محل يضع أسعاره، فالصنف الواحد له سعران مختلفان حسب المحل.
+  /// وسلّة تخلط محلَّين لا يمكن تسعيرها، ولا إسنادها لسائق واحد، ولا
+  /// معرفة من يتحمّل تلفها.
+  ///
+  /// والقيد يُفرض هنا لا في الشاشة: الشاشات كثيرة والسلّة واحدة.
+  int? _storeId;
+  String? _storeName;
+
   Map<String, dynamic>? _address;
   String? _pickupTime;
   String? _deliveryTime;
@@ -27,6 +40,8 @@ class OrderProvider with ChangeNotifier {
   Timer? _saveDebounce;
 
   List<BasketItemData> get cart => _cart;
+  int? get storeId => _storeId;
+  String? get storeName => _storeName;
   Map<String, dynamic>? get address => _address;
   String? get pickupTime => _pickupTime;
   String? get deliveryTime => _deliveryTime;
@@ -57,6 +72,34 @@ class OrderProvider with ChangeNotifier {
   void dispose() {
     _saveDebounce?.cancel();
     super.dispose();
+  }
+
+  /// هل تقبل السلّة صنفاً من هذا المحل؟
+  ///
+  /// السلّة الفارغة تقبل أي محل، والممتلئة تقبل صاحبها وحده.
+  bool acceptsStore(int candidate) =>
+      _cart.isEmpty || _storeId == null || _storeId == candidate;
+
+  /// تثبيت المحل على السلّة.
+  ///
+  /// تُنادى قبل أول إضافة. ولا تفرّغ السلّة عند الاختلاف — التفريغ قرار
+  /// الزبون لا قرارنا، فالشاشة تسأله أولاً ثم تنادي [switchStore].
+  void bindStore(int id, String name) {
+    if (_storeId == id && _storeName == name) return;
+    _storeId = id;
+    _storeName = name;
+    _scheduleSave();
+    notifyListeners();
+  }
+
+  /// تبديل المحل بعد موافقة الزبون — يفرّغ السلّة لأن أسعارها لم تعد تنطبق.
+  void switchStore(int id, String name) {
+    _cart.clear();
+    _storeId = id;
+    _storeName = name;
+    _invalidateCache();
+    _scheduleSave();
+    notifyListeners();
   }
 
   // Adds a product to the cart and calculates subtotal for the item
@@ -124,6 +167,10 @@ class OrderProvider with ChangeNotifier {
   // Removes a product from the cart
   void removeProduct(BasketItemData item) {
     _cart.remove(item);
+    if (_cart.isEmpty) {
+      _storeId = null;
+      _storeName = null;
+    }
     _invalidateCache();
     _scheduleSave();
     notifyListeners();
@@ -132,6 +179,10 @@ class OrderProvider with ChangeNotifier {
   // Clears all items from the cart
   void clearCart() {
     _cart.clear();
+    // السلّة الفارغة بلا محل: إبقاء الربط يمنع الزبون من الطلب من محل
+    // آخر بعد أن أفرغ سلّته بنفسه
+    _storeId = null;
+    _storeName = null;
     _invalidateCache();
     _scheduleSave();
     notifyListeners();
@@ -200,6 +251,8 @@ class OrderProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final cartJson = json.encode({
       'cart': _cart.map((item) => item.toJson()).toList(),
+      'storeId': _storeId,
+      'storeName': _storeName,
       'address': _address, // Store the address map as is
       'pickupTime': _pickupTime,
       'deliveryTime': _deliveryTime,
@@ -211,6 +264,8 @@ class OrderProvider with ChangeNotifier {
   // Method to reset provider state
   void resetProvider() {
     _cart.clear();
+    _storeId = null;
+    _storeName = null;
     _address = null;
     _pickupTime = null;
     _deliveryTime = null;
@@ -233,6 +288,10 @@ class OrderProvider with ChangeNotifier {
       final Map<String, dynamic> jsonMap = json.decode(cartJson);
       final List<dynamic> jsonList = jsonMap['cart'];
       _cart = jsonList.map((json) => BasketItemData.fromJson(json)).toList();
+      // سلّة محفوظة قبل هذا التحديث لا تحمل معرّف محل. لا تُرمى — يكفي
+      // أن تبقى بلا ربط، فأول إضافة تثبّت محلها.
+      _storeId = jsonMap['storeId'] as int?;
+      _storeName = jsonMap['storeName'] as String?;
       _address = jsonMap['address'] as Map<String, dynamic>?;
       _pickupTime = jsonMap['pickupTime'];
       _deliveryTime = jsonMap['deliveryTime'];

@@ -22,4 +22,14 @@ class RouteNames {
   // Add Order route
   static const String receipt = '/receipt'; // New splash screen route
   static const String BasketDetails = '/Details'; // New splash screen route
+
+  // ── نموذج الوسيط: المحل أولاً ──────────────────────────────────
+  //
+  // اختيار المغسلة صار الخطوة الأولى في الطلب لا خطوة عند الدفع:
+  // لكل محل أسعاره، فالسلّة قبل المحل بلا سعر تُحسب به.
+  static const String stores = '/stores';
+  static const String storeCatalog = '/store_catalog';
+
+  /// تتبّع الطلب — يفتح من شاشة الطلبات ومن إشعار تغيّر الحالة
+  static const String orderTracking = '/order_tracking';
 }

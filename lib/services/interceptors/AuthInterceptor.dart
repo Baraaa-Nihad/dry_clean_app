@@ -6,6 +6,12 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/services/User/TokenService.dart';
 
+class _Tokens {
+  const _Tokens(this.accessToken, this.refreshToken);
+  final String accessToken;
+  final String refreshToken;
+}
+
 class AuthInterceptor implements InterceptorContract {
   final TokenService tokenService;
 
@@ -28,8 +34,16 @@ class AuthInterceptor implements InterceptorContract {
     if (accessToken != null) {
       data.headers["Authorization"] = "Bearer $accessToken";
     } else {
-      final deviceId = await _getCachedDeviceId();
-      data.headers["Authorization"] = "Bearer $deviceId";
+      // ★ لا ترويسة أصلاً للزائر ★
+      //
+      // كان يُرسَل `Bearer <معرّف الجهاز>` — نصّ ليس توكناً. والخادم
+      // يحاول التحقّق منه فيردّ 401 مع `logout: true`، أي أن الزائر
+      // يُطرد من جلسة لم يبدأها. والمسارات العامة كانت تُرفض هي الأخرى
+      // لأن الترويسة موجودة وفاسدة.
+      //
+      // ومعرّف الجهاز يُرسَل في ترويسته الخاصة لمن يحتاجه.
+      data.headers.remove("Authorization");
+      data.headers["X-Device-Id"] = await _getCachedDeviceId();
     }
 
     return data;
@@ -40,9 +54,15 @@ class AuthInterceptor implements InterceptorContract {
     if (data.statusCode == 401) {
       final refreshToken = await tokenService.getRefreshToken();
       if (refreshToken != null) {
-        final newAccessToken = await _refreshAccessToken(refreshToken);
-        if (newAccessToken != null) {
-          await tokenService.saveTokens(newAccessToken, refreshToken);
+        final renewed = await _refreshTokens(refreshToken);
+        if (renewed != null) {
+          final newAccessToken = renewed.accessToken;
+          // ★ التوكن المدوَّر يُحفظ ★
+          //
+          // كان يُحفظ التوكن القديم مع الوصول الجديد. والخادم يُبطل
+          // توكن التجديد فور استعماله (تدوير)، فالتجديد التالي يفشل
+          // دائماً — تنجح مرّة واحدة ثم يُطرد المستخدم.
+          await tokenService.saveTokens(newAccessToken, renewed.refreshToken);
 
           final retryRequest = data.request;
           if (retryRequest != null) {
@@ -67,17 +87,45 @@ class AuthInterceptor implements InterceptorContract {
     return data;
   }
 
-  Future<String?> _refreshAccessToken(String refreshToken) async {
-    final response = await http.post(
-      Uri.parse('${Config.apiUrl}/refresh-token'),
-      body: jsonEncode({'refreshToken': refreshToken}),
-      headers: {'Content-Type': 'application/json'},
-    );
+  /// تجديد التوكنين.
+  ///
+  /// ★ ثلاثة أعطال كانت هنا ★
+  ///
+  /// المسار كان `${Config.apiUrl}/refresh-token` — وapiUrl ينتهي بشرطة
+  /// مائلة، فالناتج `//refresh-token` على جذر الخادم لا تحت
+  /// `/api/v1/private`. أي أن التجديد لم يقع مرّة واحدة منذ كُتب.
+  ///
+  /// والقراءة كانت `data['accessToken']` والخادم يردّ
+  /// `{tokens: {accessToken, refreshToken}}` — فحتى لو صحّ المسار لعاد
+  /// null.
+  ///
+  /// والثالث أعلاه: التوكن المدوَّر كان يُهمَل.
+  Future<_Tokens?> _refreshTokens(String refreshToken) async {
+    try {
+      final response = await http.post(
+        Uri.parse(Config.refreshTokenApi),
+        body: jsonEncode({'refreshToken': refreshToken}),
+        headers: {'Content-Type': 'application/json'},
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['accessToken'];
-    } else {
+      if (response.statusCode != 200) return null;
+
+      final body = jsonDecode(response.body);
+      final tokens = body is Map ? body['tokens'] : null;
+      if (tokens is! Map) return null;
+
+      final access = tokens['accessToken'];
+      if (access is! String || access.isEmpty) return null;
+
+      final refreshed = tokens['refreshToken'];
+      return _Tokens(
+        access,
+        // الخادم قد لا يدوّر التوكن في كل ردّ — عندها يبقى القديم صالحاً
+        refreshed is String && refreshed.isNotEmpty ? refreshed : refreshToken,
+      );
+    } catch (_) {
+      // انقطاع الشبكة أثناء التجديد ليس انتهاء جلسة: نعيد null فيبقى
+      // الردّ 401 كما هو، ولا نمحو توكناً ما زال صالحاً
       return null;
     }
   }
@@ -86,7 +134,8 @@ class AuthInterceptor implements InterceptorContract {
     final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     if (Platform.isAndroid) {
       AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      return androidInfo.id ?? "guest";
+      // id غير قابل للعدم في هذا الإصدار — `?? "guest"` كان شيفرة ميتة
+      return androidInfo.id;
     } else if (Platform.isIOS) {
       IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
       return iosInfo.identifierForVendor ?? "guest";

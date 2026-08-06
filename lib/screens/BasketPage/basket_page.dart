@@ -14,6 +14,7 @@ import 'package:saleem_dry_clean/components/Notification/NotificationButton.dart
 import 'package:saleem_dry_clean/services/BasketItemData.dart';
 import 'package:saleem_dry_clean/services/Providers/NavigationProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/OrderProvider.dart';
+import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 
@@ -80,6 +81,14 @@ class BasketPage extends StatelessWidget {
               )
             : Column(
                 children: [
+                  // اسم المغسلة فوق السلّة.
+                  //
+                  // الزبون قد يملأ سلّته ثم يتصفّح مغاسل أخرى ويعود. وبلا
+                  // هذا السطر لا شيء في الشاشة يقول من سيغسل — ويكتشفه
+                  // بعد الدفع.
+                  if (orderProvider.storeName != null)
+                    _StoreBanner(
+                        fem: fem, storeName: orderProvider.storeName!),
                   Expanded(
                     child: ListView.builder(
                       padding: EdgeInsets.symmetric(horizontal: 24 * fem),
@@ -176,6 +185,46 @@ class BasketPage extends StatelessWidget {
         Provider.of<OrderProvider>(context, listen: false).removeProduct(item);
       },
       fem: fem,
+    );
+  }
+}
+
+/// شريط اسم المغسلة أعلى السلّة.
+class _StoreBanner extends StatelessWidget {
+  const _StoreBanner({required this.fem, required this.storeName});
+
+  final double fem;
+  final String storeName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppColors.white,
+      padding: EdgeInsets.symmetric(horizontal: 24 * fem, vertical: 12),
+      child: Row(
+        children: [
+          const Icon(Icons.storefront_outlined,
+              size: 19, color: AppColors.green),
+          const SizedBox(width: 9),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: AppTextStyles.sfarabicRegular.copyWith(
+                    fontSize: 13, color: AppColors.secondaryTextColor),
+                children: [
+                  const TextSpan(text: 'طلبك من '),
+                  TextSpan(
+                    text: storeName,
+                    style: AppTextStyles.sfarabicBold
+                        .copyWith(fontSize: 13.5, color: AppColors.gray80),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
