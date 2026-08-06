@@ -21,6 +21,20 @@ class OrderData {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// لون الحالة كما ضبطته الإدارة — الشارة تستعمله بدل جدول محلي
+  final String? statusColor;
+
+  /// رمز الحالة الثابت (`picked_up` مثلاً).
+  ///
+  /// المنطق يُبنى عليه لا على الاسم: الأسماء تُعدَّل من لوحة التحكم
+  /// وتُترجَم، والرمز لا يتغيّر. ومؤشّر التأخير كان يوازن الاسم
+  /// الإنجليزي فتوقّف عن العمل بالعربية.
+  final String? statusCode;
+
+  /// المغسلة صاحبة الطلب — الوثيقة (٢.١.٥) تطلب اسمها على كل بطاقة
+  final String? drycleanName;
+  final String? drycleanPhone;
+
   List<OrderItem> items;
 
   OrderData({
@@ -43,6 +57,10 @@ class OrderData {
     required this.isDeleted,
     required this.createdAt,
     required this.updatedAt,
+    this.statusColor,
+    this.statusCode,
+    this.drycleanName,
+    this.drycleanPhone,
     this.items = const [],
   });
 
@@ -95,6 +113,13 @@ class OrderData {
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
 
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
+      statusColor: json['status_color'] as String?,
+      statusCode: json['status_code'] as String?,
+      // `DRYCLEAN` اسم قديم في الردّ يسبق `dryclean_name` — يُقرأ
+      // الاثنان كي لا تُفرَّغ البطاقة إن اختلف المسار
+      drycleanName:
+          (json['dryclean_name'] ?? json['DRYCLEAN']) as String?,
+      drycleanPhone: json['dryclean_phone'] as String?,
       items: json['order_items'] != null
           ? (json['order_items'] as List<dynamic>)
               .map((item) => OrderItem.fromJson(item))
@@ -110,7 +135,8 @@ class OrderData {
       'status': status,
       'categories': categories,
       'area_name': location,
-      'collection_date': orderedAt,
+      // كان المفتاحان متطابقين، فالثاني يمحو الأول ويضيع orderedAt
+      'orderedAt': orderedAt,
       'collection_date': collectionDate,
       'delivery_date': deliveryDate,
       'pickup_time': collectionTime,
@@ -150,11 +176,19 @@ class OrderData {
     DateTime? updatedAt,
     DateTime? collectionDate,
     DateTime? deliveryDate,
+    String? statusColor,
+    String? statusCode,
+    String? drycleanName,
+    String? drycleanPhone,
     List<OrderItem>? items,
   }) {
     return OrderData(
       orderId: orderId ?? this.orderId,
       status: status ?? this.status,
+      statusColor: statusColor ?? this.statusColor,
+      statusCode: statusCode ?? this.statusCode,
+      drycleanName: drycleanName ?? this.drycleanName,
+      drycleanPhone: drycleanPhone ?? this.drycleanPhone,
       categories: categories ?? this.categories,
       location: location ?? this.location,
       orderedAt: orderedAt ?? this.orderedAt,

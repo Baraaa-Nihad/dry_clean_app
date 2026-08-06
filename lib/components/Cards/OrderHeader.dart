@@ -34,7 +34,8 @@ class OrderHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          StatusBadge(status: order.status),
+          // اللون من الخادم — والشارة تسقط إلى جدولها المحلي إن غاب
+          StatusBadge(status: order.status, serverColor: order.statusColor),
           const SizedBox(width: 12),
           if (isDelayed)
             Expanded(
@@ -49,7 +50,38 @@ class OrderHeader extends StatelessWidget {
                 ),
               ),
             ),
-          Spacer(),
+          // اسم المغسلة (٢.١.٥).
+          //
+          // الزبون قد يكون له ثلاثة طلبات من ثلاث مغاسل في وقت واحد،
+          // وبلا الاسم لا شيء على البطاقة يميّزها — يفتح التفاصيل ليعرف
+          // أيّها من أين.
+          if (!isDelayed && (order.drycleanName ?? '').isNotEmpty)
+            Expanded(
+              child: Row(
+                children: [
+                  const Icon(Icons.storefront_outlined,
+                      size: 15, color: AppColors.secondaryTextColor),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      order.drycleanName!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.getFontFamily(
+                        context,
+                        AppTextStyles.regular16Gray80(context).copyWith(
+                          fontSize: 12.5,
+                          color: AppColors.secondaryTextColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Spacer(),
+          const SizedBox(width: 8),
           GestureDetector(
             onTap: () {
               NavigatorService.navigateToAndRemoveUntil(

@@ -39,16 +39,30 @@ class OrderCard extends StatelessWidget {
       final DateTime createdAt =
           order!.createdAt.toLocal(); // Order creation time
 
-      // Check against both current DB values and legacy strings
-      if (order!.status == "Awaiting Collection" ||
-          order!.status == "Waiting for collection") {
+      // ★ الموازنة بالرمز لا بالاسم ★
+      //
+      // كانت توازن نصّاً إنجليزياً، والخادم يردّ الاسم بلغة الطلب.
+      // فبالعربية لا يتحقّق أي شرط ولا يظهر مؤشّر التأخير إطلاقاً —
+      // وهو أهمّ ما ينتظره الزبون المتأخّر طلبه.
+      //
+      // والاسم يبقى احتياطاً لردّ قديم لا يحمل رمزاً.
+      final code = order!.statusCode;
+      final awaitingPickup = code == 'driver_assigned_pickup' ||
+          (code == null &&
+              (order!.status == "Awaiting Collection" ||
+                  order!.status == "Waiting for collection"));
+      final outForDelivery = code == 'out_for_delivery' ||
+          (code == null &&
+              (order!.status == "Out for Delivery" ||
+                  order!.status == "Waiting for Delivery"));
+
+      if (awaitingPickup) {
         DateTime? pickupEndTime =
             _parseEndTime(order!.collectionTime, createdAt);
         if (pickupEndTime != null && now.isAfter(pickupEndTime)) {
           isDelayed = true;
         }
-      } else if (order!.status == "Out for Delivery" ||
-          order!.status == "Waiting for Delivery") {
+      } else if (outForDelivery) {
         DateTime? deliveryEndTime =
             _parseEndTime(order!.deliveryTime, createdAt);
         if (deliveryEndTime != null && now.isAfter(deliveryEndTime)) {

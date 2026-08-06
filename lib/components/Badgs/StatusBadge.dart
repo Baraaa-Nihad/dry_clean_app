@@ -3,17 +3,48 @@ import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart'; // Import the localization utility
 
+/// شارة حالة الطلب.
+///
+/// ★ اللون من الخادم لا من جدول محلي ★
+///
+/// كانت تحمل نسخة ثانية من ألوان الحالات وتطابقها بالاسم الإنجليزي.
+/// وأدّى ذلك إلى عطلين:
+///
+/// الأول أن الخادم يردّ الاسم بلغة الطلب. فبالعربية يصل «في انتظار
+/// الاستلام» ولا يطابق أي حالة، فتُعرض كل الطلبات بشارة رمادية مكتوب
+/// عليها «غير معروف». وقد عولج سابقاً بإجبار الخادم على ردّ الإنجليزية
+/// دائماً — علاج يُبقي العلّة ويضيف إليها لغة لا تخصّ الزبون.
+///
+/// والثاني أن النسختين انفردتا: لونان في التطبيق يخالفان القاعدة.
+///
+/// والآن يمرّر المنادي [serverColor] القادم مع الطلب، ويبقى الجدول
+/// المحلي احتياطاً لمسار قديم لا يرسل لوناً بعد.
 class StatusBadge extends StatelessWidget {
   final String status; // General text for the badge
   final Color color; // Color for the badge
   final bool isStatus; // Whether it's a predefined status badge
+
+  /// اللون كما ضبطته الإدارة — سداسي مثل `#FF8C00`
+  final String? serverColor;
 
   const StatusBadge({
     Key? key,
     required this.status,
     this.color = Colors.grey, // Default color is grey if not provided
     this.isStatus = true, // Default isStatus is true for backward compatibility
+    this.serverColor,
   }) : super(key: key);
+
+  /// لون الخادم — يعيد null عند أي شكل غير متوقّع بدل أن يرمي: لون
+  /// خاطئ في القاعدة لا يجوز أن يُسقط شاشة الطلبات.
+  static Color? parseHex(String? hex) {
+    if (hex == null) return null;
+    var h = hex.trim().replaceAll('#', '');
+    if (h.length == 6) h = 'FF$h';
+    if (h.length != 8) return null;
+    final v = int.tryParse(h, radix: 16);
+    return v == null ? null : Color(v);
+  }
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -56,6 +87,16 @@ class StatusBadge extends StatelessWidget {
     }
   }
 
+  /// نصّ الشارة.
+  ///
+  /// الاسم غير الإنجليزي يُعرض كما وصل: الخادم ترجمه بلغة الطلب، وأي
+  /// «ترجمة» هنا فوقه تحوّله إلى «غير معروف».
+  String _resolveText(BuildContext context, String status) {
+    final looksEnglish = RegExp(r'^[a-zA-Z ]+$').hasMatch(status.trim());
+    if (!looksEnglish) return status;
+    return _getStatusText(context, status);
+  }
+
   String _getStatusText(BuildContext context, String status) {
     final localizations = AppLocalizations.of(context);
     switch (status.toLowerCase()) {
@@ -95,10 +136,11 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final badgeColor =
-        isStatus ? _getStatusColor(status) : color; // Determine color
-    final badgeText =
-        isStatus ? _getStatusText(context, status) : status; // Determine text
+    // ترتيب المصادر: لون الخادم، ثم الجدول المحلي، ثم اللون المُمرَّر
+    final badgeColor = isStatus
+        ? (parseHex(serverColor) ?? _getStatusColor(status))
+        : color;
+    final badgeText = isStatus ? _resolveText(context, status) : status;
 
     return Container(
       height: 34,
