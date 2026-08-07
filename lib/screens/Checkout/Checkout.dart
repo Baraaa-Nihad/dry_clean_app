@@ -347,7 +347,13 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
 
     try {
       final data =
-          await timeSelectionProvider.fetchDryCleanDetails(areaId, lang);
+          await timeSelectionProvider.fetchDryCleanDetails(
+        areaId,
+        lang,
+        // مواعيد المحل المختار لا مواعيد أوّل محل يخدم المنطقة
+        drycleanId:
+            Provider.of<OrderProvider>(context, listen: false).storeId,
+      );
       if (data.isNotEmpty) {
         if (data['dryclean'] != null) {
           final dryClean = DryClean.fromJson(data['dryclean']);
@@ -480,7 +486,13 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
     setLoading(true);
     try {
       final data = await timeSelectionProvider.fetchDeliveryTimes(
-          areaId, lang, collectionDate, pickupTime);
+        areaId,
+        lang,
+        collectionDate,
+        pickupTime,
+        // مواعيد التسليم تُحسب من وقت معالجة المحل المختار
+        drycleanId: Provider.of<OrderProvider>(context, listen: false).storeId,
+      );
 
       if (data.isNotEmpty && data['delivery_days'] != null) {
         setState(() {

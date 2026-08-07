@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/screens/OrdersPage/damage_claim_sheet.dart';
+import 'package:saleem_dry_clean/screens/OrdersPage/delivery_confirmation_dialog.dart';
 import 'package:saleem_dry_clean/screens/OrdersPage/rating_sheet.dart';
 import 'package:saleem_dry_clean/services/Models/OrderTracking.dart';
 import 'package:saleem_dry_clean/services/Providers/OrderTrackingProvider.dart';
@@ -24,6 +25,8 @@ class OrderTrackingScreen extends StatefulWidget {
     super.key,
     required this.orderId,
     this.orderNumber,
+    this.storeName,
+    this.total,
   });
 
   final int orderId;
@@ -31,17 +34,56 @@ class OrderTrackingScreen extends StatefulWidget {
   /// رقم الطلب المعروض للزبون — قد يختلف عن المعرّف الداخلي
   final String? orderNumber;
 
+  /// يظهران في حوار تأكيد الاستلام كي يعرف الزبون أي طلب يؤكّد
+  final String? storeName;
+  final double? total;
+
   @override
   State<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
 }
 
 class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
+  /// يُطرح مرّة واحدة في عمر الشاشة — لا عند كل إعادة بناء
+  bool _askedToConfirm = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<OrderTrackingProvider>().load(widget.orderId);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await context.read<OrderTrackingProvider>().load(widget.orderId);
+      _maybeAskConfirmation();
     });
+  }
+
+  /// سؤال «هل استلمت طلبك؟».
+  ///
+  /// ★ لماذا يُطرح هنا ★
+  ///
+  /// القرار المعتمد: إشعار + بوب أب بزرّين. والإشعار يقود إلى هذه
+  /// الشاشة، فهي مكان السؤال. ولمن لا يجيب مهلة أربع وعشرين ساعة ثم
+  /// تأكيد تلقائي من مهمة خلفية — فالسؤال فرصة اعتراض لا بوّابة إجبار.
+  Future<void> _maybeAskConfirmation() async {
+    if (_askedToConfirm || !mounted) return;
+
+    final t = context.read<OrderTrackingProvider>().trackingOf(widget.orderId);
+    if (t == null || !t.needsConfirmation) return;
+
+    _askedToConfirm = true;
+
+    final answered = await showDeliveryConfirmationDialog(
+      context,
+      orderId: widget.orderId,
+      orderNumber: widget.orderNumber,
+      storeName: widget.storeName,
+      total: widget.total,
+    );
+
+    // أجاب ⇐ نعيد الجلب: التقييم يفتح بعد التأكيد، والحالة تغيّرت
+    if (answered != null && mounted) {
+      await context
+          .read<OrderTrackingProvider>()
+          .load(widget.orderId, force: true);
+    }
   }
 
   @override

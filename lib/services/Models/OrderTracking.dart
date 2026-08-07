@@ -87,12 +87,23 @@ class OrderTracking {
     required this.history,
     this.view = 'customer',
     this.driver,
+    this.confirmation,
   });
 
   final TrackingStep current;
   final List<TrackingStep> history;
   final String view;
   final TrackingDriver? driver;
+
+  /// حالة تأكيد الاستلام: `pending` أو `received` أو `not_received`.
+  ///
+  /// تُقرأ لتقرير متى يُسأل الزبون. والاستنتاج من الحالة وحدها لا يكفي:
+  /// «تم التسليم» تبقى كما هي بعد التأكيد، فيُسأل في كل فتحة للشاشة.
+  final String? confirmation;
+
+  /// السؤال يُطرح مرّة واحدة: طلب مُسلَّم وردّ الزبون معلّق.
+  bool get needsConfirmation =>
+      current.code == 'completed' && confirmation == 'pending';
 
   /// الطلب المنتهي — لا خطوة قادمة بعده.
   ///
@@ -118,6 +129,7 @@ class OrderTracking {
       driver: j['driver'] is Map
           ? TrackingDriver.fromJson(Map<String, dynamic>.from(j['driver'] as Map))
           : null,
+      confirmation: j['confirmation'] as String?,
     );
   }
 }

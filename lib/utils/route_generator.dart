@@ -158,6 +158,10 @@ class RouteGenerator {
               // المعرّف قد يصل نصاً من حمولة الإشعار لا رقماً
               orderId: id is int ? id : int.tryParse('$id') ?? 0,
               orderNumber: args['orderNumber']?.toString(),
+              storeName: args['storeName']?.toString(),
+              total: args['total'] == null
+                  ? null
+                  : double.tryParse('${args['total']}'),
             ),
           );
         }

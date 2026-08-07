@@ -133,6 +133,9 @@ class OrderCard extends StatelessWidget {
                 arguments: {
                   'orderId': order!.orderId,
                   'orderNumber': '#${order!.orderId}',
+                  // يظهران في حوار تأكيد الاستلام
+                  'storeName': order!.drycleanName,
+                  'total': order!.totalPrice,
                 },
               ),
               child: Padding(

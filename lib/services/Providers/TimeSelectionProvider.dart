@@ -12,14 +12,27 @@ class TimeSelectionProvider with ChangeNotifier {
 
   bool get isLoading => _isLoading;
 
+  /// مواعيد الاستلام.
+  ///
+  /// ★ لماذا صار المحل معاملاً ★
+  ///
+  /// كان الخادم يختار «المحل صاحب أكثر المواعيد في المنطقة». وهذا معقول
+  /// حين لا يعرف من اختار الزبون. أمّا وقد صار الزبون يختار محله صراحةً
+  /// فالمواعيد يجب أن تكون مواعيده هو — وإلّا جُدوِل الطلب على أيام عمل
+  /// محل آخر، ثم لا يأتي أحد.
   Future<Map<String, dynamic>> fetchDryCleanDetails(
-      int areaId, String lang) async {
+      int areaId, String lang, {int? drycleanId}) async {
     _errorMessage = null;
     _isLoading = true;
     notifyListeners();
 
-    final url =
-        Uri.parse('${Config.fetchDryCleanDetails}?area_id=$areaId&lang=$lang');
+    final url = Uri.parse(Config.fetchDryCleanDetails).replace(
+      queryParameters: {
+        'area_id': '$areaId',
+        'lang': lang,
+        if (drycleanId != null) 'dry_clean_id': '$drycleanId',
+      },
+    );
     final client = ApiClient.createClient(_tokenService);
 
     print('Request URL: $url');
@@ -59,8 +72,11 @@ class TimeSelectionProvider with ChangeNotifier {
   /// [lang]      — "en" or "ar"
   /// [pickupDate] — "DD/MM/YYYY" (collectionDate from OrderProvider)
   /// [pickupTime] — "AM HH:MM - HH:MM" (period + formatted slot label)
+  /// [drycleanId] — المحل المختار؛ بدونه يختار الخادم أوّل محل يخدم
+  /// المنطقة، فتظهر مواعيد محل آخر
   Future<Map<String, dynamic>> fetchDeliveryTimes(
-      int areaId, String lang, String pickupDate, String pickupTime) async {
+      int areaId, String lang, String pickupDate, String pickupTime,
+      {int? drycleanId}) async {
     _errorMessage = null;
     _isLoading = true;
     notifyListeners();
@@ -79,6 +95,7 @@ class TimeSelectionProvider with ChangeNotifier {
           'lang': lang,
           'pickup_date': pickupDate,
           'pickup_time': pickupTime,
+          if (drycleanId != null) 'dry_clean_id': drycleanId,
         }),
       );
 
