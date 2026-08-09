@@ -373,5 +373,13 @@
   "search": "بحث",
   "no_results_message": "لم يتم العثور على نتائج. يرجى محاولة البحث بمعايير مختلفة.",
   "error_title": "حدث خطأ ما",
-  "retry_button": "إعادة المحاولة"
+  "retry_button": "إعادة المحاولة",
+  "location_scope_city_title": "أين تسكن؟",
+  "location_scope_area_title": "في أي منطقة؟",
+  "location_scope_city_subtitle": "اختر مدينتك لنعرض لك المغاسل التي تخدمها",
+  "location_scope_area_subtitle": "اختر منطقتك داخل {city}",
+  "location_scope_change": "تغيير",
+  "location_scope_no_cities": "لا مدن متاحة بعد",
+  "location_scope_no_areas": "لا مناطق مسجَّلة في {city} بعد",
+  "location_scope_retry": "إعادة المحاولة"
 }

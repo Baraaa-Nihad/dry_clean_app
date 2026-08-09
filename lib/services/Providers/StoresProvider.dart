@@ -96,7 +96,8 @@ class StoresProvider with ChangeNotifier {
     _search = value;
     notifyListeners();
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () => load(force: true));
+    _debounce =
+        Timer(const Duration(milliseconds: 350), () => load(force: true));
   }
 
   void setSort(StoreSort value) {
@@ -123,7 +124,8 @@ class StoresProvider with ChangeNotifier {
     load(force: true);
   }
 
-  Future<void> load({int? areaId, String lang = 'ar', bool force = false}) async {
+  Future<void> load(
+      {int? areaId, String lang = 'ar', bool force = false}) async {
     if (areaId != null) _areaId = areaId;
     if (!force && _stores.isNotEmpty) return;
 
@@ -152,7 +154,8 @@ class StoresProvider with ChangeNotifier {
       }
 
       final body = jsonDecode(res.body);
-      final list = (body is Map ? body['drycleans'] : null) as List? ?? const [];
+      final list =
+          (body is Map ? body['drycleans'] : null) as List? ?? const [];
       _stores = list
           .map((e) => Store.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
@@ -183,7 +186,8 @@ class StoresProvider with ChangeNotifier {
       final uri = Uri.parse('${Config.storeDetailsApi}/$storeId/favorite');
       final res = was
           ? await _client.delete(uri)
-          : await _client.post(uri, headers: {'Content-Type': 'application/json'});
+          : await _client
+              .post(uri, headers: {'Content-Type': 'application/json'});
 
       if (res.statusCode < 200 || res.statusCode >= 300) {
         _stores[i] = _copyWithFavorite(_stores[i], was);

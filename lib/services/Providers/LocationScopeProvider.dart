@@ -39,7 +39,10 @@ class LocationScopeProvider with ChangeNotifier {
   List<LocationOption> _governates = [];
   List<LocationOption> _areas = [];
 
-  bool _isLoading = false;
+  bool _isLoadingGovernates = false;
+  bool _isLoadingAreas = false;
+  int _governatesRequest = 0;
+  int _areasRequest = 0;
   String? _error;
   bool _restored = false;
 
@@ -47,7 +50,7 @@ class LocationScopeProvider with ChangeNotifier {
   LocationOption? get area => _area;
   List<LocationOption> get governates => _governates;
   List<LocationOption> get areas => _areas;
-  bool get isLoading => _isLoading;
+  bool get isLoading => _isLoadingGovernates || _isLoadingAreas;
   String? get error => _error;
 
   /// هل انتهى الزبون من الاختيار؟ المنطقة هي المعيار لا المحافظة:
@@ -57,6 +60,9 @@ class LocationScopeProvider with ChangeNotifier {
   /// هل قُرئ المحفوظ من القرص بعد؟ الشاشة تنتظره كي لا تُظهر شاشة
   /// اختيار لمن اختار أمس.
   bool get isRestored => _restored;
+
+  String _message(String lang, String arabic, String english) =>
+      lang == 'ar' ? arabic : english;
 
   /// استرجاع الاختيار المحفوظ — يُنادى مرّة عند الإقلاع.
   Future<void> restore() async {
@@ -80,7 +86,8 @@ class LocationScopeProvider with ChangeNotifier {
   }
 
   Future<void> loadGovernates({String lang = 'ar'}) async {
-    _isLoading = true;
+    final request = ++_governatesRequest;
+    _isLoadingGovernates = true;
     _error = null;
     notifyListeners();
 
@@ -89,29 +96,46 @@ class LocationScopeProvider with ChangeNotifier {
           .replace(queryParameters: {'lang': lang});
       final res = await _client.get(uri);
 
+      if (request != _governatesRequest) return;
+
       if (res.statusCode != 200) {
-        _error = 'تعذّر جلب المدن';
+        _error = _message(lang, 'تعذّر جلب المدن', 'Unable to load cities');
         return;
       }
 
       final body = jsonDecode(res.body);
       final list = (body is Map ? body['data'] : body) as List? ?? const [];
       _governates = list
-          .map((e) => LocationOption.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map((e) =>
+              LocationOption.fromJson(Map<String, dynamic>.from(e as Map)))
           // المحافظة المعطَّلة لا تُعرض: اختيارها يقود إلى قائمة مناطق
           // فارغة بلا تفسير
           .where((g) => g.name.isNotEmpty)
           .toList();
+      final selected = _governate;
+      if (selected != null) {
+        for (final governate in _governates) {
+          if (governate.id == selected.id) {
+            _governate = governate;
+            break;
+          }
+        }
+      }
     } catch (_) {
-      _error = 'تعذّر الاتصال بالخادم';
+      if (request != _governatesRequest) return;
+      _error = _message(
+          lang, 'تعذّر الاتصال بالخادم', 'Unable to connect to the server');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (request == _governatesRequest) {
+        _isLoadingGovernates = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> loadAreas(int governateId, {String lang = 'ar'}) async {
-    _isLoading = true;
+    final request = ++_areasRequest;
+    _isLoadingAreas = true;
     _error = null;
     _areas = [];
     notifyListeners();
@@ -123,21 +147,37 @@ class LocationScopeProvider with ChangeNotifier {
       });
       final res = await _client.get(uri);
 
+      if (request != _areasRequest) return;
+
       if (res.statusCode != 200) {
-        _error = 'تعذّر جلب المناطق';
+        _error = _message(lang, 'تعذّر جلب المناطق', 'Unable to load areas');
         return;
       }
 
       final body = jsonDecode(res.body);
       final list = (body is Map ? body['data'] : body) as List? ?? const [];
       _areas = list
-          .map((e) => LocationOption.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map((e) =>
+              LocationOption.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
+      final selected = _area;
+      if (selected != null) {
+        for (final area in _areas) {
+          if (area.id == selected.id) {
+            _area = area;
+            break;
+          }
+        }
+      }
     } catch (_) {
-      _error = 'تعذّر الاتصال بالخادم';
+      if (request != _areasRequest) return;
+      _error = _message(
+          lang, 'تعذّر الاتصال بالخادم', 'Unable to connect to the server');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (request == _areasRequest) {
+        _isLoadingAreas = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -145,16 +185,32 @@ class LocationScopeProvider with ChangeNotifier {
   ///
   /// منطقة من رام الله تحت محافظة الخليل تُنتج قائمة مغاسل لا تخدم
   /// الزبون، وهو لا يرى الخطأ لأن اسم المنطقة وحده معروض.
-  Future<void> selectGovernate(LocationOption g) async {
+  Future<void> selectGovernate(LocationOption g, {String lang = 'ar'}) async {
     _governate = g;
     _area = null;
     notifyListeners();
     await _persist();
-    await loadAreas(g.id);
+    await loadAreas(g.id, lang: lang);
   }
 
   Future<void> selectArea(LocationOption a) async {
     _area = a;
+    notifyListeners();
+    await _persist();
+  }
+
+  /// يعود بخطوة واحدة إلى قائمة المدن عند اختيار «تغيير».
+  ///
+  /// لا يكفي تفريغ واجهة الشاشة فقط؛ المنطقة السابقة يجب أن تُمسح أيضاً
+  /// كي لا يبقى التطبيق مرشَّحاً بمنطقة من المدينة القديمة.
+  Future<void> clearGovernate() async {
+    // Invalidate a pending areas request from the previous city.
+    _areasRequest++;
+    _isLoadingAreas = false;
+    _governate = null;
+    _area = null;
+    _areas = [];
+    _error = null;
     notifyListeners();
     await _persist();
   }

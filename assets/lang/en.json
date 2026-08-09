@@ -370,5 +370,13 @@
   "search": "Search",
   "no_results_message": "No results found. Please try searching with different criteria.",
   "error_title": "Something went wrong",
-  "retry_button": "Retry"
+  "retry_button": "Retry",
+  "location_scope_city_title": "Where do you live?",
+  "location_scope_area_title": "Which area are you in?",
+  "location_scope_city_subtitle": "Choose your city to see the dry cleaners that serve you.",
+  "location_scope_area_subtitle": "Choose your area in {city}",
+  "location_scope_change": "Change",
+  "location_scope_no_cities": "No cities are available yet.",
+  "location_scope_no_areas": "No areas are registered in {city} yet.",
+  "location_scope_retry": "Retry"
 }

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class LanguageProvider with ChangeNotifier {
   Locale _locale = Locale('en');
+  int _localeVersion = 0;
   VoidCallback? onLocaleChanged;
 
   Locale get locale => _locale;
@@ -15,17 +16,27 @@ class LanguageProvider with ChangeNotifier {
 
   // Load the locale from shared preferences or use the system locale
   Future<void> _loadLocale() async {
+    final loadVersion = _localeVersion;
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? languageCode = prefs.getString('language_code');
 
-      if (languageCode != null) {
-        _locale = Locale(languageCode);
-      } else {
-        const supportedCodes = ['en', 'ar'];
-        final systemCode =
-            PlatformDispatcher.instance.locale.languageCode;
-        _locale = Locale(supportedCodes.contains(systemCode) ? systemCode : 'en');
+      final loadedLocale = languageCode != null
+          ? Locale(languageCode)
+          : () {
+              const supportedCodes = ['en', 'ar'];
+              final systemCode =
+                  PlatformDispatcher.instance.locale.languageCode;
+              return Locale(
+                  supportedCodes.contains(systemCode) ? systemCode : 'en');
+            }();
+
+      // Do not overwrite a language selected by the user while the stored
+      // preference was still loading.
+      if (loadVersion != _localeVersion) return;
+
+      _locale = loadedLocale;
+      if (languageCode == null) {
         await _saveLocale(_locale.languageCode);
       }
     } catch (e) {
@@ -41,22 +52,18 @@ class LanguageProvider with ChangeNotifier {
     if (_locale.languageCode == locale.languageCode) return;
 
     _locale = locale;
-    await _saveLocale(locale.languageCode);
+    _localeVersion++;
     notifyListeners();
+
+    await _saveLocale(locale.languageCode);
 
     // Notify other components that might be listening for locale changes
     onLocaleChanged?.call();
   }
 
   // Toggle between English and Arabic
-  void toggleLanguage() {
-    if (_locale.languageCode == 'en') {
-      _locale = Locale('ar');
-    } else {
-      _locale = Locale('en');
-    }
-    notifyListeners();
-  }
+  Future<void> toggleLanguage() =>
+      setLocale(Locale(_locale.languageCode == 'en' ? 'ar' : 'en'));
 
   // Save the selected locale to shared preferences
   Future<void> _saveLocale(String languageCode) async {

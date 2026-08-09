@@ -85,10 +85,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         print('Completing onboarding...');
         await onboardingProvider
             .completeOnboarding(context); // Await completion
-        print('Navigating to main screen...');
-        // Replace the current route with the main screen
-        NavigatorService.navigateTo(RouteNames.main);
-        // Alternatively, use Navigator.of(context).pushReplacementNamed(RouteNames.main);
+        print('Navigating to location check...');
+        // Route through DecisionScreen so first-time users select their city
+        // and area before reaching the main screen. Existing selections are
+        // restored there, so returning users continue straight to the app.
+        NavigatorService.replaceWith(RouteNames.decision);
       } catch (e) {
         print('Error during navigation: $e');
         // Optionally, navigate to ErrorPage or show a dialog
