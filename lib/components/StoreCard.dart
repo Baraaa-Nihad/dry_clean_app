@@ -276,74 +276,63 @@ class _StoreDetails extends StatelessWidget {
           Icons.account_balance_wallet_outlined,
           l10n.translate('store_min_order'),
           '${store.minOrderTotal.toStringAsFixed(0)} ₪',
-          AppColors.prpuleCard,
+          AppColors.blueCard,
           AppColors.purbleCardBackgourd,
         ),
-      if (store.productsCount > 0)
-        _DetailData(
-          Icons.local_laundry_service_outlined,
-          l10n.translate('store_services_available'),
-          l10n.translate(
-            'store_services_count',
-            params: {'count': '${store.productsCount}'},
-          ),
-          AppColors.greenCard,
-          AppColors.greenCardBackgourd,
-        ),
+      // if (store.productsCount > 0)
+      //   _DetailData(
+      //     Icons.local_laundry_service_outlined,
+      //     l10n.translate('store_services_available'),
+      //     l10n.translate(
+      //       'store_services_count',
+      //       params: {'count': '${store.productsCount}'},
+      //     ),
+      //     AppColors.greenCard,
+      //     AppColors.greenCardBackgourd,
+      //   ),
       if (store.averagePrice != null)
         _DetailData(
           Icons.payments_outlined,
           l10n.translate('store_average_price'),
           '${store.averagePrice!.toStringAsFixed(0)} ₪',
-          AppColors.orangeCard,
+          AppColors.blueCard,
           AppColors.orangeCardBackgourd,
         ),
+      // if (working.isNotEmpty)
+      //   _DetailData(
+      //     numericWorking
+      //         ? Icons.hourglass_bottom_rounded
+      //         : Icons.access_time_rounded,
+      //     numericWorking
+      //         ? l10n.translate('store_processing_time')
+      //         : l10n.translate('store_working_hours'),
+      //     numericWorking
+      //         ? l10n.translate(
+      //             'duration_hours',
+      //             params: {'count': working},
+      //           )
+      //         : working,
+      //     AppColors.gray60,
+      //     AppColors.gray10,
+      //   ),
     ];
-
-    final working = (store.workingHours ?? '').trim();
-    final numericWorking = RegExp(r'^\d+(\.\d+)?$').hasMatch(working);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 330;
-        final itemWidth =
-            compact ? constraints.maxWidth : (constraints.maxWidth - 10) / 2;
+        const spacing = 6.0;
+        final itemWidth = (constraints.maxWidth - (spacing * 2)) / 3;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Wrap(
-              spacing: 10,
-              runSpacing: 11,
-              children: details
-                  .map((detail) => SizedBox(
-                        width: itemWidth,
-                        child: _DetailTile(data: detail),
-                      ))
-                  .toList(),
-            ),
-            if (working.isNotEmpty) ...[
-              const SizedBox(height: 11),
-              _DetailTile(
-                data: _DetailData(
-                  numericWorking
-                      ? Icons.hourglass_bottom_rounded
-                      : Icons.access_time_rounded,
-                  numericWorking
-                      ? l10n.translate('store_processing_time')
-                      : l10n.translate('store_working_hours'),
-                  numericWorking
-                      ? l10n.translate(
-                          'duration_hours',
-                          params: {'count': working},
-                        )
-                      : working,
-                  AppColors.gray60,
-                  AppColors.gray10,
+        return Wrap(
+          spacing: spacing,
+          runSpacing: 10,
+          children: details
+              .map(
+                (detail) => SizedBox(
+                  width: itemWidth,
+                  child: _DetailTile(data: detail),
                 ),
-              ),
-            ],
-          ],
+              )
+              .toList(),
         );
       },
     );
@@ -357,47 +346,49 @@ class _DetailTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: data.background,
-            borderRadius: BorderRadius.circular(10),
+    return Tooltip(
+      message: '${data.label}: ${data.value}',
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: data.background,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            alignment: Alignment.center,
+            child: Icon(data.icon, size: 16, color: data.color),
           ),
-          alignment: Alignment.center,
-          child: Icon(data.icon, size: 18, color: data.color),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                data.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.sfarabicRegular.copyWith(
-                  fontSize: 10.5,
-                  color: AppColors.gray50,
+          const SizedBox(width: 5),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  data.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.sfarabicRegular.copyWith(
+                    fontSize: 9.5,
+                    color: AppColors.gray50,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 1),
-              Text(
-                data.value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.sfarabicMedium.copyWith(
-                  fontSize: 12.5,
-                  color: AppColors.gray80,
+                Text(
+                  data.value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.sfarabicMedium.copyWith(
+                    fontSize: 11.5,
+                    color: AppColors.gray80,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

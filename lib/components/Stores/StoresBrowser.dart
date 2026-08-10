@@ -9,6 +9,7 @@ import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 import 'package:saleem_dry_clean/utils/route_names.dart';
+import 'package:saleem_dry_clean/utils/store_favorite_action.dart';
 
 /// تصفّح المغاسل: بحث وفلاتر وقائمة.
 ///
@@ -279,8 +280,11 @@ class _StoresBrowserState extends State<StoresBrowser> {
             return StoreCard(
               store: store,
               onTap: () => _open(store),
-              onFavoriteTap: () =>
-                  context.read<StoresProvider>().toggleFavorite(store.id),
+              onFavoriteTap: () => toggleStoreFavorite(
+                context,
+                storeId: store.id,
+                currentValue: store.isFavorite,
+              ),
             );
           },
           childCount: p.stores.length,

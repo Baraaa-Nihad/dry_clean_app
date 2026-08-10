@@ -14,6 +14,7 @@ import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 import 'package:saleem_dry_clean/utils/store_localization.dart';
+import 'package:saleem_dry_clean/utils/store_favorite_action.dart';
 
 /// كتالوج المحل — أصنافه بأسعاره هو.
 ///
@@ -296,9 +297,18 @@ class _CoverAppBar extends StatelessWidget {
         // إشعار أو رابط لا يجد سبيلاً لحفظ المحل.
         Consumer<StoresProvider>(
           builder: (context, stores, _) {
-            final fav = stores.isFavorite(store.id);
+            final fav = stores.isFavorite(
+              store.id,
+              fallback: store.isFavorite,
+            );
             return IconButton(
-              onPressed: () => stores.toggleFavorite(store.id),
+              onPressed: stores.isFavoriteUpdating(store.id)
+                  ? null
+                  : () => toggleStoreFavorite(
+                        context,
+                        storeId: store.id,
+                        currentValue: fav,
+                      ),
               icon: Icon(
                 fav ? Icons.favorite : Icons.favorite_border,
                 color: fav ? AppColors.red : AppColors.gray70,

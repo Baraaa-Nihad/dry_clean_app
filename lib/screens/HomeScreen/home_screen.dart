@@ -77,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
           HomeAppBar(
             fem: widget.fem,
             quantityNumber: true,
-            suffixIconPath: NotificationButton(),
+            // suffixIconPath: NotificationButton(),
             onPrefixIconTap: () {
               Navigator.pop(context);
             },

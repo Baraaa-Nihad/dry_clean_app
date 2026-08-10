@@ -19,6 +19,8 @@ import 'package:saleem_dry_clean/services/User/TokenService.dart';
 /// اختلاف حرف يُسقط الترتيب إلى الافتراضي بصمت.
 enum StoreSort { rating, popular, priceLow, priceHigh }
 
+enum FavoriteToggleResult { updated, authenticationRequired, failed }
+
 extension StoreSortApi on StoreSort {
   String get apiKey {
     switch (this) {
@@ -68,9 +70,10 @@ extension StoreSortApi on StoreSort {
 /// ويرشّحها ويرتّبها. الفصل مقصود: اختيار المحل قرار يبقى، وقائمة
 /// التصفّح حالة عابرة.
 class StoresProvider with ChangeNotifier {
-  StoresProvider(TokenService tokenService)
-      : _client = ApiClient.createClient(tokenService);
+  StoresProvider(this._tokenService)
+      : _client = ApiClient.createClient(_tokenService);
 
+  final TokenService _tokenService;
   final http.Client _client;
 
   List<Store> _stores = [];
@@ -81,6 +84,8 @@ class StoresProvider with ChangeNotifier {
   String _search = '';
   StoreSort _sort = StoreSort.rating;
   bool _favoritesOnly = false;
+  final Map<int, bool> _favoriteStates = {};
+  final Set<int> _favoriteUpdates = {};
   int? _areaId;
   String _lang = 'ar';
 
@@ -178,6 +183,12 @@ class StoresProvider with ChangeNotifier {
           .map((e) => Store.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
 
+      for (final store in loaded) {
+        if (!_favoriteUpdates.contains(store.id)) {
+          _favoriteStates[store.id] = store.isFavorite;
+        }
+      }
+
       // Preview data is deliberately debug-only. It lets us review the new
       // card layout in an area that has no providers yet, without placing fake
       // laundries in the production app or database.
@@ -208,15 +219,29 @@ class StoresProvider with ChangeNotifier {
   ///
   /// انتظار الخادم قبل تلوين القلب يجعل الضغطة تبدو غير مستجيبة على
   /// شبكة بطيئة. والتراجع عند الفشل يمنع كذبة دائمة.
-  Future<void> toggleFavorite(int storeId) async {
-    final i = _stores.indexWhere((s) => s.id == storeId);
-    if (i < 0) return;
+  Future<FavoriteToggleResult> toggleFavorite(
+    int storeId, {
+    bool? currentValue,
+  }) async {
+    if (_favoriteUpdates.contains(storeId)) {
+      return FavoriteToggleResult.failed;
+    }
 
-    final was = _stores[i].isFavorite;
-    _stores[i] = _copyWithFavorite(_stores[i], !was);
+    final token = await _tokenService.getAccessToken();
+    if (token == null || token.isEmpty) {
+      return FavoriteToggleResult.authenticationRequired;
+    }
+
+    final was = isFavorite(storeId, fallback: currentValue ?? false);
+    _favoriteUpdates.add(storeId);
+    _setFavorite(storeId, !was);
     notifyListeners();
 
-    if (_isPreviewData) return;
+    if (_isPreviewData) {
+      _favoriteUpdates.remove(storeId);
+      notifyListeners();
+      return FavoriteToggleResult.updated;
+    }
 
     try {
       final uri = Uri.parse('${Config.storeDetailsApi}/$storeId/favorite');
@@ -225,22 +250,41 @@ class StoresProvider with ChangeNotifier {
           : await _client
               .post(uri, headers: {'Content-Type': 'application/json'});
 
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        _stores[i] = _copyWithFavorite(_stores[i], was);
-        notifyListeners();
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return FavoriteToggleResult.updated;
       }
+
+      _setFavorite(storeId, was);
+      return res.statusCode == 401
+          ? FavoriteToggleResult.authenticationRequired
+          : FavoriteToggleResult.failed;
     } catch (_) {
-      _stores[i] = _copyWithFavorite(_stores[i], was);
+      _setFavorite(storeId, was);
+      return FavoriteToggleResult.failed;
+    } finally {
+      _favoriteUpdates.remove(storeId);
       notifyListeners();
     }
   }
 
   /// حالة المفضّلة لمحل بعينه — تقرؤها صفحة المحل لزرّ القلب.
-  bool isFavorite(int storeId) {
+  bool isFavorite(int storeId, {bool fallback = false}) {
+    final remembered = _favoriteStates[storeId];
+    if (remembered != null) return remembered;
     for (final s in _stores) {
       if (s.id == storeId) return s.isFavorite;
     }
-    return false;
+    return fallback;
+  }
+
+  bool isFavoriteUpdating(int storeId) => _favoriteUpdates.contains(storeId);
+
+  void _setFavorite(int storeId, bool value) {
+    _favoriteStates[storeId] = value;
+    final index = _stores.indexWhere((store) => store.id == storeId);
+    if (index >= 0) {
+      _stores[index] = _copyWithFavorite(_stores[index], value);
+    }
   }
 
   Store _copyWithFavorite(Store s, bool fav) => Store(

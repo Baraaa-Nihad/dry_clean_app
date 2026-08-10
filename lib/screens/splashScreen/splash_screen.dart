@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
+import 'package:saleem_dry_clean/services/Navigator/startup_router.dart';
 import 'package:saleem_dry_clean/utils/route_names.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,11 +15,43 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  bool _animationFinished = false;
+  bool _startupFinished = false;
+  bool _animationStarted = false;
+  bool _hasNavigated = false;
+  String? _destination;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prepareDestination());
+  }
+
+  Future<void> _prepareDestination() async {
+    try {
+      final destination = await StartupRouter.resolve(context);
+      if (!mounted) return;
+      _destination = destination;
+    } catch (error) {
+      debugPrint('SplashScreen: startup failed: $error');
+      if (!mounted) return;
+      _destination = RouteNames.error;
+    } finally {
+      if (mounted) {
+        _startupFinished = true;
+        _navigateWhenReady();
+      }
+    }
+  }
+
+  void _navigateWhenReady() {
+    if (_hasNavigated || !_animationFinished || !_startupFinished) return;
+    final destination = _destination;
+    if (destination == null) return;
+
+    _hasNavigated = true;
+    NavigatorService.navigateToAndRemoveUntil(destination);
   }
 
   @override
@@ -56,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen>
                 height: 280.w,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.07),
+                  color: Colors.white.withValues(alpha: 0.07),
                 ),
               ),
             ),
@@ -68,7 +101,7 @@ class _SplashScreenState extends State<SplashScreen>
                 height: 320.w,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.06),
+                  color: Colors.white.withValues(alpha: 0.06),
                 ),
               ),
             ),
@@ -80,7 +113,7 @@ class _SplashScreenState extends State<SplashScreen>
                 height: 160.w,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                 ),
               ),
             ),
@@ -96,9 +129,13 @@ class _SplashScreenState extends State<SplashScreen>
                   'assets/animations/S - White.json',
                   controller: _controller,
                   onLoaded: (composition) {
+                    if (_animationStarted) return;
+                    _animationStarted = true;
                     _controller.duration = composition.duration;
                     _controller.forward().whenComplete(() {
-                      NavigatorService.replaceWith(RouteNames.decision);
+                      if (!mounted) return;
+                      _animationFinished = true;
+                      _navigateWhenReady();
                     });
                   },
                   width: 300.w,

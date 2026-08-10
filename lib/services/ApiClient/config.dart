@@ -58,6 +58,7 @@ class Config {
   static String get updateUserNameApi => '${fullApiUrlNoPrivate}editUserName/';
   static String get updateUserEmailApi =>
       '${fullApiUrlNoPrivate}editUserEmail/';
+
   /// المحافظات.
   ///
   /// كان '${fullApiUrlNoPrivate}getGovernates/' — مسار لا وجود له في
@@ -98,11 +99,16 @@ class Config {
   static String get sendContactApi => '${fullApiUrl}contact/submit';
   static String get deviceRegistration => '${fullApiUrl}device/register';
   static String get deviceUnregistration => '${fullApiUrl}device/unregister';
-  static String get getBanners => '${fullApiUrl}banners/getAll';
+  // The home slider is visible before sign-in. Use the public active-only
+  // endpoint; /private/banners/getAll belongs to the administration portal
+  // and correctly requires an authenticated administrator.
+  static String get getBanners => '${fullApiUrlNoPrivate}banners';
   static String get getOnboardingApi => '${fullApiUrlNoPrivate}app/onboarding';
 
-  static String get privacyPolicyUrl => '${fullApiUrlNoPrivate}legal/privacy_policy/view';
-  static String get termsAndConditionsUrl => '${fullApiUrlNoPrivate}legal/terms_and_conditions/view';
+  static String get privacyPolicyUrl =>
+      '${fullApiUrlNoPrivate}legal/privacy_policy/view';
+  static String get termsAndConditionsUrl =>
+      '${fullApiUrlNoPrivate}legal/terms_and_conditions/view';
 
   // Add the Change Password API endpoint
 

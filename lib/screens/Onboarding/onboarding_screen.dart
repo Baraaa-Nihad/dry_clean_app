@@ -7,7 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/Indicator/GradientCustomIndicator.dart';
 import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
+import 'package:saleem_dry_clean/services/Navigator/startup_router.dart';
 import 'package:saleem_dry_clean/services/Providers/LanguageProvider.dart';
+import 'package:saleem_dry_clean/services/Providers/LocationScopeProvider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/utils/OnboardingProvider.dart';
@@ -49,6 +51,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _hasNavigated = false;
+  String? _preloadedLocationLanguage;
 
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
@@ -64,9 +67,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // لون تعبئة الزر الدائري (Next) وزر Start - تركوازي بهوية Saleem.
   // ⚠️ لو عندك لون رسمي بـ AppColors بنفس درجة زر Start الأصلي، بدّل
   // القيمتين هون فيه مباشرة عشان يطابق باقي التطبيق تماماً.
-  static const Color _brandTealStart = Color(0xFF12B3A0);
-  static const Color _brandTealEnd = Color(0xFF0B7A6E);
-
   @override
   void initState() {
     super.initState();
@@ -96,6 +96,24 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final languageCode = context.read<LanguageProvider>().locale.languageCode;
+    if (_preloadedLocationLanguage == languageCode) return;
+    _preloadedLocationLanguage = languageCode;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final location = context.read<LocationScopeProvider>();
+      await location.restore();
+      if (!mounted || location.isChosen) return;
+      if (location.governatesLanguage != languageCode) {
+        await location.loadGovernates(lang: languageCode);
+      }
+    });
+  }
+
   Widget _buildDots(int count, int activeIndex) {
     return GradientCustomIndicator(
       activeIndex: activeIndex,
@@ -108,10 +126,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     if (!_hasNavigated) {
       _hasNavigated = true;
       try {
-        print('Completing onboarding...');
-        await onboardingProvider.completeOnboarding(context);
-        print('Navigating to location check...');
-        NavigatorService.replaceWith(RouteNames.decision);
+        await onboardingProvider.completeOnboarding();
+        if (!mounted) return;
+        final destination = await StartupRouter.resolve(context);
+        if (!mounted) return;
+        NavigatorService.navigateToAndRemoveUntil(destination);
       } catch (e) {
         print('Error during navigation: $e');
         NavigatorService.navigateTo(RouteNames.error);
@@ -157,8 +176,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     });
 
     if (onboardingProvider.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light,
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: Image.asset(
+            _staticOnboardingImages.first,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+          ),
+        ),
       );
     }
 
@@ -281,7 +309,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                       fontSize: 14.0,
                                       fontWeight: FontWeight.w500,
                                       height: 1.4,
-                                      color: Colors.white.withOpacity(0.88),
+                                      color:
+                                          Colors.white.withValues(alpha: 0.88),
                                     ),
                                   ),
                                   textAlign: TextAlign.center,
@@ -306,7 +335,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                         fontSize: 12.0,
                                         fontWeight: FontWeight.w400,
                                         height: 1.2,
-                                        color: Colors.white.withOpacity(0.7),
+                                        color:
+                                            Colors.white.withValues(alpha: 0.7),
                                       ),
                                     ),
                                     textAlign: TextAlign.center,
@@ -403,16 +433,16 @@ class _GlassIconButton extends StatelessWidget {
                 gradient: filled
                     ? LinearGradient(
                         colors: [
-                          _tealStart.withOpacity(0.9),
-                          _tealEnd.withOpacity(0.9),
+                          _tealStart.withValues(alpha: 0.9),
+                          _tealEnd.withValues(alpha: 0.9),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       )
                     : null,
-                color: filled ? null : Colors.white.withOpacity(0.16),
+                color: filled ? null : Colors.white.withValues(alpha: 0.16),
                 border: Border.all(
-                  color: Colors.white.withOpacity(filled ? 0.45 : 0.35),
+                  color: Colors.white.withValues(alpha: filled ? 0.45 : 0.35),
                   width: 1,
                 ),
               ),
@@ -468,16 +498,16 @@ class _GlassPillButton extends StatelessWidget {
                 gradient: filled
                     ? LinearGradient(
                         colors: [
-                          _tealStart.withOpacity(0.85),
-                          _tealEnd.withOpacity(0.85),
+                          _tealStart.withValues(alpha: 0.85),
+                          _tealEnd.withValues(alpha: 0.85),
                         ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       )
                     : null,
-                color: filled ? null : Colors.white.withOpacity(0.14),
+                color: filled ? null : Colors.white.withValues(alpha: 0.14),
                 border: Border.all(
-                  color: Colors.white.withOpacity(filled ? 0.4 : 0.32),
+                  color: Colors.white.withValues(alpha: filled ? 0.4 : 0.32),
                   width: 1,
                 ),
               ),

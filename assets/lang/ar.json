@@ -391,6 +391,8 @@
   "stores_fetch_error": "تعذّر جلب المغاسل",
   "server_connection_error": "تعذّر الاتصال بالخادم",
   "stores_no_favorites": "لا مغاسل في مفضّلتك",
+  "favorite_update_failed": "تعذّر تحديث المفضّلة، حاول مرة أخرى.",
+  "favorite_login_required": "سجّل دخولك لإضافة المغاسل إلى المفضّلة.",
   "stores_no_results": "لا نتائج",
   "stores_none_in_area": "لا مغاسل في منطقتك بعد",
   "stores_adjust_search": "جرّب اسماً آخر أو امسح الفلاتر",

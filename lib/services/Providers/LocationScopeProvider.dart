@@ -38,6 +38,7 @@ class LocationScopeProvider with ChangeNotifier {
 
   List<LocationOption> _governates = [];
   List<LocationOption> _areas = [];
+  String? _governatesLanguage;
 
   bool _isLoadingGovernates = false;
   bool _isLoadingAreas = false;
@@ -50,6 +51,7 @@ class LocationScopeProvider with ChangeNotifier {
   LocationOption? get area => _area;
   List<LocationOption> get governates => _governates;
   List<LocationOption> get areas => _areas;
+  String? get governatesLanguage => _governatesLanguage;
   bool get isLoading => _isLoadingGovernates || _isLoadingAreas;
   String? get error => _error;
 
@@ -94,7 +96,7 @@ class LocationScopeProvider with ChangeNotifier {
     try {
       final uri = Uri.parse(Config.getGovernatesApi)
           .replace(queryParameters: {'lang': lang});
-      final res = await _client.get(uri);
+      final res = await _client.get(uri).timeout(const Duration(seconds: 10));
 
       if (request != _governatesRequest) return;
 
@@ -112,6 +114,7 @@ class LocationScopeProvider with ChangeNotifier {
           // فارغة بلا تفسير
           .where((g) => g.name.isNotEmpty)
           .toList();
+      _governatesLanguage = lang;
       final selected = _governate;
       if (selected != null) {
         for (final governate in _governates) {

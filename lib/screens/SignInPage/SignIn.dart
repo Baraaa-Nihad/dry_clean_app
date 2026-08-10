@@ -27,15 +27,17 @@ import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/NoSwipeBackPageRoute.dart';
 import 'package:saleem_dry_clean/utils/ValidationUtils.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
-import 'package:saleem_dry_clean/utils/navigator_key.dart';
 import 'package:saleem_dry_clean/utils/route_names.dart';
 import 'package:saleem_dry_clean/utils/app_version_helper.dart'; // Import the app version helper
 
 class SignIn extends StatefulWidget {
   final double fem;
+  final String? noticeKey;
 
-  SignIn({
+  const SignIn({
+    super.key,
     required this.fem,
+    this.noticeKey,
   });
 
   @override
@@ -173,12 +175,12 @@ class _SignInState extends State<SignIn> {
           _isLoading = false;
           _hasError = true;
           _errorMessage = AppLocalizations.of(context)
-              ?.translate('password_or_mobile_incorrect') ??
-              'Password or mobile number is incorrect';
+              .translate('password_or_mobile_incorrect');
         });
       }
     }
   }
+
   @override
   void dispose() {
     _mobileNumberController.dispose();
@@ -214,7 +216,7 @@ class _SignInState extends State<SignIn> {
                         children: [
                           SizedBox(height: 92.h), // Use ScreenUtil
                           Text(
-                            localizations?.translate('sign_in') ?? 'Sign In',
+                            localizations.translate('sign_in'),
                             style: AppTextStyles.getFontFamily(
                               context,
                               AppTextStyles.bold16Gray80(context).copyWith(
@@ -225,8 +227,7 @@ class _SignInState extends State<SignIn> {
                           ),
                           SizedBox(height: 8.h),
                           Text(
-                            localizations?.translate('welcome_back') ??
-                                'Welcome back! Sign in to your account to access\n all our services',
+                            localizations.translate('welcome_back'),
                             style: AppTextStyles.getFontFamily(
                               context,
                               AppTextStyles.regular16Gray50(context).copyWith(
@@ -235,7 +236,51 @@ class _SignInState extends State<SignIn> {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          SizedBox(height: 40.h),
+                          if (widget.noticeKey != null) ...[
+                            SizedBox(height: 20.h),
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 14.w,
+                                vertical: 12.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.greenCardBackgourd,
+                                borderRadius: BorderRadius.circular(12.r),
+                                border: Border.all(
+                                  color: AppColors.gradientStart
+                                      .withValues(alpha: 0.22),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.favorite_border_rounded,
+                                    color: AppColors.gradientStart,
+                                    size: 21,
+                                  ),
+                                  SizedBox(width: 10.w),
+                                  Expanded(
+                                    child: Text(
+                                      localizations
+                                          .translate(widget.noticeKey!),
+                                      style: AppTextStyles.getFontFamily(
+                                        context,
+                                        AppTextStyles.regular16Gray80(context)
+                                            .copyWith(
+                                          fontSize: 13.sp,
+                                          fontWeight: FontWeight.w500,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: 20.h),
+                          ] else
+                            SizedBox(height: 40.h),
                           Mobile.MobileNumberInput(
                             fem: 1,
                             controller: _mobileNumberController,
@@ -243,8 +288,7 @@ class _SignInState extends State<SignIn> {
                             hasError: _hasError,
                             enableValidation: false,
                             labelTextPrimary:
-                                localizations?.translate('mobile_number') ??
-                                    'Mobile Number',
+                                localizations.translate('mobile_number'),
                             countryCodes: ['+970', '+972'],
                             onCountryCodeChanged: _onCountryCodeChanged,
                             onInputChange: _onInputChange,
@@ -257,8 +301,7 @@ class _SignInState extends State<SignIn> {
                             focusNode: _passwordFocusNode,
                             hasError: _hasError,
                             labelTextPrimary:
-                                localizations?.translate('password') ??
-                                    'Password',
+                                localizations.translate('password'),
                             inputType: _isPasswordVisible
                                 ? TextInput.InputType.text
                                 : TextInput.InputType.password,
@@ -280,12 +323,10 @@ class _SignInState extends State<SignIn> {
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return localizations
-                                        ?.translate('enter_password') ??
-                                    'Please enter a password';
+                                    .translate('enter_password');
                               } else if (value.length < 8) {
                                 return localizations
-                                        ?.translate('password_length') ??
-                                    'Password must be at least 8 characters';
+                                    .translate('password_length');
                               }
                               return null;
                             },
@@ -312,8 +353,7 @@ class _SignInState extends State<SignIn> {
                             child: LoadingButton(
                               fem: 1,
                               isLoading: _isLoading,
-                              buttonText: localizations?.translate('log_in') ??
-                                  'Log in',
+                              buttonText: localizations.translate('log_in'),
                               onPressed:
                                   _isButtonEnabled ? _handleSignIn : null,
                               isDisabled: !_isButtonEnabled,
@@ -329,8 +369,7 @@ class _SignInState extends State<SignIn> {
                               );
                             },
                             child: Text(
-                              localizations?.translate('forget_password') ??
-                                  'Forget password?',
+                              localizations.translate('forget_password'),
                               style: AppTextStyles.getFontFamily(
                                 context,
                                 AppTextStyles.bold16Gray80(context).copyWith(
@@ -359,9 +398,7 @@ class _SignInState extends State<SignIn> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           DividerWithText(
-                            text:
-                                localizations?.translate('dont_have_account') ??
-                                    'Don\'t have an account?',
+                            text: localizations.translate('dont_have_account'),
                             fem: 1.0, // Adjust or remove fem
                           ),
                           SizedBox(height: 16.h),
@@ -369,8 +406,7 @@ class _SignInState extends State<SignIn> {
                             padding: EdgeInsets.only(bottom: 60.h),
                             child: SecondaryButton(
                               fem: 1,
-                              text: localizations?.translate('signup') ??
-                                  'Sign up',
+                              text: localizations.translate('signup'),
                               onPressed: () {
                                 Navigator.push(
                                   context,
@@ -405,7 +441,10 @@ class _SignInState extends State<SignIn> {
                     gradient: RadialGradient(
                       center: Alignment.center,
                       radius: 0.5,
-                      colors: [AppColors.green, AppColors.blue.withOpacity(0)],
+                      colors: [
+                        AppColors.green,
+                        AppColors.blue.withValues(alpha: 0),
+                      ],
                       stops: [0.5, 1.0],
                     ),
                     shape: OvalBorder(),
@@ -425,7 +464,10 @@ class _SignInState extends State<SignIn> {
                     gradient: RadialGradient(
                       center: Alignment.center,
                       radius: 0.5,
-                      colors: [AppColors.green, AppColors.blue.withOpacity(0)],
+                      colors: [
+                        AppColors.green,
+                        AppColors.blue.withValues(alpha: 0),
+                      ],
                       stops: [0.5, 1.0],
                     ),
                     shape: OvalBorder(),

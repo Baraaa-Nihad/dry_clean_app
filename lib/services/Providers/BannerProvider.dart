@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:saleem_dry_clean/services/ApiClient/ApiClient.dart';
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
@@ -58,7 +57,8 @@ class BannerProvider with ChangeNotifier {
           // Populate _bannerImages with URLs from the 'imagePath' field in the response
           _bannerImages = data
               .map((item) {
-                final imageObj = lang == 'ar' ? item['image_ar'] : item['image_en'];
+                final imageObj =
+                    lang == 'ar' ? item['image_ar'] : item['image_en'];
                 final String? raw = imageObj?['image_path'] as String?;
                 return Config.resolveImageUrl(raw);
               })

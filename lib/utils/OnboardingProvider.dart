@@ -18,8 +18,10 @@ class OnboardingProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   List<OnboardingStep> get steps => _steps;
 
+  late final Future<void> ready;
+
   OnboardingProvider() {
-    initialize();
+    ready = initialize();
   }
 
   Future<void> initialize() async {
@@ -61,7 +63,7 @@ class OnboardingProvider with ChangeNotifier {
     }
   }
 
-  Future<void> completeOnboarding(BuildContext context) async {
+  Future<void> completeOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('hasCompletedOnboarding', true);
     _hasCompleted = true;

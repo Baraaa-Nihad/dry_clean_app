@@ -40,7 +40,9 @@ class _LocationScopeScreenState extends State<LocationScopeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final p = context.read<LocationScopeProvider>();
-      p.loadGovernates(lang: lang);
+      if (p.governatesLanguage != lang) {
+        p.loadGovernates(lang: lang);
+      }
       // محافظة محفوظة من جلسة سابقة: نجلب مناطقها فوراً كي لا يعيد
       // الزبون اختيار مدينته ليصل إلى منطقته
       final g = p.governate;

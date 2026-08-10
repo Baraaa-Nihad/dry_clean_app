@@ -388,6 +388,8 @@
   "stores_fetch_error": "Couldn't load laundries",
   "server_connection_error": "Couldn't connect to the server",
   "stores_no_favorites": "No laundries in your favorites",
+  "favorite_update_failed": "Could not update favorites. Please try again.",
+  "favorite_login_required": "Sign in to add laundries to your favorites.",
   "stores_no_results": "No results",
   "stores_none_in_area": "No laundries in your area yet",
   "stores_adjust_search": "Try another name or clear the filters",

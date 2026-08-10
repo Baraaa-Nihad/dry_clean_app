@@ -48,7 +48,14 @@ class RouteGenerator {
       case RouteNames.onboarding:
         return FadeRoute(page: OnboardingScreen());
       case RouteNames.signIn:
-        return MaterialPageRoute(builder: (_) => SignIn(fem: 1));
+        return MaterialPageRoute(
+          builder: (_) => SignIn(
+            fem: 1,
+            noticeKey: args is Map<String, dynamic>
+                ? args['noticeKey'] as String?
+                : null,
+          ),
+        );
       case RouteNames.checkout:
         return MaterialPageRoute(builder: (_) => CheckoutAddress(fem: 1));
       case RouteNames.splash:
@@ -130,7 +137,8 @@ class RouteGenerator {
       case RouteNames.stores:
         return MaterialPageRoute(
           builder: (_) => StoresScreen(
-            areaId: args is Map<String, dynamic> ? args['areaId'] as int? : null,
+            areaId:
+                args is Map<String, dynamic> ? args['areaId'] as int? : null,
             onStoreSelected: (store) => NavigatorService.navigateTo(
               RouteNames.storeCatalog,
               arguments: {'store': store},
@@ -143,8 +151,7 @@ class RouteGenerator {
           return MaterialPageRoute(
             builder: (_) => StoreCatalogScreen(
               store: args['store'] as Store,
-              onCheckout: () =>
-                  NavigatorService.navigateTo(RouteNames.basket),
+              onCheckout: () => NavigatorService.navigateTo(RouteNames.basket),
             ),
           );
         }

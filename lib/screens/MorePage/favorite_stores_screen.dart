@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/StoreCard.dart';
+import 'package:saleem_dry_clean/utils/store_favorite_action.dart';
 import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
 import 'package:saleem_dry_clean/services/Providers/StoresProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
@@ -87,8 +88,11 @@ class _FavoriteStoresScreenState extends State<FavoriteStoresScreen> {
                       RouteNames.storeCatalog,
                       arguments: {'store': store},
                     ),
-                    onFavoriteTap: () =>
-                        context.read<StoresProvider>().toggleFavorite(store.id),
+                    onFavoriteTap: () => toggleStoreFavorite(
+                      context,
+                      storeId: store.id,
+                      currentValue: store.isFavorite,
+                    ),
                   );
                 },
               ),
