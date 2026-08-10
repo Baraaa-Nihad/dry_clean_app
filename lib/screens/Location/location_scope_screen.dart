@@ -92,78 +92,94 @@ class _LocationScopeScreenState extends State<LocationScopeScreen> {
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.backgroundColor,
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(24, 28, 24, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 54,
-                      height: 54,
-                      decoration: const BoxDecoration(
-                        color: AppColors.greenCardBackgourd,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.location_on_outlined,
-                          color: AppColors.green, size: 26),
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            // خلفية الشاشة بالكامل - صورة city.png تاخد حجم الشاشة كلها
+            // (فوق تحت يمين شمال)، وما في أي عنصر ينازعها من ورا أو قدّام.
+            Image.asset(
+              'assets/images/city.png',
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+            ),
+            SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding:
+                        const EdgeInsetsDirectional.fromSTEB(24, 28, 24, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 54,
+                          height: 54,
+                          decoration: const BoxDecoration(
+                            color: AppColors.greenCardBackgourd,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.location_on_outlined,
+                              color: AppColors.gradientStart, size: 26),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          gov == null
+                              ? _translate(
+                                  localizations, 'location_scope_city_title',
+                                  arabic: 'أين تسكن؟',
+                                  english: 'Where do you live?')
+                              : _translate(
+                                  localizations, 'location_scope_area_title',
+                                  arabic: 'في أي منطقة؟',
+                                  english: 'Which area are you in?'),
+                          style: AppTextStyles.sfarabicBold
+                              .copyWith(fontSize: 23, color: AppColors.gray80),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          gov == null
+                              ? _translate(
+                                  localizations,
+                                  'location_scope_city_subtitle',
+                                  arabic:
+                                      'اختر مدينتك لنعرض لك المغاسل التي تخدمها',
+                                  english:
+                                      'Choose your city to see the dry cleaners that serve you.',
+                                )
+                              : _translate(
+                                  localizations,
+                                  'location_scope_area_subtitle',
+                                  arabic: 'اختر منطقتك داخل {city}',
+                                  english: 'Choose your area in {city}',
+                                  params: {'city': gov.name},
+                                ),
+                          style: AppTextStyles.sfarabicRegular.copyWith(
+                              fontSize: 13.5,
+                              height: 1.5,
+                              color: AppColors.secondaryTextColor),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      gov == null
-                          ? _translate(
-                              localizations, 'location_scope_city_title',
-                              arabic: 'أين تسكن؟',
-                              english: 'Where do you live?')
-                          : _translate(
-                              localizations, 'location_scope_area_title',
-                              arabic: 'في أي منطقة؟',
-                              english: 'Which area are you in?'),
-                      style: AppTextStyles.sfarabicBold
-                          .copyWith(fontSize: 23, color: AppColors.gray80),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      gov == null
-                          ? _translate(
-                              localizations,
-                              'location_scope_city_subtitle',
-                              arabic:
-                                  'اختر مدينتك لنعرض لك المغاسل التي تخدمها',
-                              english:
-                                  'Choose your city to see the dry cleaners that serve you.',
-                            )
-                          : _translate(
-                              localizations,
-                              'location_scope_area_subtitle',
-                              arabic: 'اختر منطقتك داخل {city}',
-                              english: 'Choose your area in {city}',
-                              params: {'city': gov.name},
-                            ),
-                      style: AppTextStyles.sfarabicRegular.copyWith(
-                          fontSize: 13.5,
-                          height: 1.5,
-                          color: AppColors.secondaryTextColor),
-                    ),
-                  ],
-                ),
-              ),
-              if (gov != null)
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(24, 10, 24, 0),
-                  child: _ChosenCity(
-                    name: gov.name,
-                    onChange: () =>
-                        context.read<LocationScopeProvider>().clearGovernate(),
                   ),
-                ),
-              const SizedBox(height: 14),
-              Expanded(child: _body(p, gov, localizations, lang)),
-            ],
-          ),
+                  if (gov != null)
+                    Padding(
+                      padding:
+                          const EdgeInsetsDirectional.fromSTEB(24, 10, 24, 0),
+                      child: _ChosenCity(
+                        name: gov.name,
+                        onChange: () => context
+                            .read<LocationScopeProvider>()
+                            .clearGovernate(),
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  Expanded(child: _body(p, gov, localizations, lang)),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -258,7 +274,7 @@ class _ChosenCity extends StatelessWidget {
             child: Row(
               children: [
                 const Icon(Icons.location_city_outlined,
-                    size: 19, color: AppColors.green),
+                    size: 19, color: AppColors.gradientStart),
                 const SizedBox(width: 9),
                 Expanded(
                   child: Text(
@@ -270,7 +286,7 @@ class _ChosenCity extends StatelessWidget {
                 const Icon(
                   Icons.swap_horiz_rounded,
                   size: 22,
-                  color: AppColors.green,
+                  color: AppColors.gradientStart,
                 ),
               ],
             ),
@@ -315,7 +331,9 @@ class _OptionRow extends StatelessWidget {
                           ? Icons.chevron_left
                           : Icons.chevron_right,
                   size: 20,
-                  color: selected ? AppColors.green : AppColors.inactiveColor,
+                  color: selected
+                      ? AppColors.gradientStart
+                      : AppColors.inactiveColor,
                 ),
               ],
             ),
@@ -353,7 +371,7 @@ class _Retry extends StatelessWidget {
                 onPressed: onRetry,
                 child: const Icon(
                   Icons.autorenew_rounded,
-                  color: AppColors.green,
+                  color: AppColors.gradientStart,
                   size: 25,
                 ),
               ),

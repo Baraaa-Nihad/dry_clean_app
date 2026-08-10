@@ -1,26 +1,43 @@
 // lib/pages/onboarding_screen.dart
 
-import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:saleem_dry_clean/components/AppBar/AppHeader.dart';
-import 'package:saleem_dry_clean/components/BackButtonWidget.dart';
 import 'package:saleem_dry_clean/components/Indicator/GradientCustomIndicator.dart';
-import 'package:saleem_dry_clean/components/buttons/LanguageButton.dart';
-import 'package:saleem_dry_clean/components/buttons/PrimaryButton.dart';
-import 'package:saleem_dry_clean/components/buttons/SecondaryButton.dart';
-import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
 import 'package:saleem_dry_clean/services/Providers/LanguageProvider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:saleem_dry_clean/services/Providers/UserProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
-import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/OnboardingProvider.dart';
-import 'package:saleem_dry_clean/utils/connectivity_service.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 import 'package:saleem_dry_clean/utils/route_names.dart';
+
+// ─────────────────────────────────────────────────────────────────────────
+// ملاحظات على هاي النسخة (تعديل بعد الملاحظات):
+//
+// 1) شلنا البانل الزجاجي الكبير يلي كان خلف النص بالكامل - كان عم يغطي
+//    جزء كبير من الصورة. هلأ النص (dots/عنوان/وصف) عايش مباشرة فوق
+//    الصورة، معتمد على التدرج المدموج بالصورة نفسها للوضوح (بدون أي
+//    عنصر إضافي وراه).
+//
+// 2) زر تجاهل/Skip صار بالزاوية العلوية مقابل زر اللغة تماماً - كبسولة
+//    زجاجية صغيرة فيها بس النص (بنفس خط التطبيق)، بتختفي بآخر صفحة.
+//
+// 3) زر "التالي" صار دائري زجاجي ضبابي (زي زر اللغة بالضبط بالستايل)
+//    فيه سهم بيتجه يمين أو شمال حسب اللغة المختارة، بدل الزر المستطيل
+//    الكبير. بآخر صفحة بيتحول لزر "Start" بعرض كامل (نفس منطق الترتيب
+//    السابق: AnimatedSwitcher بين الحالتين).
+//
+// 4) نزّلنا كتلة (العنوان + الوصف + النقاط) لتحت أكتر، وقرّبناها من الزر:
+//    قللنا المسافتين قبل النقاط وبعدها (كانوا 18.h و20.h، صاروا 8.h و6.h).
+//    الزر نفسه ما انلمس ولا سطر - وضل بمكانه القديم بالضبط، لأنه آخر
+//    عنصر بالعمود وموضعه أصلاً ثابت بالنسبة لأسفل الشاشة بغض النظر عن
+//    قد ايش فوقه من مسافات. لو لسا بدك تنزلهن أكتر: قلل هالرقمين
+//    (8.h / 6.h) أكتر، بس خلي شوي مسافة تنفس ولا توصلهن لصفر عشان ما
+//    تلزق النقاط بالزر.
+// ─────────────────────────────────────────────────────────────────────────
 
 class OnboardingScreen extends StatefulWidget {
   @override
@@ -31,44 +48,54 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  bool _hasNavigated = false; // Flag to prevent multiple navigations
+  bool _hasNavigated = false;
 
-  // Animation Controller for Modal Slide-Up
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  // الصور الثابتة المحلية - بدل صور لوحة التحكم (imageUrlEn/imageUrlAr).
+  static const List<String> _staticOnboardingImages = [
+    'assets/images/dry_clean_onboarding_1.png',
+    'assets/images/dry_clean_onboarding_2.png',
+    'assets/images/dry_clean_onboarding_3.png',
+  ];
+
+  // لون تعبئة الزر الدائري (Next) وزر Start - تركوازي بهوية Saleem.
+  // ⚠️ لو عندك لون رسمي بـ AppColors بنفس درجة زر Start الأصلي، بدّل
+  // القيمتين هون فيه مباشرة عشان يطابق باقي التطبيق تماماً.
+  static const Color _brandTealStart = Color(0xFF12B3A0);
+  static const Color _brandTealEnd = Color(0xFF0B7A6E);
 
   @override
   void initState() {
     super.initState();
-    // Initialize Animation Controller
     _animationController = AnimationController(
       vsync: this,
-      duration:
-          Duration(milliseconds: 600), // Increased duration for smoothness
+      duration: Duration(milliseconds: 500),
     );
 
     _slideAnimation = Tween<Offset>(
-      begin: Offset(0, 1), // Starts below the screen
-      end: Offset(0, 0), // Ends at its natural position
+      begin: Offset(0, 0.12),
+      end: Offset(0, 0),
     ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOutCubic, // Smoother curve
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
 
-    // Start the slide-up animation
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
     _animationController.forward();
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    _animationController.dispose(); // Dispose the animation controller
+    _animationController.dispose();
     super.dispose();
   }
 
-  // Method to build stepper dots
   Widget _buildDots(int count, int activeIndex) {
     return GradientCustomIndicator(
       activeIndex: activeIndex,
@@ -77,35 +104,36 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // Method to handle navigation after completing onboarding
   Future<void> _navigateToMain(OnboardingProvider onboardingProvider) async {
     if (!_hasNavigated) {
-      _hasNavigated = true; // Prevent re-navigation
+      _hasNavigated = true;
       try {
         print('Completing onboarding...');
-        await onboardingProvider
-            .completeOnboarding(context); // Await completion
+        await onboardingProvider.completeOnboarding(context);
         print('Navigating to location check...');
-        // Route through DecisionScreen so first-time users select their city
-        // and area before reaching the main screen. Existing selections are
-        // restored there, so returning users continue straight to the app.
         NavigatorService.replaceWith(RouteNames.decision);
       } catch (e) {
         print('Error during navigation: $e');
-        // Optionally, navigate to ErrorPage or show a dialog
         NavigatorService.navigateTo(RouteNames.error);
       }
     }
   }
 
-  // Method to navigate to the previous page
-  void _goToPreviousPage() {
-    if (_currentPage > 0) {
-      _pageController.previousPage(
+  void _goToNextPage(OnboardingProvider onboardingProvider) {
+    if (_currentPage < onboardingProvider.steps.length - 1) {
+      _pageController.nextPage(
         duration: Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        curve: Curves.easeIn,
       );
+    } else {
+      _navigateToMain(onboardingProvider);
     }
+  }
+
+  void _replayEntranceAnimation() {
+    _animationController
+      ..reset()
+      ..forward();
   }
 
   @override
@@ -114,23 +142,19 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final languageProvider = Provider.of<LanguageProvider>(context);
     final localizations = AppLocalizations.of(context);
 
-    // Define fem for scaling
-    double fem = 1.0; // Adjust this based on your design requirements
-    // If using ScreenUtil, you might set it like:
-    // double fem = ScreenUtil().scaleWidth;
-
-    // Determine current language
     bool isEnglish = languageProvider.locale.languageCode == 'en';
+    bool isLastPage = _currentPage == onboardingProvider.steps.length - 1;
+    // السهم بيتجه بنفس اتجاه القراءة الحالي: يمين بالإنجليزي، شمال بالعربي.
+    final IconData nextArrowIcon =
+        Directionality.of(context) == TextDirection.rtl
+            ? Icons.arrow_forward_rounded
+            : Icons.arrow_forward_rounded;
 
-    // Check onboarding status and navigate if necessary
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!onboardingProvider.isActive || onboardingProvider.hasCompleted) {
         _navigateToMain(onboardingProvider);
       }
     });
-
-    // Determine if the current page is the last page
-    bool isLastPage = _currentPage == onboardingProvider.steps.length - 1;
 
     if (onboardingProvider.isLoading) {
       return const Scaffold(
@@ -138,299 +162,339 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       );
     }
 
-    return Scaffold(
-      extendBodyBehindAppBar: true, // Allows body to extend behind system UI
-      body: onboardingProvider.isActive && !onboardingProvider.hasCompleted
-          ? Stack(
-              children: [
-                // **1. Gray Background Container**
-                Positioned.fill(
-                  child: Container(
-                    color: AppColors.gray10, // Set the gray10 background
-                  ),
-                ),
-                // **2. Background Image with Error Handling**
-                Positioned.fill(
-                  child: PageView.builder(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // أيقونات شريط الحالة (الوقت/البطارية) بيضاء عشان تبين فوق الصورة.
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: onboardingProvider.isActive && !onboardingProvider.hasCompleted
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  // **1. الصورة تغطي الشاشة بالكامل - بدون أي منازع**
+                  PageView.builder(
                     controller: _pageController,
                     itemCount: onboardingProvider.steps.length,
                     onPageChanged: (index) {
-                      setState(() {
-                        _currentPage = index;
-                      });
+                      setState(() => _currentPage = index);
+                      _replayEntranceAnimation();
                     },
                     itemBuilder: (context, index) {
-                      final step = onboardingProvider.steps[index];
-                      final rawUrl =
-                          isEnglish ? step.imageUrlEn : step.imageUrlAr;
-                      final resolvedUrl = Config.resolveImageUrl(rawUrl);
-
-                      Widget fallback = Container(
-                        color: AppColors.gray10,
-                        child: Center(
-                          child: SvgPicture.asset(
-                            'assets/icons/default_icon.svg',
-                            width: 100.w,
-                            height: 100.h,
-                            color: AppColors.gray70,
-                            semanticsLabel: 'Default Icon',
-                          ),
-                        ),
-                      );
-
-                      if (resolvedUrl.startsWith('http')) {
-                        return CachedNetworkImage(
-                          imageUrl: resolvedUrl,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          placeholder: (context, url) => Container(
-                            color: AppColors.gray10,
-                          ),
-                          errorWidget: (context, url, error) => fallback,
-                        );
-                      }
+                      final imagePath = _staticOnboardingImages[
+                          index % _staticOnboardingImages.length];
 
                       return Image.asset(
-                        resolvedUrl,
+                        imagePath,
                         fit: BoxFit.cover,
                         width: double.infinity,
                         height: double.infinity,
-                        errorBuilder: (context, error, stackTrace) => fallback,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.black,
+                          child: const Center(
+                            child: Icon(Icons.image_not_supported_rounded,
+                                color: Colors.white54, size: 48),
+                          ),
+                        ),
                       );
                     },
                   ),
-                ),
-                // **3. AppHeader Positioned at the Top**
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: AppHeader(
-                    quantityNumber: true,
-                    title: '',
-                    fem: fem,
-                    prefixIcon: _currentPage > 0
-                        ? BackButtonWidget(
-                            onTap: () {
-                              _goToPreviousPage();
-                            },
-                          )
-                        : null,
-                    suffixIcon: _currentPage == 0
-                        ? const LanguageButton()
-                        : null, // Use the new widget
-                  ),
-                ),
-                // **4. Modal with stepper and texts using SlideTransition**
-                SlideTransition(
-                  position: _slideAnimation,
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
+
+                  // **2. الزاوية العلوية: زر Skip مقابل زر اللغة**
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
                     child: SafeArea(
-                      top: false,
-                      bottom:
-                          true, // تفعيل الـ SafeArea من الأسفل لحماية الأزرار من التداخل
-                      child: Container(
-                        width: double.infinity,
-                        // تم التعديل لتكون المسافات الداخلية متوازنة واحترافية من جميع الجهات
-                        padding: EdgeInsets.fromLTRB(24.w, 32.h, 24.w, 24.h),
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(24.w),
-                            topRight: Radius.circular(24.w),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0x0C7485B6),
-                              blurRadius: 4,
-                              offset: Offset(0, -4),
-                              spreadRadius: 0,
-                            )
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize
-                              .min, // ليأخذ الكونتينر حجمه الطبيعي المريح
+                      bottom: false,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 20.w, vertical: 12.h),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            // Stepper Dots
-                            _buildDots(
-                                onboardingProvider.steps.length, _currentPage),
-                            SizedBox(height: 24.h),
-
-                            // Title
-                            Text(
-                              isEnglish
-                                  ? onboardingProvider
-                                      .steps[_currentPage].titleEn
-                                  : onboardingProvider
-                                      .steps[_currentPage].titleAr,
-                              style: AppTextStyles.getFontFamily(
-                                context,
-                                AppTextStyles.regular16Gray80(context).copyWith(
-                                    fontSize: 24.0,
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.2,
-                                    color: AppColors.gray80),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            SizedBox(height: 12.h),
-
-                            // Message
-                            Text(
-                              isEnglish
-                                  ? onboardingProvider
-                                      .steps[_currentPage].messageEn
-                                  : onboardingProvider
-                                      .steps[_currentPage].messageAr,
-                              style: AppTextStyles.getFontFamily(
-                                context,
-                                AppTextStyles.regular16Gray80(context).copyWith(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.4,
-                                    color: AppColors.gray50),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-
-                            // Sub Message (if exists)
-                            if (onboardingProvider
-                                        .steps[_currentPage].subMessageEn !=
-                                    null &&
-                                onboardingProvider
-                                        .steps[_currentPage].subMessageAr !=
-                                    null) ...[
-                              SizedBox(height: 8.h),
-                              Text(
-                                isEnglish
-                                    ? onboardingProvider
-                                        .steps[_currentPage].subMessageEn!
-                                    : onboardingProvider
-                                        .steps[_currentPage].subMessageAr!,
-                                style: AppTextStyles.getFontFamily(
-                                  context,
-                                  AppTextStyles.regular16Gray80(context)
-                                      .copyWith(
-                                          fontSize: 14.0,
-                                          fontWeight: FontWeight.w400,
-                                          height: 1.2,
-                                          color: AppColors.gray40),
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-
-                            // فاصل احترافي مريح للعين بين النصوص والأزرار السفلية
-                            SizedBox(height: 32.h),
-
-                            // **B. Buttons Section with AnimatedSwitcher**
-                            AnimatedSwitcher(
-                              duration: Duration(milliseconds: 300),
-                              transitionBuilder:
-                                  (Widget child, Animation<double> animation) {
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: child,
-                                );
-                              },
-                              child: isLastPage
-                                  ? PrimaryButton(
-                                      key: ValueKey('StartButton'),
-                                      fem: 1,
-                                      buttonWidth: "full",
-                                      isDisabled: false,
-                                      text: localizations.translate('Start'),
-                                      onPressed: () async {
-                                        await _navigateToMain(
-                                            onboardingProvider);
-                                      },
-                                    )
-                                  : Row(
-                                      key: ValueKey('SkipNextButtons'),
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceEvenly,
-                                      children: [
-                                        Expanded(
-                                          child: SecondaryButton(
-                                              fem: 1,
-                                              buttonWidth: "medium",
-                                              isDisabled: false,
-                                              text: localizations
-                                                  .translate('skip'),
-                                              onPressed: () async {
-                                                await _navigateToMain(
-                                                    onboardingProvider);
-                                              }),
-                                        ),
-                                        SizedBox(width: 16.w),
-                                        Expanded(
-                                          child: PrimaryButton(
-                                            fem: 1,
-                                            buttonWidth: "medium",
-                                            isDisabled: false,
-                                            text:
-                                                localizations.translate('next'),
-                                            onPressed: () async {
-                                              if (_currentPage <
-                                                  onboardingProvider
-                                                          .steps.length -
-                                                      1) {
-                                                _pageController.nextPage(
-                                                  duration: Duration(
-                                                      milliseconds: 300),
-                                                  curve: Curves.easeIn,
-                                                );
-                                              } else {
-                                                await _navigateToMain(
-                                                    onboardingProvider);
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                            isLastPage
+                                ? SizedBox(width: 44.w)
+                                : _GlassPillButton(
+                                    text: localizations.translate('skip'),
+                                    filled: false,
+                                    compact: true,
+                                    onTap: () =>
+                                        _navigateToMain(onboardingProvider),
+                                  ),
+                            _GlassIconButton(
+                              icon: Icons.language_rounded,
+                              onTap: () => languageProvider.toggleLanguage(),
                             ),
                           ],
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            )
-          : SizedBox
-              .shrink(), // Return an empty widget if not active or completed
+                  // **3. النص + الأزرار مباشرة فوق الصورة - بدون أي بانل**
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: SafeArea(
+                      top: false,
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: _slideAnimation,
+                          child: Padding(
+                            // قللنا الفراغ السفلي عشان الكتلة تنزل لتحت أكتر
+                            // (جوا الجزء الغامق من تدرج الصورة). عدّل الرقم
+                            // 6.h لو بدك تتحكم أكتر بمقدار النزول.
+                            padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 6.h),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  isEnglish
+                                      ? onboardingProvider
+                                          .steps[_currentPage].titleEn
+                                      : onboardingProvider
+                                          .steps[_currentPage].titleAr,
+                                  style: AppTextStyles.getFontFamily(
+                                    context,
+                                    AppTextStyles.regular16Gray80(context)
+                                        .copyWith(
+                                      fontSize: 22.0,
+                                      fontWeight: FontWeight.w700,
+                                      height: 1.3,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: 5.h),
+                                Text(
+                                  isEnglish
+                                      ? onboardingProvider
+                                          .steps[_currentPage].messageEn
+                                      : onboardingProvider
+                                          .steps[_currentPage].messageAr,
+                                  style: AppTextStyles.getFontFamily(
+                                    context,
+                                    AppTextStyles.regular16Gray80(context)
+                                        .copyWith(
+                                      fontSize: 14.0,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.4,
+                                      color: Colors.white.withOpacity(0.88),
+                                    ),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                if (onboardingProvider
+                                            .steps[_currentPage].subMessageEn !=
+                                        null &&
+                                    onboardingProvider
+                                            .steps[_currentPage].subMessageAr !=
+                                        null) ...[
+                                  SizedBox(height: 6.h),
+                                  Text(
+                                    isEnglish
+                                        ? onboardingProvider
+                                            .steps[_currentPage].subMessageEn!
+                                        : onboardingProvider
+                                            .steps[_currentPage].subMessageAr!,
+                                    style: AppTextStyles.getFontFamily(
+                                      context,
+                                      AppTextStyles.regular16Gray80(context)
+                                          .copyWith(
+                                        fontSize: 12.0,
+                                        fontWeight: FontWeight.w400,
+                                        height: 1.2,
+                                        color: Colors.white.withOpacity(0.7),
+                                      ),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                                SizedBox(height: 8.h),
+                                _buildDots(onboardingProvider.steps.length,
+                                    _currentPage),
+                                SizedBox(height: 6.h),
+
+                                // زر Start (آخر صفحة) أو الزر الدائري Next
+                                AnimatedSwitcher(
+                                  duration: Duration(milliseconds: 300),
+                                  transitionBuilder: (child, animation) =>
+                                      FadeTransition(
+                                          opacity: animation, child: child),
+                                  child: isLastPage
+                                      ? _GlassPillButton(
+                                          key: ValueKey('StartButton'),
+                                          text:
+                                              localizations.translate('Start'),
+                                          filled: true,
+                                          fullWidth: true,
+                                          onTap: () => _navigateToMain(
+                                              onboardingProvider),
+                                        )
+                                      : Align(
+                                          key: ValueKey('NextButton'),
+                                          alignment:
+                                              AlignmentDirectional.bottomEnd,
+                                          child: _GlassIconButton(
+                                            icon: nextArrowIcon,
+                                            filled: true,
+                                            size: 45,
+                                            onTap: () => _goToNextPage(
+                                                onboardingProvider),
+                                          ),
+                                        ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : SizedBox.shrink(),
+      ),
     );
   }
+}
 
-  // Handle the Retry button press
-  Future<void> _handleRetry() async {
-    final connectivityService =
-        Provider.of<ConnectivityService>(context, listen: false);
+// ─────────────────────────────────────────────────────────────────────────
+// أزرار وأيقونات زجاجية (glassmorphism) مخصّصة لشاشة الأونبوردنج
+// ─────────────────────────────────────────────────────────────────────────
 
-    // Check connectivity before attempting to retry
-    if (!connectivityService.isConnected) {
-      print('RetryHandler: No internet connection. Cannot retry.');
-      return;
-    }
+/// زر أيقونة دائري زجاجي شفاف. `filled: true` بيدي تلوين تركوازي خفيف
+/// (للفعل الأساسي متل Next)، بينما `filled: false` بيضل شفاف محايد
+/// (للأفعال الثانوية متل اللغة/الرجوع).
+class _GlassIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool filled;
+  final double size;
 
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
+  const _GlassIconButton({
+    Key? key,
+    required this.icon,
+    required this.onTap,
+    this.filled = false,
+    this.size = 44,
+  }) : super(key: key);
 
-    try {
-      print('RetryHandler: Attempting to refresh user data');
-      await userProvider.refreshUserData(context);
-      print('RetryHandler: User data refreshed');
+  static const Color _tealStart = Color(0xFF12B3A0);
+  static const Color _tealEnd = Color(0xFF0B7A6E);
 
-      if (connectivityService.isConnected) {
-        Navigator.of(context, rootNavigator: true).pop(); // Close the modal
+  @override
+  Widget build(BuildContext context) {
+    return ClipOval(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Container(
+              width: size.w,
+              height: size.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: filled
+                    ? LinearGradient(
+                        colors: [
+                          _tealStart.withOpacity(0.9),
+                          _tealEnd.withOpacity(0.9),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: filled ? null : Colors.white.withOpacity(0.16),
+                border: Border.all(
+                  color: Colors.white.withOpacity(filled ? 0.45 : 0.35),
+                  width: 1,
+                ),
+              ),
+              child: Icon(icon, color: Colors.white, size: size.w * 0.42),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-        print('RetryHandler: Modal dismissed after successful retry');
-      }
-    } catch (e) {
-      print('RetryHandler: Retry failed with error: $e');
-    }
+/// زر كبسولة (pill) زجاجي - `compact: true` بياخد حجم النص بالضبط
+/// (لزر Skip بالزاوية)، وإلا بياخد المساحة المتاحة (لزر Start).
+class _GlassPillButton extends StatelessWidget {
+  final String text;
+  final bool filled;
+  final bool fullWidth;
+  final bool compact;
+  final VoidCallback onTap;
+
+  const _GlassPillButton({
+    Key? key,
+    required this.text,
+    required this.onTap,
+    this.filled = false,
+    this.fullWidth = false,
+    this.compact = false,
+  }) : super(key: key);
+
+  static const Color _tealStart = Color(0xFF12B3A0);
+  static const Color _tealEnd = Color(0xFF0B7A6E);
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(compact ? 22.w : 16.w),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Container(
+              width: fullWidth ? double.infinity : null,
+              height: compact ? 44.w : 52.h,
+              padding: compact
+                  ? EdgeInsets.symmetric(horizontal: 18.w)
+                  : EdgeInsets.zero,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(compact ? 22.w : 16.w),
+                gradient: filled
+                    ? LinearGradient(
+                        colors: [
+                          _tealStart.withOpacity(0.85),
+                          _tealEnd.withOpacity(0.85),
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      )
+                    : null,
+                color: filled ? null : Colors.white.withOpacity(0.14),
+                border: Border.all(
+                  color: Colors.white.withOpacity(filled ? 0.4 : 0.32),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                text,
+                style: AppTextStyles.getFontFamily(
+                  context,
+                  TextStyle(
+                    color: Colors.white,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

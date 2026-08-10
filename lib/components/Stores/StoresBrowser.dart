@@ -130,7 +130,8 @@ class _StoresBrowserState extends State<StoresBrowser> {
       return const SliverToBoxAdapter(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 60),
-          child: Center(child: CircularProgressIndicator(color: AppColors.green)),
+          child:
+              Center(child: CircularProgressIndicator(color: AppColors.green)),
         ),
       );
     }
@@ -203,7 +204,7 @@ class _AreaBar extends StatelessWidget {
         child: Row(
           children: [
             const Icon(Icons.location_on_outlined,
-                size: 17, color: AppColors.green),
+                size: 17, color: AppColors.gradientStart),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -217,7 +218,7 @@ class _AreaBar extends StatelessWidget {
             Text(
               'تغيير',
               style: AppTextStyles.sfarabicMedium
-                  .copyWith(fontSize: 12.5, color: AppColors.green),
+                  .copyWith(fontSize: 12.5, color: AppColors.gradientStart),
             ),
           ],
         ),
@@ -317,7 +318,7 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Material(
-        color: selected ? AppColors.primaryColor : AppColors.white,
+        color: selected ? AppColors.gradientStart : AppColors.white,
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
@@ -392,8 +393,8 @@ class _Empty extends StatelessWidget {
             Text(
               subtitle!,
               textAlign: TextAlign.center,
-              style: AppTextStyles.sfarabicRegular.copyWith(
-                  fontSize: 13, color: AppColors.secondaryTextColor),
+              style: AppTextStyles.sfarabicRegular
+                  .copyWith(fontSize: 13, color: AppColors.secondaryTextColor),
             ),
           ],
           if (actionLabel != null) ...[
@@ -403,7 +404,7 @@ class _Empty extends StatelessWidget {
               child: Text(
                 actionLabel!,
                 style: AppTextStyles.sfarabicBold
-                    .copyWith(color: AppColors.green),
+                    .copyWith(color: AppColors.gradientStart),
               ),
             ),
           ],
