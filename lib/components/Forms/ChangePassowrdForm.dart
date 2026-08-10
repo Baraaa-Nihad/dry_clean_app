@@ -292,12 +292,10 @@ class _ChangePasswordFormState extends State<ChangePasswordForm> {
               children: [
                 PrimaryButton(
                   buttonWidth: "full",
-                  text: _isLoading
-                      ? (AppLocalizations.of(context)?.translate('loading') ??
-                          'Loading...')
-                      : (localizations?.translate('update_password') ??
-                          'Update password'),
+                  text: localizations?.translate('update_password') ??
+                      'Update password',
                   fem: widget.fem,
+                  isLoading: _isLoading,
                   isDisabled: !_notEmpty || _isLoading,
                   onPressed: _isLoading
                       ? null

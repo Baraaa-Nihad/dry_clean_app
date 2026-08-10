@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:saleem_dry_clean/components/Modals/GenderSelectionModal/GenderSelectionModal.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
-import 'package:saleem_dry_clean/style/CustomInputStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 
@@ -29,114 +27,130 @@ class GenderCustomDropDown extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _GenderCustomDropDownState createState() => _GenderCustomDropDownState();
+  State<GenderCustomDropDown> createState() =>
+      _GenderCustomDropDownState();
 }
 
 class _GenderCustomDropDownState extends State<GenderCustomDropDown> {
-  bool _isFocused = false;
-  bool _isValid = true;
-
   @override
   void initState() {
     super.initState();
-    widget.controller.addListener(_validateInput);
-    widget.focusNode.addListener(_handleFocusChange);
+    widget.controller.addListener(_handleValueChanged);
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_validateInput);
-    widget.focusNode.removeListener(_handleFocusChange);
+    widget.controller.removeListener(_handleValueChanged);
     super.dispose();
   }
 
-  void _validateInput() {
-    String input = widget.controller.text;
-    bool isValid = widget.validator != null
-        ? widget.validator!(input) == null
-        : true; // Only check validity if validator is provided
-
-    setState(() {
-      _isValid = isValid;
-      widget.onInputChange(_isValid);
-    });
+  void _handleValueChanged() {
+    final value = widget.controller.text;
+    final isValid = widget.validator?.call(value) == null;
+    if (mounted) setState(() {});
+    widget.onInputChange(isValid);
   }
 
-  void _handleFocusChange() {
-    setState(() {
-      _isFocused = widget.focusNode.hasFocus;
-    });
+  bool _isSelected(String key, String translatedValue) {
+    final value = widget.controller.text.trim().toLowerCase();
+    return value == key ||
+        value == translatedValue.toLowerCase() ||
+        (key == 'male' && value == 'ذكر') ||
+        (key == 'female' && value == 'أنثى');
   }
 
-  void _openModal() {
-    GenderSelectionModal.show(
-      context,
-      widget.fem,
-      widget.controller.text,
-      (selectedArea) {
-        setState(() {
-          widget.controller.text = selectedArea;
-        });
-        _validateInput();
-      },
-    );
+  void _select(String value) {
+    if (widget.isDisabled) return;
+    widget.controller.text = value;
   }
 
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final male = localizations.translate('male');
+    final female = localizations.translate('female');
 
-    return Column(
-      children: [
-        Container(
-          width: 380 * widget.fem,
-          height: 56,
-          child: Focus(
-            focusNode: widget.focusNode,
-            child: GestureDetector(
-              onTap: widget.isDisabled ? null : _openModal,
-              child: AbsorbPointer(
-                child: TextFormField(
-                  controller: widget.controller,
-                  enabled: !widget.isDisabled,
-                  decoration: CustomInputStyles.getInputDecoration(
-                    filled: true, // Enable filling the background
-                    fillColor: AppColors.white,
-                    _isFocused,
-                    _isValid,
-                    widget.isDisabled,
-                    hasError: widget.hasError,
-                    context,
-                    localizations?.translate('gender') ?? 'Gender',
-                    isEmpty: widget.controller.text.isEmpty,
-                    suffixIcon: SvgPicture.asset(
-                      isRtl
-                          ? 'assets/vectors/leftArrow.svg'
-                          : 'assets/vectors/rightArrow1.svg',
-                      width: 24,
-                      height: 24,
-                    ),
-                    fem: widget.fem,
-                  ),
-                  style: AppTextStyles.getFontFamily(
-                    context,
-                    AppTextStyles.regular16Gray80(context).copyWith(
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.w500,
-                      height: 1.5,
-                      color: widget.isDisabled
-                          ? AppColors.inActiveColor
-                          : AppColors.gray70,
-                    ),
-                  ),
-                  cursorColor: AppColors.blue,
+    return Focus(
+      focusNode: widget.focusNode,
+      child: SizedBox(
+        width: 380 * widget.fem,
+        height: 32 * widget.fem,
+        child: Row(
+          children: [
+            Text(
+              localizations.translate('gender'),
+              style: AppTextStyles.getFontFamily(
+                context,
+                AppTextStyles.regular16Gray80(context).copyWith(
+                  fontSize: 16 * widget.fem,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.gray50,
                 ),
               ),
             ),
+            const Spacer(),
+            _buildChoice(
+              context,
+              value: 'male',
+              label: male,
+              selected: _isSelected('male', male),
+            ),
+            SizedBox(width: 22 * widget.fem),
+            _buildChoice(
+              context,
+              value: 'female',
+              label: female,
+              selected: _isSelected('female', female),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChoice(
+    BuildContext context, {
+    required String value,
+    required String label,
+    required bool selected,
+  }) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.isDisabled ? null : () => _select(value),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 4 * widget.fem),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SvgPicture.asset(
+                selected
+                    ? 'assets/Icons/checked_box.svg'
+                    : 'assets/Icons/Check_box.svg',
+                width: 22 * widget.fem,
+                height: 22 * widget.fem,
+              ),
+              SizedBox(width: 8 * widget.fem),
+              Text(
+                label,
+                style: AppTextStyles.getFontFamily(
+                  context,
+                  AppTextStyles.bold16Gray70(context).copyWith(
+                    fontSize: 16 * widget.fem,
+                    fontWeight: FontWeight.w600,
+                    color: widget.isDisabled
+                        ? AppColors.inActiveColor
+                        : AppColors.gray70,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }

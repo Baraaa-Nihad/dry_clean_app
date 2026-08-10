@@ -14,6 +14,8 @@ class CustomDatePicker extends StatefulWidget {
   final Function(String) onDateSelected;
   final String labelText;
   final double fem;
+  final DateTime? maximumDate;
+  final Widget? suffixIcon;
 
   const CustomDatePicker({
     Key? key,
@@ -22,6 +24,8 @@ class CustomDatePicker extends StatefulWidget {
     required this.onDateSelected,
     required this.labelText,
     required this.fem,
+    this.maximumDate,
+    this.suffixIcon,
   }) : super(key: key);
 
   @override
@@ -63,11 +67,20 @@ class _CustomDatePickerState extends State<CustomDatePicker> {
   }
 
   Future<void> _showMaterialDatePicker(BuildContext context) async {
+    final maximumDate = widget.maximumDate ?? DateTime(2100);
+    final currentValue = DateTime.tryParse(widget.controller.text);
+    final today = DateTime.now();
+    final initialDate = currentValue != null &&
+            !currentValue.isBefore(DateTime(1900)) &&
+            !currentValue.isAfter(maximumDate)
+        ? currentValue
+        : (today.isAfter(maximumDate) ? maximumDate : today);
+
     final DateTime? selectedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: initialDate,
       firstDate: DateTime(1900),
-      lastDate: DateTime(2100),
+      lastDate: maximumDate,
       builder: (BuildContext context, Widget? child) {
         return Theme(
           data: ThemeData.light().copyWith(
@@ -100,6 +113,14 @@ class _CustomDatePickerState extends State<CustomDatePicker> {
 
   void _showCupertinoDatePicker(BuildContext context) {
     final localizations = AppLocalizations.of(context);
+    final maximumDate = widget.maximumDate ?? DateTime(2100);
+    final currentValue = DateTime.tryParse(widget.controller.text);
+    final today = DateTime.now();
+    final initialDate = currentValue != null &&
+            !currentValue.isBefore(DateTime(1900)) &&
+            !currentValue.isAfter(maximumDate)
+        ? currentValue
+        : (today.isAfter(maximumDate) ? maximumDate : today);
 
     showModalBottomSheet(
       context: context,
@@ -142,7 +163,9 @@ class _CustomDatePickerState extends State<CustomDatePicker> {
                   ),
                   child: CupertinoDatePicker(
                     mode: CupertinoDatePickerMode.date,
-                    initialDateTime: DateTime.now(),
+                    initialDateTime: initialDate,
+                    minimumDate: DateTime(1900),
+                    maximumDate: maximumDate,
                     onDateTimeChanged: (DateTime newDate) {
                       final formattedDate =
                           "${newDate.year}-${newDate.month.toString().padLeft(2, '0')}-${newDate.day.toString().padLeft(2, '0')}";
@@ -175,6 +198,7 @@ class _CustomDatePickerState extends State<CustomDatePicker> {
           widget.labelText,
           labelTextSecondary: null,
           isEmpty: widget.controller.text.isEmpty,
+          suffixIcon: widget.suffixIcon,
           fem: widget.fem,
           filled: true,
           fillColor: AppColors.white,

@@ -3,9 +3,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/buttons/LoadingButton.dart';
-import 'package:saleem_dry_clean/components/inputs/CustomDropDown.dart';
 import 'package:saleem_dry_clean/components/inputs/GenderCustomDropDown.dart';
 import 'package:saleem_dry_clean/components/inputs/TextCustomInput.dart';
+import 'package:saleem_dry_clean/services/Providers/LocationScopeProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/sign_up_provider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
@@ -50,12 +50,24 @@ class _RegistrationFormState extends State<RegistrationForm> {
   bool _isPasswordVisible = false;
   bool _isRepeatPasswordVisible = false;
 
+  DateTime get _latestAllowedBirthDate {
+    final today = DateTime.now();
+    final year = today.year - 15;
+    final lastDayOfMonth = DateTime(year, today.month + 1, 0).day;
+    final day = today.day > lastDayOfMonth ? lastDayOfMonth : today.day;
+    return DateTime(year, today.month, day);
+  }
+
+  bool _isOldEnough(String value) {
+    final birthDate = DateTime.tryParse(value.trim());
+    return birthDate != null && !birthDate.isAfter(_latestAllowedBirthDate);
+  }
+
   @override
   void initState() {
     super.initState();
     _firstNameController.addListener(_validateForm);
     _lastNameController.addListener(_validateForm);
-    _areaController.addListener(_validateForm);
     _passwordController.addListener(_validateForm);
     _repeatPasswordController.addListener(_validateForm);
     _dobController.addListener(_validateForm); // Add listener for date of birth
@@ -80,6 +92,18 @@ class _RegistrationFormState extends State<RegistrationForm> {
     });
 
     _loadMobileNumber();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final selectedArea = context.watch<LocationScopeProvider>().area;
+    if (selectedArea == null) return;
+
+    _selectedAreaId = selectedArea.id.toString();
+    if (_areaController.text != selectedArea.name) {
+      _areaController.text = selectedArea.name;
+    }
   }
 
   Future<void> _loadMobileNumber() async {
@@ -121,7 +145,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
           _repeatPasswordController.text.isEmpty ||
           _passwordController.text != _repeatPasswordController.text ||
           _passwordController.text.length < 8 ||
-          _dobController.text.isEmpty ||
+          !_isOldEnough(_dobController.text) ||
           _genderController
               .text.isEmpty; // Validate date of birth and gender fields
     });
@@ -284,52 +308,6 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                   ],
                                 ),
                                 SizedBox(height: 16 * fem),
-                                TextCustomInput(
-                                  controller: TextEditingController(
-                                    text: localizations
-                                            ?.translate('Ramallah&Al-Bireh') ??
-                                        'Ramallah & Al-Bireh',
-                                  ),
-                                  focusNode: FocusNode(),
-                                  labelTextPrimary:
-                                      localizations?.translate('governate') ??
-                                          'Governate',
-                                  fem: fem,
-                                  isDisabled: true,
-                                  onInputChange: (isValid) {},
-                                ),
-                                SizedBox(height: 16 * fem),
-                                CustomDropDown(
-                                  fem: 1.0,
-                                  controller: _areaController,
-                                  focusNode: _areaFocusNode,
-                                  onInputChange: (isValid) {
-                                    // Handle input change
-                                  },
-                                  onAreaIdChange: (areaId) {
-                                    _selectedAreaId = areaId;
-                                  },
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return localizations?.translate(
-                                              'please_select_area') ??
-                                          'Please select an area';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                // SizedBox(height: 16 * fem),
-                                // TextCustomInput(
-                                //   controller: _mobileController,
-                                //   focusNode: FocusNode(),
-                                //   labelTextPrimary: localizations
-                                //           ?.translate('mobile_number') ??
-                                //       'Mobile Number',
-                                //   fem: fem,
-                                //   isDisabled: true,
-                                //   onInputChange: (isValid) {},
-                                // ),
-                                SizedBox(height: 16 * fem),
                                 GenderCustomDropDown(
                                   fem: fem,
                                   controller: _genderController,
@@ -355,6 +333,15 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                       'Date of Birth',
                                   fem: fem,
                                   inputType: InputType.date,
+                                  maximumDate: _latestAllowedBirthDate,
+                                  suffixIcon: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: SvgPicture.asset(
+                                      'assets/Icons/CalendarGrad.svg',
+                                      width: 24,
+                                      height: 24,
+                                    ),
+                                  ),
                                   onInputChange: (isValid) {
                                     _validateForm();
                                   },
@@ -364,8 +351,39 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                               ?.translate('please_enter_dob') ??
                                           'Please enter your date of birth';
                                     }
+                                    if (!_isOldEnough(value)) {
+                                      return localizations?.translate(
+                                              'minimum_registration_age') ??
+                                          'You must be at least 15 years old';
+                                    }
                                     return null;
                                   },
+                                ),
+                                SizedBox(height: 16 * fem),
+                                TextCustomInput(
+                                  controller: TextEditingController(
+                                    text: localizations
+                                            ?.translate('Ramallah&Al-Bireh') ??
+                                        'Ramallah & Al-Bireh',
+                                  ),
+                                  focusNode: FocusNode(),
+                                  labelTextPrimary:
+                                      localizations?.translate('governate') ??
+                                          'Governate',
+                                  fem: fem,
+                                  isDisabled: true,
+                                  onInputChange: (isValid) {},
+                                ),
+                                SizedBox(height: 16 * fem),
+                                TextCustomInput(
+                                  controller: _areaController,
+                                  focusNode: _areaFocusNode,
+                                  labelTextPrimary:
+                                      localizations?.translate('area') ??
+                                          'Area',
+                                  fem: fem,
+                                  isDisabled: true,
+                                  onInputChange: (isValid) {},
                                 ),
                                 SizedBox(height: 16 * fem),
                                 TextCustomInput(

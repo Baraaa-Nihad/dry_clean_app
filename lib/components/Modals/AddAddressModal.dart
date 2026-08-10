@@ -6,9 +6,9 @@ import 'package:saleem_dry_clean/components/Modals/AddAddressNameModal.dart';
 import 'package:saleem_dry_clean/components/Modals/CustomModal.dart';
 import 'package:saleem_dry_clean/components/buttons/PrimaryButton.dart';
 import 'package:saleem_dry_clean/components/buttons/SecondaryButton.dart';
-import 'package:saleem_dry_clean/components/inputs/CustomDropDown.dart';
 import 'package:saleem_dry_clean/components/inputs/TextCustomInput.dart';
 import 'package:saleem_dry_clean/services/Providers/AddressesProvider.dart';
+import 'package:saleem_dry_clean/services/Providers/LocationScopeProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
@@ -63,15 +63,19 @@ class _NewAddressModalState extends State<NewAddressModal> {
     super.initState();
 
     _selectedIndex = widget.selectedIndex;
-    _addressNameController =
-        TextEditingController(text: widget.item['addressName'] ?? '');
+    _addressNameController = TextEditingController(
+      text: widget.item['addressName'] ?? '',
+    );
     _governateController = TextEditingController();
-    _streetController =
-        TextEditingController(text: widget.item['street'] ?? '');
-    _buildingController =
-        TextEditingController(text: widget.item['building'] ?? '');
-    _extraInfoController =
-        TextEditingController(text: widget.item['extraInfo'] ?? '');
+    _streetController = TextEditingController(
+      text: widget.item['street'] ?? '',
+    );
+    _buildingController = TextEditingController(
+      text: widget.item['building'] ?? '',
+    );
+    _extraInfoController = TextEditingController(
+      text: widget.item['extraInfo'] ?? '',
+    );
     _areaController = TextEditingController(text: widget.item['area'] ?? '');
 
     _addressNameFocusNode = FocusNode();
@@ -81,13 +85,14 @@ class _NewAddressModalState extends State<NewAddressModal> {
     _areaFocusNode = FocusNode();
     _extraInfoFocusNode = FocusNode();
 
-    // Set selected category based on existing addressName
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AddressesProvider>(context, listen: false)
-          .fetchAddressNames()
-          .then((_) {
-        _setSelectedCategory();
-      });
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _hydrateSavedLocation();
+      if (!mounted) return;
+      await Provider.of<AddressesProvider>(
+        context,
+        listen: false,
+      ).fetchAddressNames();
+      if (mounted) _setSelectedCategory();
     });
 
     _validateForm();
@@ -96,6 +101,63 @@ class _NewAddressModalState extends State<NewAddressModal> {
     _buildingController.addListener(_validateForm);
     _extraInfoController.addListener(_validateForm);
     _areaController.addListener(_validateForm);
+  }
+
+  /// The city and area were chosen before registration/browsing and are kept
+  /// by LocationScopeProvider. A new delivery address inherits both values so
+  /// the user cannot accidentally create an address outside the active scope.
+  Future<void> _hydrateSavedLocation() async {
+    final scope = context.read<LocationScopeProvider>();
+    if (!scope.isRestored) await scope.restore();
+    if (!mounted) return;
+
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final selectedGovernate = scope.governate;
+    final selectedArea = scope.area;
+
+    final governateName = widget.isNewAddress && selectedGovernate != null
+        ? selectedGovernate.name
+        : (isRtl
+                  ? widget.item['governateName_ar']
+                  : widget.item['governateName_en']) ??
+              widget.item['governate'] ??
+              selectedGovernate?.name ??
+              '';
+    final areaName = widget.isNewAddress && selectedArea != null
+        ? selectedArea.name
+        : (isRtl ? widget.item['areaName_ar'] : widget.item['areaName_en']) ??
+              widget.item['area'] ??
+              selectedArea?.name ??
+              '';
+
+    setState(() {
+      _governateController.text = governateName.toString();
+      _areaController.text = areaName.toString();
+
+      final governateId = widget.isNewAddress && selectedGovernate != null
+          ? selectedGovernate.id
+          : widget.item['governateId'] ??
+                widget.item['governate_id'] ??
+                selectedGovernate?.id;
+      final areaId = widget.isNewAddress && selectedArea != null
+          ? selectedArea.id
+          : widget.item['areaId'] ?? widget.item['area_id'] ?? selectedArea?.id;
+
+      if (governateId != null) {
+        widget.item['governateId'] = governateId;
+        widget.item['governate_id'] = governateId;
+      }
+      if (areaId != null) {
+        widget.item['areaId'] = areaId;
+        widget.item['area_id'] = areaId;
+      }
+      widget.item['governate'] = _governateController.text;
+      widget.item['area'] = _areaController.text;
+      widget.item[isRtl ? 'governateName_ar' : 'governateName_en'] =
+          _governateController.text;
+      widget.item[isRtl ? 'areaName_ar' : 'areaName_en'] = _areaController.text;
+    });
+    _validateForm();
   }
 
   void _setSelectedCategory() {
@@ -155,7 +217,11 @@ class _NewAddressModalState extends State<NewAddressModal> {
 
   void _validateForm() {
     setState(() {
-      _isFormValid = _addressNameController.text.isNotEmpty &&
+      _isFormValid =
+          _addressNameController.text.isNotEmpty &&
+          _governateController.text.isNotEmpty &&
+          _areaController.text.isNotEmpty &&
+          (widget.item['areaId'] ?? widget.item['area_id']) != null &&
           _streetController.text.isNotEmpty &&
           _buildingController.text.isNotEmpty;
     });
@@ -166,7 +232,6 @@ class _NewAddressModalState extends State<NewAddressModal> {
       _isSubmitting = true;
     });
 
-    const _governateid = "1";
     widget.item['addressName_ar'] = _addressNameController.text;
     widget.item['addressName_en'] = _addressNameController.text;
     widget.item['governate'] = _governateController.text;
@@ -174,11 +239,12 @@ class _NewAddressModalState extends State<NewAddressModal> {
     widget.item['building'] = _buildingController.text;
     widget.item['extraInfo'] = _extraInfoController.text;
     widget.item['area'] = _areaController.text;
-    widget.item['governateId'] = _governateid;
+    widget.item['governateId'] ??= widget.item['governate_id'];
+    widget.item['areaId'] ??= widget.item['area_id'];
 
     if (_selectedIndex >= 0 && _selectedIndex < addressNames.length) {
-      widget.item['addressNameId'] =
-          addressNames[_selectedIndex]['id'].toString();
+      widget.item['addressNameId'] = addressNames[_selectedIndex]['id']
+          .toString();
     }
 
     if (widget.isNewAddress) {
@@ -195,8 +261,7 @@ class _NewAddressModalState extends State<NewAddressModal> {
 
     CustomModal.show(
       context,
-      mainTitle: localizations.translate('add_address_details') ??
-          'Add Address Details',
+      mainTitle: localizations.translate('add_address_details'),
       fem: widget.fem,
       isDisabledButton: false,
       onPrefixIconTap: () {
@@ -234,15 +299,10 @@ class _NewAddressModalState extends State<NewAddressModal> {
 
     bool isRtl = Directionality.of(context) == TextDirection.rtl;
 
-    _governateController.text =
-        isRtl ? 'رام الله والبيرة' : 'Ramallah & Al-Bireh';
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: addressesProvider.isLoading
-          ? Center(
-              child: LoadingDots(fem: widget.fem),
-            )
+          ? Center(child: LoadingDots(fem: widget.fem))
           : GestureDetector(
               onTap: () {
                 FocusScope.of(context).unfocus();
@@ -259,7 +319,7 @@ class _NewAddressModalState extends State<NewAddressModal> {
                                 ? name['name_ar'] ?? ''
                                 : name['name_en'] ?? '',
                             'id': name['id'] ?? '',
-                            'icon': name['icon'] ?? ''
+                            'icon': name['icon'] ?? '',
                           };
                         }).toList(),
                         fem: widget.fem,
@@ -267,8 +327,10 @@ class _NewAddressModalState extends State<NewAddressModal> {
                         onItemSelected: (index) {
                           setState(() {
                             _selectedIndex = index;
-                            _addressNameController.text = addressNames[index]
-                                    [isRtl ? 'name_ar' : 'name_en'] ??
+                            _addressNameController.text =
+                                addressNames[index][isRtl
+                                    ? 'name_ar'
+                                    : 'name_en'] ??
                                 '';
                             _isCustomName = false;
                             _validateForm();
@@ -286,8 +348,7 @@ class _NewAddressModalState extends State<NewAddressModal> {
                         children: [
                           SizedBox(height: 12 * widget.fem),
                           Text(
-                            localizations.translate('fill_out_location_info') ??
-                                'Please fill out the information for the location where you want us to pick up from and deliver to your laundry.',
+                            localizations.translate('fill_out_location_info'),
                             style: AppTextStyles.getFontFamily(
                               context,
                               AppTextStyles.regular16Gray80(context).copyWith(
@@ -304,14 +365,13 @@ class _NewAddressModalState extends State<NewAddressModal> {
                             GestureDetector(
                               onTap: openNameModal,
                               child: Text(
-                                localizations
-                                        .translate('or_enter_custom_name') ??
-                                    'Or enter custom name',
+                                localizations.translate('or_enter_custom_name'),
                                 textAlign: TextAlign.center,
                                 style: AppTextStyles.getFontFamily(
                                   context,
-                                  AppTextStyles.bold16Gradient(context)
-                                      .copyWith(
+                                  AppTextStyles.bold16Gradient(
+                                    context,
+                                  ).copyWith(
                                     fontSize: 16.0 * widget.fem,
                                     fontWeight: FontWeight.w600,
                                     height: 1.5,
@@ -324,9 +384,9 @@ class _NewAddressModalState extends State<NewAddressModal> {
                             TextCustomInput(
                               controller: _addressNameController,
                               focusNode: _addressNameFocusNode,
-                              labelTextPrimary:
-                                  localizations.translate('address_name') ??
-                                      'Address Name',
+                              labelTextPrimary: localizations.translate(
+                                'address_name',
+                              ),
                               fem: widget.fem,
                               onInputChange: (isValid) {
                                 widget.item['addressName'] =
@@ -339,42 +399,29 @@ class _NewAddressModalState extends State<NewAddressModal> {
                           TextCustomInput(
                             controller: _governateController,
                             focusNode: _governateFocusNode,
-                            labelTextPrimary:
-                                localizations.translate('governate') ??
-                                    'Governate',
+                            labelTextPrimary: localizations.translate(
+                              'governate',
+                            ),
                             fem: widget.fem,
                             isDisabled: true,
                             onInputChange: (isValid) {},
                           ),
                           SizedBox(height: 16 * widget.fem),
-                          CustomDropDown(
-                            fem: widget.fem,
+                          TextCustomInput(
                             controller: _areaController,
-                            selectedItem: widget.item['area_id'] ?? 0,
                             focusNode: _areaFocusNode,
-                            onInputChange: (isValid) {
-                              widget.item['area'] = _areaController.text;
-                              widget.onUpdate(widget.item);
-                              _validateForm();
-                            },
-                            onAreaIdChange: (areaId) {
-                              widget.item['areaId'] = areaId;
-                            },
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return localizations
-                                        .translate('please_select_area') ??
-                                    'Please select an area';
-                              }
-                              return null;
-                            },
+                            labelTextPrimary: localizations.translate(
+                              'select_area',
+                            ),
+                            fem: widget.fem,
+                            isDisabled: true,
+                            onInputChange: (isValid) {},
                           ),
                           SizedBox(height: 16 * widget.fem),
                           TextCustomInput(
                             controller: _streetController,
                             focusNode: _streetFocusNode,
-                            labelTextPrimary:
-                                localizations.translate('street') ?? 'Street',
+                            labelTextPrimary: localizations.translate('street'),
                             fem: widget.fem,
                             onInputChange: (isValid) {
                               widget.item['street'] = _streetController.text;
@@ -383,9 +430,9 @@ class _NewAddressModalState extends State<NewAddressModal> {
                             },
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return localizations
-                                        .translate('please_enter_street') ??
-                                    'Please enter a street';
+                                return localizations.translate(
+                                  'please_enter_street',
+                                );
                               }
                               return null;
                             },
@@ -394,9 +441,9 @@ class _NewAddressModalState extends State<NewAddressModal> {
                           TextCustomInput(
                             controller: _buildingController,
                             focusNode: _buildingFocusNode,
-                            labelTextPrimary:
-                                localizations.translate('building') ??
-                                    'Building',
+                            labelTextPrimary: localizations.translate(
+                              'building',
+                            ),
                             fem: widget.fem,
                             onInputChange: (isValid) {
                               widget.item['building'] =
@@ -406,9 +453,9 @@ class _NewAddressModalState extends State<NewAddressModal> {
                             },
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return localizations
-                                        .translate('please_enter_building') ??
-                                    'Please enter a building';
+                                return localizations.translate(
+                                  'please_enter_building',
+                                );
                               }
                               return null;
                             },
@@ -418,9 +465,9 @@ class _NewAddressModalState extends State<NewAddressModal> {
                             textInputHeight: 104.0 * widget.fem,
                             controller: _extraInfoController,
                             focusNode: _extraInfoFocusNode,
-                            labelTextPrimary:
-                                localizations.translate('extra_address_info') ??
-                                    'Extra address information',
+                            labelTextPrimary: localizations.translate(
+                              'extra_address_info',
+                            ),
                             fem: widget.fem,
                             onInputChange: (isValid) {
                               widget.item['extraInfo'] =
@@ -438,9 +485,10 @@ class _NewAddressModalState extends State<NewAddressModal> {
                                   fem: widget.fem,
                                   buttonWidth: "medium",
                                   isDisabled: !_isFormValid || _isSubmitting,
-                                  text: localizations.translate('add') ?? 'Add',
-                                  onPressed:
-                                      _isFormValid ? _handleSubmit : null,
+                                  text: localizations.translate('add'),
+                                  onPressed: _isFormValid
+                                      ? _handleSubmit
+                                      : null,
                                 ),
                               ),
                               SizedBox(width: 16 * widget.fem),
@@ -449,8 +497,7 @@ class _NewAddressModalState extends State<NewAddressModal> {
                                   fem: widget.fem,
                                   buttonWidth: "medium",
                                   isDisabled: false,
-                                  text: localizations.translate('cancel') ??
-                                      'Cancel',
+                                  text: localizations.translate('cancel'),
                                   onPressed: () => Navigator.of(context).pop(),
                                 ),
                               ),

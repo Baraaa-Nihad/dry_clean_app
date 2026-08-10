@@ -103,13 +103,12 @@ class _LangSelectionModalState extends State<LangSelectionModal> {
                 final languageName = language == 'ar' ? 'العربية' : 'English';
                 return GestureDetector(
                   onTap: () {
-                    setState(() {
-                      _selectedLanguage = language;
-                    });
+                    Navigator.of(context).pop();
                     widget.onLanguageSelected(language);
                   },
                   child: _buildLanguageItem(
                     context,
+                    language,
                     languageName,
                     isSelected,
                   ),
@@ -124,7 +123,11 @@ class _LangSelectionModalState extends State<LangSelectionModal> {
   }
 
   Widget _buildLanguageItem(
-      BuildContext context, String language, bool isSelected) {
+    BuildContext context,
+    String languageCode,
+    String language,
+    bool isSelected,
+  ) {
     return Container(
       height: 48.0 * widget.fem,
       decoration: BoxDecoration(
@@ -139,11 +142,10 @@ class _LangSelectionModalState extends State<LangSelectionModal> {
           Flexible(
             child: Text(
               language,
-              style: AppTextStyles.getFontFamily(
-                context,
-                AppTextStyles.bold16Gray70(context).copyWith(
-                  fontSize: 16.0 * widget.fem,
-                ),
+              style: AppTextStyles.bold16Gray70(context).copyWith(
+                fontFamily:
+                    languageCode == 'ar' ? 'BalooBhaijaan' : 'Poppins',
+                fontSize: 16.0 * widget.fem,
               ),
               overflow: TextOverflow.ellipsis,
             ),

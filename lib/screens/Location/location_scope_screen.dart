@@ -330,7 +330,7 @@ class _OptionRow extends StatelessWidget {
                   selected
                       ? Icons.check_circle
                       : Directionality.of(context) == TextDirection.rtl
-                          ? Icons.chevron_left
+                          ? Icons.chevron_right
                           : Icons.chevron_right,
                   size: 20,
                   color: selected

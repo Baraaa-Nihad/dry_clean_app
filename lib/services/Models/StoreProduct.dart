@@ -85,8 +85,9 @@ class StoreProduct {
       price: price,
       // الاحتياط للسعر المعلن لا للصفر: صفر يعني «مجاني» وهو أسوأ خطأ
       // يمكن عرضه على الزبون
-      effectivePrice:
-          j['effectivePrice'] == null ? price : _d(j['effectivePrice']),
+      effectivePrice: j['effectivePrice'] == null
+          ? price
+          : _d(j['effectivePrice']),
       offerPrice: j['offerPrice'] == null ? null : _d(j['offerPrice']),
       hasOffer: j['hasOffer'] == true,
       unit: (j['unit'] ?? 'item').toString(),
@@ -95,6 +96,43 @@ class StoreProduct {
           .toList(),
     );
   }
+}
+
+/// A customer-facing catalogue item with every service offered by one store.
+///
+/// The API keeps the natural pricing row (`product + service + store`).  The
+/// catalogue, however, is product-first: the customer opens one garment and
+/// chooses the required quantities for all available services in one place.
+class CatalogProduct {
+  CatalogProduct({
+    required this.productId,
+    required this.name,
+    required this.offerings,
+    this.groupId,
+    this.groupName,
+    this.imagePath,
+  });
+
+  final int productId;
+  final String name;
+  final int? groupId;
+  final String? groupName;
+  final String? imagePath;
+  final List<StoreProduct> offerings;
+
+  bool get hasOffer => offerings.any((offering) => offering.hasOffer);
+
+  int? get bestDiscountPercent {
+    int? best;
+    for (final offering in offerings) {
+      final value = offering.discountPercent;
+      if (value != null && (best == null || value > best)) best = value;
+    }
+    return best;
+  }
+
+  /// A stable identity for section keys and cart badges.
+  String get key => '$productId';
 }
 
 /// مقاس جاهز لصنف يُسعَّر بالمتر المربّع.
@@ -110,10 +148,10 @@ class ProductSize {
   final double area;
 
   factory ProductSize.fromJson(Map<String, dynamic> j) => ProductSize(
-        height: double.tryParse('${j['height'] ?? 0}') ?? 0,
-        width: double.tryParse('${j['width'] ?? 0}') ?? 0,
-        area: double.tryParse('${j['area'] ?? 0}') ?? 0,
-      );
+    height: double.tryParse('${j['height'] ?? 0}') ?? 0,
+    width: double.tryParse('${j['width'] ?? 0}') ?? 0,
+    area: double.tryParse('${j['area'] ?? 0}') ?? 0,
+  );
 }
 
 /// خدمة المحل وما تحتها من أصناف — بنية تبويب الشاشة.
@@ -129,13 +167,12 @@ class StoreService {
   final List<StoreProduct> products;
 
   factory StoreService.fromJson(Map<String, dynamic> j) => StoreService(
-        serviceId: int.tryParse('${j['serviceId']}') ?? 0,
-        serviceName: (j['serviceName'] ?? '').toString(),
-        products: ((j['products'] as List?) ?? const [])
-            .map((e) =>
-                StoreProduct.fromJson(Map<String, dynamic>.from(e as Map)))
-            .toList(),
-      );
+    serviceId: int.tryParse('${j['serviceId']}') ?? 0,
+    serviceName: (j['serviceName'] ?? '').toString(),
+    products: ((j['products'] as List?) ?? const [])
+        .map((e) => StoreProduct.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList(),
+  );
 
   /// الأصناف مجمّعة بالمجموعة، مرتّبة كما وردت من الخادم.
   ///

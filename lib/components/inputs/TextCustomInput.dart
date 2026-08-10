@@ -30,6 +30,7 @@ class TextCustomInput extends StatefulWidget {
   final Function(bool) onInputChange;
   final String? Function(String?)? validator;
   final InputType inputType;
+  final DateTime? maximumDate;
 
   const TextCustomInput({
     Key? key,
@@ -47,6 +48,7 @@ class TextCustomInput extends StatefulWidget {
     required this.onInputChange,
     this.validator,
     this.inputType = InputType.text,
+    this.maximumDate,
   }) : super(key: key);
 
   @override
@@ -99,14 +101,37 @@ class _TextCustomInputState extends State<TextCustomInput> {
   @override
   Widget build(BuildContext context) {
     if (widget.inputType == InputType.date) {
-      return CustomDatePicker(
-        controller: widget.controller,
-        focusNode: widget.focusNode,
-        onDateSelected: (date) {
-          _validateInput();
-        },
-        labelText: widget.labelTextPrimary,
-        fem: widget.fem,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CustomDatePicker(
+            controller: widget.controller,
+            focusNode: widget.focusNode,
+            onDateSelected: (date) {
+              _validateInput();
+            },
+            labelText: widget.labelTextPrimary,
+            fem: widget.fem,
+            maximumDate: widget.maximumDate,
+            suffixIcon: widget.suffixIcon,
+          ),
+          if (_errorMessage != null && _isDirty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text(
+                _errorMessage!,
+                style: AppTextStyles.getFontFamily(
+                  context,
+                  AppTextStyles.regular16Gray80(context).copyWith(
+                    fontSize: 12.0,
+                    fontWeight: FontWeight.w500,
+                    height: 1.5,
+                    color: AppColors.red,
+                  ),
+                ),
+              ),
+            ),
+        ],
       );
     }
 

@@ -154,6 +154,19 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
     );
   }
 
+  String _localizedGender(AppLocalizations localizations, String value) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized == 'male' || normalized == 'm' || normalized == 'ذكر') {
+      return localizations.translate('male');
+    }
+    if (normalized == 'female' ||
+        normalized == 'f' ||
+        normalized == 'أنثى') {
+      return localizations.translate('female');
+    }
+    return value;
+  }
+
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
@@ -207,7 +220,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                         leadingIcon: true,
                         leadingIconPath: 'assets/Icons/Gender.svg',
                         title: localizations?.translate('Gender') ?? 'Gender',
-                        subtitle: user.gender,
+                        subtitle: _localizedGender(localizations, user.gender),
                         trailingIcon: false,
                         trailingIconPath: 'assets/Icons/edit.svg',
                         onTap: () {},

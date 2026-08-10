@@ -1,7 +1,6 @@
 // lib/components/Filters/CategoryFilter.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
@@ -28,8 +27,8 @@ class CategoryFilter extends StatelessWidget {
   // Enhanced shimmer effect to mimic category button layout
   Widget buildShimmer(double fem) {
     return Shimmer.fromColors(
-      baseColor: AppColors.gray20!,
-      highlightColor: AppColors.gray10!,
+      baseColor: AppColors.gray20,
+      highlightColor: AppColors.gray10,
       child: Container(
         height: 44 * fem,
         margin: EdgeInsets.only(right: 8 * fem),
@@ -37,10 +36,7 @@ class CategoryFilter extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.gray20,
           borderRadius: BorderRadius.circular(12 * fem),
-          border: Border.all(
-            color: AppColors.gray20!,
-            width: 1,
-          ),
+          border: Border.all(color: AppColors.gray20, width: 1),
         ),
         child: Row(
           children: [
@@ -56,10 +52,7 @@ class CategoryFilter extends StatelessWidget {
             SizedBox(width: 8 * fem),
             // Rectangular placeholder for text
             Expanded(
-              child: Container(
-                height: 16 * fem,
-                color: AppColors.gray20,
-              ),
+              child: Container(height: 16 * fem, color: AppColors.gray20),
             ),
           ],
         ),
@@ -95,10 +88,12 @@ class CategoryFilter extends StatelessWidget {
                         height: 44 * fem,
                         margin: EdgeInsets.only(right: 8 * fem),
                         padding: EdgeInsets.symmetric(
-                            horizontal: 16 * fem, vertical: 8 * fem),
+                          horizontal: 16 * fem,
+                          vertical: 8 * fem,
+                        ),
                         decoration: BoxDecoration(
-                          color:
-                              isSelected ? AppColors.gray80 : AppColors.white,
+                          gradient: isSelected ? AppColors.brandGradient : null,
+                          color: isSelected ? null : AppColors.white,
                           borderRadius: BorderRadius.circular(12 * fem),
                           border: Border.all(
                             color: isSelected
@@ -114,9 +109,12 @@ class CategoryFilter extends StatelessWidget {
                                   item['icon'].isNotEmpty)
                                 SvgPicture.asset(
                                   item['icon'],
-                                  color: isSelected
-                                      ? Colors.white
-                                      : Color(0xFF033371),
+                                  colorFilter: ColorFilter.mode(
+                                    isSelected
+                                        ? Colors.white
+                                        : const Color(0xFF033371),
+                                    BlendMode.srcIn,
+                                  ),
                                   width: 20 * fem,
                                   height: 20 * fem,
                                 ),
@@ -128,8 +126,9 @@ class CategoryFilter extends StatelessWidget {
                                 textAlign: TextAlign.center,
                                 style: AppTextStyles.getFontFamily(
                                   context,
-                                  AppTextStyles.regular16Gray80(context)
-                                      .copyWith(
+                                  AppTextStyles.regular16Gray80(
+                                    context,
+                                  ).copyWith(
                                     fontSize: 16.0,
                                     fontWeight: FontWeight.w600,
                                     height: 1,
@@ -151,7 +150,4 @@ class CategoryFilter extends StatelessWidget {
       ),
     );
   }
-
-  @override
-  Size get preferredSize => Size.fromHeight(84 * fem);
 }

@@ -1,25 +1,18 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:saleem_dry_clean/services/ApiClient/ApiClient.dart';
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
-import 'package:saleem_dry_clean/services/Models/StoreProduct.dart';
 import 'package:saleem_dry_clean/services/Models/Store.dart';
+import 'package:saleem_dry_clean/services/Models/StoreProduct.dart';
 import 'package:saleem_dry_clean/services/User/TokenService.dart';
 
-/// كتالوج محل واحد بأسعاره هو.
-///
-/// ★ ما الذي تغيّر عن ServiceTypeProvider ★
-///
-/// ذاك ينادي groupsWithProductsAndServices بلا معرّف محل، فيردّ كتالوج
-/// المنصّة بسعر واحد لكل صنف. وهذا كان صحيحاً حين كانت سليم هي من تغسل.
-///
-/// وهذا ينادي /customer/drycleans/:id/products فيردّ ما سعّره هذا المحل
-/// وحده: منتج لم يسعّره لا يظهر أصلاً — محل لا يغسل سجاداً لا يعرض
-/// سجاداً، بدل أن يعرضه ثم يرفض الطلب عند الدفع.
+/// Loads one laundry's catalogue and exposes it in the product-first shape
+/// used by the customer experience.
 class StoreCatalogProvider with ChangeNotifier {
   StoreCatalogProvider(TokenService tokenService)
-      : _client = ApiClient.createClient(tokenService);
+    : _client = ApiClient.createClient(tokenService);
 
   final http.Client _client;
 
@@ -28,8 +21,6 @@ class StoreCatalogProvider with ChangeNotifier {
   Store? _store;
   bool _isLoading = false;
   String? _error;
-
-  int? _selectedServiceId;
   String _search = '';
   String _lang = 'ar';
   int _requestSeq = 0;
@@ -40,49 +31,104 @@ class StoreCatalogProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   String get search => _search;
-  int? get selectedServiceId => _selectedServiceId;
 
-  /// الخدمة المعروضة الآن — أول خدمة ما لم يختر الزبون غيرها.
-  StoreService? get selectedService {
-    if (_services.isEmpty) return null;
-    for (final s in _services) {
-      if (s.serviceId == _selectedServiceId) return s;
+  /// Products after search, grouped by garment category.
+  ///
+  /// The API response is service-first because each price belongs to one
+  /// product/service/store row. Rows sharing a product id are folded into one
+  /// catalogue item so all services can be selected from its details screen.
+  Map<String, List<CatalogProduct>> get visibleGroups {
+    final query = _search.trim().toLowerCase();
+    final fallbackGroup = _lang == 'en' ? 'Other' : 'أخرى';
+    final products = <int, CatalogProduct>{};
+
+    for (final service in _services) {
+      for (final offering in service.products) {
+        final existing = products[offering.productId];
+        if (existing == null) {
+          products[offering.productId] = CatalogProduct(
+            productId: offering.productId,
+            name: offering.name,
+            groupId: offering.groupId,
+            groupName: offering.groupName,
+            imagePath: offering.imagePath,
+            offerings: [offering],
+          );
+        } else if (!existing.offerings.any(
+          (item) => item.serviceId == offering.serviceId,
+        )) {
+          existing.offerings.add(offering);
+        }
+      }
     }
-    return _services.first;
+
+    final grouped = <String, List<CatalogProduct>>{};
+    for (final product in products.values) {
+      if (query.isNotEmpty && !product.name.toLowerCase().contains(query)) {
+        continue;
+      }
+      final group = (product.groupName ?? '').trim();
+      grouped
+          .putIfAbsent(group.isEmpty ? fallbackGroup : group, () => [])
+          .add(product);
+    }
+    if (kDebugMode && query.isEmpty && products.isNotEmpty) {
+      _appendPreviewCategories(grouped, products.values.toList());
+    }
+    return grouped;
   }
 
-  /// أصناف الخدمة المختارة بعد البحث، مجمّعة بالمجموعة.
-  ///
-  /// البحث محلي: الكتالوج محمَّل كاملاً في الذاكرة، ونداء الخادم عند كل
-  /// حرف يجعل الكتابة متقطّعة على شبكة بطيئة.
-  Map<String, List<StoreProduct>> get visibleGroups {
-    final svc = selectedService;
-    if (svc == null) return const {};
+  /// Adds enough development-only content to exercise the sticky category
+  /// navigation and long-list behaviour. Release builds always use server data
+  /// only, and searching hides the preview rows so search results stay honest.
+  void _appendPreviewCategories(
+    Map<String, List<CatalogProduct>> grouped,
+    List<CatalogProduct> source,
+  ) {
+    final labels = _lang == 'en'
+        ? const [
+            'Bedding',
+            'Jackets',
+            'Sportswear',
+            'Children',
+            'Curtains',
+            'Blankets',
+            'Traditional wear',
+            'Home textiles',
+          ]
+        : const [
+            'أغطية السرير',
+            'جاكيتات',
+            'ملابس رياضية',
+            'ملابس أطفال',
+            'ستائر',
+            'بطانيات',
+            'ملابس تراثية',
+            'مفروشات منزلية',
+          ];
 
-    final q = _search.trim().toLowerCase();
-    final grouped =
-        svc.byGroup(fallbackGroup: _lang == 'en' ? 'Other' : 'أخرى');
-    if (q.isEmpty) return grouped;
-
-    final map = <String, List<StoreProduct>>{};
-    for (final entry in grouped.entries) {
-      final hits =
-          entry.value.where((p) => p.name.toLowerCase().contains(q)).toList();
-      if (hits.isNotEmpty) map[entry.key] = hits;
+    for (var groupIndex = 0; groupIndex < labels.length; groupIndex++) {
+      final label = labels[groupIndex];
+      if (grouped.containsKey(label)) continue;
+      grouped[label] = List.generate(3, (itemIndex) {
+        final original = source[(groupIndex * 3 + itemIndex) % source.length];
+        return CatalogProduct(
+          productId: original.productId,
+          name: original.name,
+          groupId: original.groupId,
+          groupName: label,
+          imagePath: original.imagePath,
+          offerings: List<StoreProduct>.from(original.offerings),
+        );
+      });
     }
-    return map;
   }
 
   bool get isEmptyAfterSearch =>
       !_isLoading && _error == null && visibleGroups.isEmpty;
 
-  void selectService(int serviceId) {
-    if (_selectedServiceId == serviceId) return;
-    _selectedServiceId = serviceId;
-    notifyListeners();
-  }
-
   void setSearch(String value) {
+    if (_search == value) return;
     _search = value;
     notifyListeners();
   }
@@ -92,17 +138,16 @@ class StoreCatalogProvider with ChangeNotifier {
     final languageChanged = requestedLanguage != _lang;
     _lang = requestedLanguage;
 
-    // نفس المحل ومحمَّل: لا نعيد النداء عند كل دخول للشاشة
     if (!force &&
         !languageChanged &&
         _storeId == storeId &&
-        _services.isNotEmpty) return;
+        _services.isNotEmpty) {
+      return;
+    }
 
-    // محل مختلف: نُفرغ القديم فوراً كي لا تُعرض أسعار محل تحت اسم آخر
     if (_storeId != storeId || languageChanged) {
       _services = [];
       _store = null;
-      _selectedServiceId = null;
       _search = '';
     }
 
@@ -113,20 +158,21 @@ class StoreCatalogProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final detailsUri = Uri.parse('${Config.storeDetailsApi}/$storeId')
-          .replace(queryParameters: {'lang': _lang});
-      final productsUri =
-          Uri.parse('${Config.storeDetailsApi}/$storeId/products')
-              .replace(queryParameters: {'lang': _lang});
+      final detailsUri = Uri.parse(
+        '${Config.storeDetailsApi}/$storeId',
+      ).replace(queryParameters: {'lang': _lang});
+      final productsUri = Uri.parse(
+        '${Config.storeDetailsApi}/$storeId/products',
+      ).replace(queryParameters: {'lang': _lang});
 
       final responses = await Future.wait([
         _client.get(detailsUri),
         _client.get(productsUri),
       ]);
-      final detailsResponse = responses[0];
-      final productsResponse = responses[1];
       if (request != _requestSeq) return;
 
+      final detailsResponse = responses[0];
+      final productsResponse = responses[1];
       if (productsResponse.statusCode != 200) {
         _error = 'catalog_fetch_error';
         return;
@@ -144,11 +190,10 @@ class StoreCatalogProvider with ChangeNotifier {
       final raw = (body is Map ? body['services'] : null) as List? ?? const [];
       _services = raw
           .map(
-              (e) => StoreService.fromJson(Map<String, dynamic>.from(e as Map)))
+            (item) =>
+                StoreService.fromJson(Map<String, dynamic>.from(item as Map)),
+          )
           .toList();
-
-      _selectedServiceId ??=
-          _services.isEmpty ? null : _services.first.serviceId;
     } catch (_) {
       if (request != _requestSeq) return;
       _error = 'server_connection_error';
@@ -165,7 +210,6 @@ class StoreCatalogProvider with ChangeNotifier {
     _storeId = null;
     _services = [];
     _store = null;
-    _selectedServiceId = null;
     _search = '';
     _error = null;
     _isLoading = false;

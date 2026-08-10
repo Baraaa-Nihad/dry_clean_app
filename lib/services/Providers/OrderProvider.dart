@@ -76,6 +76,7 @@ class OrderProvider with ChangeNotifier {
     final t = _cachedSubtotal + _deliveryFees - _discount;
     return t < 0 ? 0 : t;
   }
+
   int get totalQuantity => _cachedTotalQuantity;
 
   /// Recomputes cached totals. Call after any change to _cart or _deliveryFees.
@@ -167,10 +168,12 @@ class OrderProvider with ChangeNotifier {
     // بكمية اثنين. الدمج بلا المساحة كان يُبقي مساحة الأولى ويضاعفها،
     // فيدفع الزبون ثمن سجادتين كبيرتين وقد أرسل واحدة كبيرة وأخرى
     // صغيرة. والمساحة فارغة للمسعَّر بالقطعة، فسلوكه لم يتغيّر.
-    int existingIndex = _cart.indexWhere((item) =>
-        item.productId == newItem.productId &&
-        item.serviceType.id == newItem.serviceType.id &&
-        item.area == newItem.area);
+    int existingIndex = _cart.indexWhere(
+      (item) =>
+          item.productId == newItem.productId &&
+          item.serviceType.id == newItem.serviceType.id &&
+          item.area == newItem.area,
+    );
 
     if (existingIndex != -1) {
       // Item exists, update the quantity and subtotal
@@ -205,21 +208,105 @@ class OrderProvider with ChangeNotifier {
         newItem.area,
       );
 
-      _cart.add(BasketItemData(
-        productId: newItem.productId,
-        productName: newItem.productName,
-        category: newItem.category,
-        serviceType: newItem.serviceType,
-        imagePath: newItem.imagePath,
-        price: newItem.price,
-        unit: newItem.unit,
-        quantity: newItem.quantity,
-        subCategory: newItem.subCategory,
-        area: newItem.area,
-        subtotal: calculatedSubtotal,
-      ));
+      _cart.add(
+        BasketItemData(
+          productId: newItem.productId,
+          productName: newItem.productName,
+          category: newItem.category,
+          serviceType: newItem.serviceType,
+          imagePath: newItem.imagePath,
+          price: newItem.price,
+          unit: newItem.unit,
+          quantity: newItem.quantity,
+          subCategory: newItem.subCategory,
+          area: newItem.area,
+          subtotal: calculatedSubtotal,
+        ),
+      );
     }
 
+    _invalidateCache();
+    _scheduleSave();
+    notifyListeners();
+  }
+
+  /// Replaces every basket line for one catalogue product in a single update.
+  ///
+  /// One product can have independent washing, ironing and dry-clean lines.
+  /// Applying the details screen as one transaction prevents intermediate cart
+  /// totals and makes closing the screen without saving harmless.
+  void replaceProductLines({
+    required int productId,
+    required int storeId,
+    required String storeName,
+    required List<BasketItemData> lines,
+  }) {
+    if (!acceptsStore(storeId)) {
+      throw StateError('The basket belongs to another laundry.');
+    }
+
+    _cart.removeWhere((item) => item.productId == productId);
+
+    for (final line in lines.where((item) => item.quantity > 0)) {
+      final existingIndex = _cart.indexWhere(
+        (item) =>
+            item.productId == line.productId &&
+            item.serviceType.id == line.serviceType.id &&
+            item.area == line.area,
+      );
+
+      if (existingIndex == -1) {
+        _cart.add(
+          BasketItemData(
+            productId: line.productId,
+            productName: line.productName,
+            category: line.category,
+            serviceType: line.serviceType,
+            imagePath: line.imagePath,
+            price: line.price,
+            unit: line.unit,
+            quantity: line.quantity,
+            subCategory: line.subCategory,
+            area: line.area,
+            subtotal: BasketItemData.calculateSubtotal(
+              line.unit,
+              line.price,
+              line.quantity,
+              line.area,
+            ),
+          ),
+        );
+      } else {
+        final existing = _cart[existingIndex];
+        final quantity = existing.quantity + line.quantity;
+        _cart[existingIndex] = BasketItemData(
+          productId: existing.productId,
+          productName: existing.productName,
+          category: existing.category,
+          serviceType: existing.serviceType,
+          imagePath: existing.imagePath,
+          price: existing.price,
+          unit: existing.unit,
+          quantity: quantity,
+          subCategory: existing.subCategory,
+          area: existing.area,
+          subtotal: BasketItemData.calculateSubtotal(
+            existing.unit,
+            existing.price,
+            quantity,
+            existing.area,
+          ),
+        );
+      }
+    }
+
+    if (_cart.isEmpty) {
+      _storeId = null;
+      _storeName = null;
+    } else {
+      _storeId = storeId;
+      _storeName = storeName;
+    }
     _invalidateCache();
     _scheduleSave();
     notifyListeners();
