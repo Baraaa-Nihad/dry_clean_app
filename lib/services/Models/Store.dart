@@ -23,6 +23,7 @@ class Store {
     this.minOrderTotal = 0,
     this.turnaroundHours,
     this.hasActiveOffer = false,
+    this.discountPercent,
     this.isPromoted = false,
     this.isFavorite = false,
     this.address,
@@ -52,6 +53,7 @@ class Store {
   final int? turnaroundHours;
 
   final bool hasActiveOffer;
+  final int? discountPercent;
   final bool isPromoted;
   final bool isFavorite;
 
@@ -92,17 +94,14 @@ class Store {
         turnaroundHours:
             j['turnaroundHours'] == null ? null : _i(j['turnaroundHours']),
         hasActiveOffer: j['hasActiveOffer'] == true,
+        discountPercent:
+            j['discountPercent'] == null ? null : _i(j['discountPercent']),
         isPromoted: j['isPromoted'] == true,
         isFavorite: j['isFavorite'] == true,
         address: j['address'] as String?,
         phone: j['phone'] as String?,
         latitude: _d(j['latitude']),
         longitude: _d(j['longitude']),
-        // Production currently sends `processingHours` as a number, while
-        // older responses used text. Accept both so a valid catalogue response
-        // is not misreported as a connection failure.
-        workingHours: j['processingHours'] == null
-            ? null
-            : j['processingHours'].toString(),
+        workingHours: j['workingHours']?.toString(),
       );
 }

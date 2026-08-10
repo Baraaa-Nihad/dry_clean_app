@@ -189,14 +189,17 @@ class StoresProvider with ChangeNotifier {
         }
       }
 
-      // Preview data is deliberately debug-only. It lets us review the new
-      // card layout in an area that has no providers yet, without placing fake
-      // laundries in the production app or database.
-      if (loaded.isEmpty &&
-          kDebugMode &&
+      // Complete the list to four cards in debug builds so the stacked layout
+      // can be reviewed without creating fake production laundries.
+      if (kDebugMode &&
+          loaded.length < 4 &&
           _search.trim().isEmpty &&
           !_favoritesOnly) {
-        _stores = _previewStoresForSort();
+        final missing = 4 - loaded.length;
+        _stores = [
+          ...loaded,
+          ..._previewStoresForSort().take(missing),
+        ];
         _isPreviewData = true;
       } else {
         _stores = loaded;
@@ -237,7 +240,7 @@ class StoresProvider with ChangeNotifier {
     _setFavorite(storeId, !was);
     notifyListeners();
 
-    if (_isPreviewData) {
+    if (storeId < 0) {
       _favoriteUpdates.remove(storeId);
       notifyListeners();
       return FavoriteToggleResult.updated;
@@ -301,6 +304,7 @@ class StoresProvider with ChangeNotifier {
         minOrderTotal: s.minOrderTotal,
         turnaroundHours: s.turnaroundHours,
         hasActiveOffer: s.hasActiveOffer,
+        discountPercent: s.discountPercent,
         isPromoted: s.isPromoted,
         isFavorite: fav,
         address: s.address,
@@ -327,6 +331,7 @@ class StoresProvider with ChangeNotifier {
         minOrderTotal: 30,
         turnaroundHours: 24,
         hasActiveOffer: true,
+        discountPercent: 20,
         isPromoted: true,
         workingHours:
             english ? 'Daily 8:00 AM - 10:00 PM' : 'يومياً 8:00 - 22:00',
@@ -344,6 +349,8 @@ class StoresProvider with ChangeNotifier {
         averagePrice: 12,
         minOrderTotal: 25,
         turnaroundHours: 48,
+        hasActiveOffer: true,
+        discountPercent: 15,
         workingHours: english
             ? 'Saturday - Thursday 9:00 AM - 9:00 PM'
             : 'السبت - الخميس 9:00 - 21:00',
@@ -363,6 +370,23 @@ class StoresProvider with ChangeNotifier {
         turnaroundHours: 72,
         workingHours:
             english ? 'Daily 10:00 AM - 8:00 PM' : 'يومياً 10:00 - 20:00',
+      ),
+      Store(
+        id: -4,
+        name: english ? 'White Cloud Laundry' : 'مغسلة الغيمة البيضاء',
+        description: english
+            ? 'Gentle fabric care and precise finishing'
+            : 'عناية لطيفة بالأقمشة وتشطيب دقيق',
+        rating: 4.5,
+        ratingCount: 41,
+        ordersCount: 176,
+        productsCount: 23,
+        averagePrice: 13,
+        minOrderTotal: 25,
+        turnaroundHours: 36,
+        workingHours: english
+            ? 'Saturday - Thursday 8:30 AM - 9:30 PM'
+            : 'السبت - الخميس 8:30 - 21:30',
       ),
     ];
 

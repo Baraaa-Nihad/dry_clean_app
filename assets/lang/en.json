@@ -405,6 +405,7 @@
   "stores_sort_rating": "Highest rated",
   "stores_preview_notice": "Design preview — these laundries won't appear in the published app",
   "store_offer_available": "Offers available on selected services",
+  "store_discount_up_to": "Up to {discount}% off selected services",
   "store_pricing_unavailable": "This laundry hasn't set its prices yet",
   "store_featured": "Featured",
   "store_new": "New",

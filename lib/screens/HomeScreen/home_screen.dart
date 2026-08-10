@@ -60,12 +60,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      body: Stack(
-        children: [
-          StoresBrowser(
-            title: l10n.translate('stores_choose_title'),
-            subtitle: l10n.translate('stores_choose_subtitle'),
-            header: ClipPath(
+      body: StoresBrowser(
+        title: l10n.translate('stores_choose_title'),
+        subtitle: l10n.translate('stores_choose_subtitle'),
+        header: Stack(
+          children: [
+            ClipPath(
               clipper: BottomCurvedClipper(),
               child: Container(
                 color: AppColors.white,
@@ -73,16 +73,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     ImageSlider(imagePaths: displayImagePaths, fem: widget.fem),
               ),
             ),
-          ),
-          HomeAppBar(
-            fem: widget.fem,
-            quantityNumber: true,
-            // suffixIconPath: NotificationButton(),
-            onPrefixIconTap: () {
-              Navigator.pop(context);
-            },
-          ),
-        ],
+            HomeAppBar(
+              fem: widget.fem,
+              quantityNumber: true,
+              // suffixIconPath: NotificationButton(),
+              onPrefixIconTap: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

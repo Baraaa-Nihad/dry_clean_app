@@ -4,7 +4,6 @@ import 'package:saleem_dry_clean/services/Models/Store.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
-import 'package:saleem_dry_clean/utils/store_localization.dart';
 
 /// بطاقة المحل في قائمة الاختيار.
 ///
@@ -71,7 +70,14 @@ class StoreCard extends StatelessWidget {
                         if (store.hasActiveOffer)
                           _StatusPill(
                             icon: Icons.local_offer_outlined,
-                            label: l10n.translate('store_offer_available'),
+                            label: (store.discountPercent ?? 0) > 0
+                                ? l10n.translate(
+                                    'store_discount_up_to',
+                                    params: {
+                                      'discount': '${store.discountPercent}'
+                                    },
+                                  )
+                                : l10n.translate('store_offer_available'),
                             color: AppColors.orangeCard,
                             background: AppColors.orangeCardBackgourd,
                           ),
@@ -103,7 +109,6 @@ class _StoreHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -113,27 +118,14 @@ class _StoreHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      store.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.sfarabicBold.copyWith(
-                        fontSize: 16,
-                        color: AppColors.gray80,
-                      ),
-                    ),
-                  ),
-                  if (store.isPromoted) ...[
-                    const SizedBox(width: 7),
-                    _MiniLabel(
-                      icon: Icons.workspace_premium_outlined,
-                      label: l10n.translate('store_featured'),
-                    ),
-                  ],
-                ],
+              Text(
+                store.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.sfarabicBold.copyWith(
+                  fontSize: 16,
+                  color: AppColors.gray80,
+                ),
               ),
               if ((store.description ?? '').trim().isNotEmpty) ...[
                 const SizedBox(height: 4),
@@ -261,13 +253,13 @@ class _StoreDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final turnaround = localizedTurnaround(context, store.turnaroundHours);
+    final workingHours = (store.workingHours ?? '').trim();
     final details = <_DetailData>[
-      if (turnaround.isNotEmpty)
+      if (workingHours.isNotEmpty)
         _DetailData(
-          Icons.schedule_outlined,
-          l10n.translate('store_turnaround'),
-          turnaround,
+          Icons.access_time_rounded,
+          l10n.translate('store_working_hours'),
+          workingHours,
           AppColors.blueCard,
           AppColors.blueCardBackgourd,
         ),
@@ -279,62 +271,16 @@ class _StoreDetails extends StatelessWidget {
           AppColors.blueCard,
           AppColors.purbleCardBackgourd,
         ),
-      // if (store.productsCount > 0)
-      //   _DetailData(
-      //     Icons.local_laundry_service_outlined,
-      //     l10n.translate('store_services_available'),
-      //     l10n.translate(
-      //       'store_services_count',
-      //       params: {'count': '${store.productsCount}'},
-      //     ),
-      //     AppColors.greenCard,
-      //     AppColors.greenCardBackgourd,
-      //   ),
-      if (store.averagePrice != null)
-        _DetailData(
-          Icons.payments_outlined,
-          l10n.translate('store_average_price'),
-          '${store.averagePrice!.toStringAsFixed(0)} ₪',
-          AppColors.blueCard,
-          AppColors.orangeCardBackgourd,
-        ),
-      // if (working.isNotEmpty)
-      //   _DetailData(
-      //     numericWorking
-      //         ? Icons.hourglass_bottom_rounded
-      //         : Icons.access_time_rounded,
-      //     numericWorking
-      //         ? l10n.translate('store_processing_time')
-      //         : l10n.translate('store_working_hours'),
-      //     numericWorking
-      //         ? l10n.translate(
-      //             'duration_hours',
-      //             params: {'count': working},
-      //           )
-      //         : working,
-      //     AppColors.gray60,
-      //     AppColors.gray10,
-      //   ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const spacing = 6.0;
-        final itemWidth = (constraints.maxWidth - (spacing * 2)) / 3;
-
-        return Wrap(
-          spacing: spacing,
-          runSpacing: 10,
-          children: details
-              .map(
-                (detail) => SizedBox(
-                  width: itemWidth,
-                  child: _DetailTile(data: detail),
-                ),
-              )
-              .toList(),
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var index = 0; index < details.length; index++) ...[
+          _DetailTile(data: details[index]),
+          if (index != details.length - 1) const SizedBox(height: 10),
+        ],
+      ],
     );
   }
 }
@@ -368,8 +314,6 @@ class _DetailTile extends StatelessWidget {
               children: [
                 Text(
                   data.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.sfarabicRegular.copyWith(
                     fontSize: 9.5,
                     color: AppColors.gray50,
@@ -377,8 +321,6 @@ class _DetailTile extends StatelessWidget {
                 ),
                 Text(
                   data.value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.sfarabicMedium.copyWith(
                     fontSize: 11.5,
                     color: AppColors.gray80,
@@ -407,38 +349,6 @@ class _DetailData {
   final String value;
   final Color color;
   final Color background;
-}
-
-class _MiniLabel extends StatelessWidget {
-  const _MiniLabel({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: AppColors.blueCardBackgourd,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: AppColors.blueCard),
-          const SizedBox(width: 3),
-          Text(
-            label,
-            style: AppTextStyles.sfarabicMedium.copyWith(
-              fontSize: 10.5,
-              color: AppColors.gray70,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _StatusPill extends StatelessWidget {

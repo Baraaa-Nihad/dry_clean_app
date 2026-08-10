@@ -280,11 +280,13 @@ class _StoresBrowserState extends State<StoresBrowser> {
             return StoreCard(
               store: store,
               onTap: () => _open(store),
-              onFavoriteTap: () => toggleStoreFavorite(
-                context,
-                storeId: store.id,
-                currentValue: store.isFavorite,
-              ),
+              onFavoriteTap: store.id < 0
+                  ? null
+                  : () => toggleStoreFavorite(
+                        context,
+                        storeId: store.id,
+                        currentValue: store.isFavorite,
+                      ),
             );
           },
           childCount: p.stores.length,

@@ -408,6 +408,7 @@
   "stores_sort_rating": "الأعلى تقييماً",
   "stores_preview_notice": "معاينة تصميمية — هذه المغاسل لا تظهر في النسخة المنشورة",
   "store_offer_available": "توجد عروض على خدمات مختارة",
+  "store_discount_up_to": "خصم يصل إلى {discount}% على خدمات مختارة",
   "store_pricing_unavailable": "لم يضبط هذا المحل أسعاره بعد",
   "store_featured": "مميّز",
   "store_new": "جديد",
