@@ -73,15 +73,6 @@ class Store {
 
   bool get hasRating => ratingCount > 0;
 
-  /// «يوم» أوضح من «٢٤ ساعة» عند القراءة السريعة
-  String? get turnaroundLabel {
-    final h = turnaroundHours;
-    if (h == null || h <= 0) return null;
-    if (h < 24) return '$h ساعة';
-    final days = (h / 24).round();
-    return days == 1 ? 'يوم واحد' : '$days أيام';
-  }
-
   static double? _d(dynamic v) =>
       v == null ? null : double.tryParse(v.toString());
   static int _i(dynamic v) => int.tryParse('${v ?? 0}') ?? 0;
@@ -98,9 +89,8 @@ class Store {
         productsCount: _i(j['productsCount']),
         averagePrice: _d(j['averagePrice']),
         minOrderTotal: _d(j['minOrderTotal']) ?? 0,
-        turnaroundHours: j['turnaroundHours'] == null
-            ? null
-            : _i(j['turnaroundHours']),
+        turnaroundHours:
+            j['turnaroundHours'] == null ? null : _i(j['turnaroundHours']),
         hasActiveOffer: j['hasActiveOffer'] == true,
         isPromoted: j['isPromoted'] == true,
         isFavorite: j['isFavorite'] == true,
@@ -108,6 +98,11 @@ class Store {
         phone: j['phone'] as String?,
         latitude: _d(j['latitude']),
         longitude: _d(j['longitude']),
-        workingHours: j['processingHours'] as String?,
+        // Production currently sends `processingHours` as a number, while
+        // older responses used text. Accept both so a valid catalogue response
+        // is not misreported as a connection failure.
+        workingHours: j['processingHours'] == null
+            ? null
+            : j['processingHours'].toString(),
       );
 }

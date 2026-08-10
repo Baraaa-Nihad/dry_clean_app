@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/utils/localization.dart';
 
 /// كتلة تقييم المحل (٢.١.٣): متوسّط عام، ثلاثة محاور، وتعليقات تُفتح
 /// بزرّ.
@@ -46,8 +47,8 @@ class _StoreRatingsSectionState extends State<StoreRatingsSection> {
           '${Config.storeDetailsApi}/${widget.storeId}/ratings?limit=10'));
       if (!mounted) return;
       if (res.statusCode == 200) {
-        setState(() => _data = Map<String, dynamic>.from(
-            jsonDecode(res.body) as Map));
+        setState(() =>
+            _data = Map<String, dynamic>.from(jsonDecode(res.body) as Map));
       }
     } catch (_) {
       // فشل التقييمات لا يُسقط صفحة المحل: الكتلة تختفي والأصناف تبقى
@@ -78,6 +79,7 @@ class _StoreRatingsSectionState extends State<StoreRatingsSection> {
 
     final overall = double.tryParse('${_data?['overall'] ?? 0}') ?? 0;
     final comments = (_data?['comments'] as List?) ?? const [];
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       color: AppColors.white,
@@ -88,7 +90,7 @@ class _StoreRatingsSectionState extends State<StoreRatingsSection> {
           Row(
             children: [
               Text(
-                'التقييم',
+                l10n.translate('ratings_title'),
                 style: AppTextStyles.sfarabicBold
                     .copyWith(fontSize: 15, color: AppColors.gray80),
               ),
@@ -96,11 +98,14 @@ class _StoreRatingsSectionState extends State<StoreRatingsSection> {
               Text(
                 '(${overall.toStringAsFixed(1)})',
                 style: AppTextStyles.poppinsSemiBold
-                    .copyWith(fontSize: 14, color: AppColors.green),
+                    .copyWith(fontSize: 14, color: AppColors.brandAccent),
               ),
               const Spacer(),
               Text(
-                '$total تقييم',
+                l10n.translate(
+                  'ratings_total',
+                  params: {'count': '$total'},
+                ),
                 style: AppTextStyles.sfarabicRegular.copyWith(
                     fontSize: 12, color: AppColors.secondaryTextColor),
               ),
@@ -109,19 +114,19 @@ class _StoreRatingsSectionState extends State<StoreRatingsSection> {
           const SizedBox(height: 12),
           _AxisRow(
             icon: Icons.local_laundry_service_outlined,
-            label: 'جودة الخدمة',
+            label: l10n.translate('ratings_service_quality'),
             score: _avg('service'),
             count: _count('service'),
           ),
           _AxisRow(
             icon: Icons.inventory_2_outlined,
-            label: 'الاستلام',
+            label: l10n.translate('ratings_pickup'),
             score: _avg('pickup'),
             count: _count('pickup'),
           ),
           _AxisRow(
             icon: Icons.delivery_dining_outlined,
-            label: 'التوصيل',
+            label: l10n.translate('ratings_delivery'),
             score: _avg('delivery'),
             count: _count('delivery'),
           ),
@@ -139,14 +144,17 @@ class _StoreRatingsSectionState extends State<StoreRatingsSection> {
                 icon: Icon(
                   _expanded ? Icons.expand_less : Icons.expand_more,
                   size: 19,
-                  color: AppColors.green,
+                  color: AppColors.brandAccent,
                 ),
                 label: Text(
                   _expanded
-                      ? 'إخفاء التعليقات'
-                      : 'عرض التعليقات (${comments.length})',
+                      ? l10n.translate('ratings_hide_comments')
+                      : l10n.translate(
+                          'ratings_show_comments',
+                          params: {'count': '${comments.length}'},
+                        ),
                   style: AppTextStyles.sfarabicMedium
-                      .copyWith(fontSize: 13, color: AppColors.green),
+                      .copyWith(fontSize: 13, color: AppColors.brandAccent),
                 ),
               ),
             ),
@@ -178,6 +186,7 @@ class _AxisRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 9),
       child: Row(
@@ -194,9 +203,9 @@ class _AxisRow extends StatelessWidget {
           if (score == null)
             Text(
               // محور بلا تقييم يُقال صراحةً: صفر يقرأ كأسوأ تقييم
-              'لا تقييم بعد',
-              style: AppTextStyles.sfarabicRegular.copyWith(
-                  fontSize: 11.5, color: AppColors.inactiveColor),
+              l10n.translate('ratings_none'),
+              style: AppTextStyles.sfarabicRegular
+                  .copyWith(fontSize: 11.5, color: AppColors.inactiveColor),
             )
           else ...[
             Text(
@@ -210,8 +219,8 @@ class _AxisRow extends StatelessWidget {
             const SizedBox(width: 5),
             Text(
               '($count)',
-              style: AppTextStyles.poppinsRegular.copyWith(
-                  fontSize: 11, color: AppColors.secondaryTextColor),
+              style: AppTextStyles.poppinsRegular
+                  .copyWith(fontSize: 11, color: AppColors.secondaryTextColor),
             ),
           ],
         ],
@@ -226,7 +235,12 @@ class _CommentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final score = int.tryParse('${data['score'] ?? 0}') ?? 0;
+    final rawAuthor = (data['author'] ?? '').toString().trim();
+    final author = rawAuthor.isEmpty || rawAuthor == 'زبون'
+        ? l10n.translate('ratings_customer')
+        : rawAuthor;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 9),
@@ -241,13 +255,12 @@ class _CommentTile extends StatelessWidget {
           Row(
             children: [
               Text(
-                (data['author'] ?? 'زبون').toString(),
+                author,
                 style: AppTextStyles.sfarabicMedium
                     .copyWith(fontSize: 12.5, color: AppColors.gray80),
               ),
               const SizedBox(width: 8),
               Row(
-                textDirection: TextDirection.rtl,
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(
                   5,
@@ -265,8 +278,8 @@ class _CommentTile extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             (data['comment'] ?? '').toString(),
-            style: AppTextStyles.sfarabicRegular.copyWith(
-                fontSize: 12.5, height: 1.5, color: AppColors.gray70),
+            style: AppTextStyles.sfarabicRegular
+                .copyWith(fontSize: 12.5, height: 1.5, color: AppColors.gray70),
           ),
         ],
       ),

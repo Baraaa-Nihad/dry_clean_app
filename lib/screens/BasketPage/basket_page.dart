@@ -50,7 +50,6 @@ class BasketPage extends StatelessWidget {
     final orderProvider = Provider.of<OrderProvider>(context);
     final groupedData = groupItemsByCategoryAndServiceType(orderProvider.cart);
     final localizations = AppLocalizations.of(context);
-    bool isRtl = Directionality.of(context) == TextDirection.rtl;
 
     return GestureDetector(
       onTap: () {
@@ -59,7 +58,7 @@ class BasketPage extends StatelessWidget {
       child: Scaffold(
         appBar: AppHeader(
           quantityNumber: true,
-          title: localizations?.translate('basket') ?? 'Basket',
+          title: localizations.translate('basket'),
           fem: fem,
           suffixIcon: NotificationButton(),
           onPrefixIconTap: () {
@@ -87,8 +86,7 @@ class BasketPage extends StatelessWidget {
                   // هذا السطر لا شيء في الشاشة يقول من سيغسل — ويكتشفه
                   // بعد الدفع.
                   if (orderProvider.storeName != null)
-                    _StoreBanner(
-                        fem: fem, storeName: orderProvider.storeName!),
+                    _StoreBanner(fem: fem, storeName: orderProvider.storeName!),
                   Expanded(
                     child: ListView.builder(
                       padding: EdgeInsets.symmetric(horizontal: 24 * fem),
@@ -151,7 +149,7 @@ class BasketPage extends StatelessWidget {
                       color: AppColors.white,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.gray60.withOpacity(0.1),
+                          color: AppColors.gray60.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: Offset(0, -2),
                         ),
@@ -174,7 +172,7 @@ class BasketPage extends StatelessWidget {
 
     DeleteModal.show(
       context,
-      mainTitle: localizations?.translate('delete_item') ?? 'Delete item?',
+      mainTitle: localizations.translate('delete_item'),
       richBody: '${item.quantity} ${item.subCategory}',
       prefixIconPath: 'assets/vectors/close_icon.svg',
       onPrefixIconTap: () {
@@ -204,8 +202,11 @@ class _StoreBanner extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 24 * fem, vertical: 12),
       child: Row(
         children: [
-          const Icon(Icons.storefront_outlined,
-              size: 19, color: AppColors.green),
+          const Icon(
+            Icons.storefront_outlined,
+            size: 19,
+            color: AppColors.brandAccent,
+          ),
           const SizedBox(width: 9),
           Expanded(
             child: RichText(

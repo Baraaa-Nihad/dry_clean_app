@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/services/Models/Store.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/utils/localization.dart';
+import 'package:saleem_dry_clean/utils/store_localization.dart';
 
 /// بطاقة المحل في قائمة الاختيار.
 ///
@@ -28,6 +31,7 @@ class StoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final disabled = !store.canOrder;
 
     return Padding(
@@ -38,59 +42,46 @@ class StoreCard extends StatelessWidget {
         opacity: disabled ? 0.55 : 1,
         child: Material(
           color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: AppColors.gray20),
+          ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: disabled ? null : onTap,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _CoverStrip(store: store, onFavoriteTap: onFavoriteTap),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 13),
+                  child: _StoreHeader(
+                    store: store,
+                    onFavoriteTap: onFavoriteTap,
+                  ),
+                ),
+                const Divider(height: 1, thickness: 1, color: AppColors.gray20),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 13, 14, 14),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              store.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.sfarabicBold.copyWith(
-                                fontSize: 16,
-                                color: AppColors.gray80,
-                              ),
-                            ),
-                          ),
-                          if (store.hasRating) _RatingChip(store: store),
-                        ],
-                      ),
-                      if ((store.description ?? '').isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          store.description!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.sfarabicRegular.copyWith(
-                            fontSize: 12.5,
-                            height: 1.5,
-                            color: AppColors.secondaryTextColor,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 10),
-                      _MetaRow(store: store),
-                      if (disabled) ...[
-                        const SizedBox(height: 10),
-                        Text(
-                          'لم يضبط هذا المحل أسعاره بعد',
-                          style: AppTextStyles.sfarabicMedium.copyWith(
-                            fontSize: 12,
+                      _StoreDetails(store: store),
+                      if (store.hasActiveOffer || disabled) ...[
+                        const SizedBox(height: 12),
+                        if (store.hasActiveOffer)
+                          _StatusPill(
+                            icon: Icons.local_offer_outlined,
+                            label: l10n.translate('store_offer_available'),
                             color: AppColors.orangeCard,
+                            background: AppColors.orangeCardBackgourd,
                           ),
-                        ),
+                        if (disabled)
+                          _StatusPill(
+                            icon: Icons.info_outline_rounded,
+                            label: l10n.translate('store_pricing_unavailable'),
+                            color: AppColors.orangeCard,
+                            background: AppColors.orangeCardBackgourd,
+                          ),
                       ],
                     ],
                   ),
@@ -104,93 +95,70 @@ class StoreCard extends StatelessWidget {
   }
 }
 
-/// شريط الغلاف مع الشعار والشارات.
-///
-/// الغلاف غير موجود لمعظم المحلات بعد، فالبديل تدرّج الهوية لا صورة
-/// رمادية: التدرّج يبدو مقصوداً والرمادي يبدو عطلاً.
-class _CoverStrip extends StatelessWidget {
-  const _CoverStrip({required this.store, this.onFavoriteTap});
+class _StoreHeader extends StatelessWidget {
+  const _StoreHeader({required this.store, this.onFavoriteTap});
 
   final Store store;
   final VoidCallback? onFavoriteTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 96,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if ((store.coverUrl ?? '').isNotEmpty)
-            Image.network(
-              store.coverUrl!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const _GradientCover(),
-            )
-          else
-            const _GradientCover(),
-
-          // تعتيم خفيف يضمن قراءة الشارات فوق أي صورة
-          Container(
-            // ملاحظة: withOpacity مُهمَل في Flutter الأحدث، لكن withValues
-            // غير موجود في الإصدار الذي يستعمله هذا التطبيق. يُستبدل عند
-            // ترقية Flutter لا قبلها.
-            // ignore: deprecated_member_use
-            color: AppColors.black.withOpacity(0.12),
-          ),
-
-          // الشعار
-          Positioned(
-            top: 12,
-            right: 12,
-            child: Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: const [
-                  BoxShadow(color: AppColors.shadowColor, blurRadius: 8),
+    final l10n = AppLocalizations.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _StoreLogo(store: store),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      store.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.sfarabicBold.copyWith(
+                        fontSize: 16,
+                        color: AppColors.gray80,
+                      ),
+                    ),
+                  ),
+                  if (store.isPromoted) ...[
+                    const SizedBox(width: 7),
+                    _MiniLabel(
+                      icon: Icons.workspace_premium_outlined,
+                      label: l10n.translate('store_featured'),
+                    ),
+                  ],
                 ],
               ),
-              clipBehavior: Clip.antiAlias,
-              child: (store.logoUrl ?? '').isNotEmpty
-                  ? Image.network(
-                      store.logoUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const _LogoFallback(),
-                    )
-                  : const _LogoFallback(),
-            ),
+              if ((store.description ?? '').trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  store.description!.trim(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.sfarabicRegular.copyWith(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: AppColors.secondaryTextColor,
+                  ),
+                ),
+              ],
+            ],
           ),
-
-          if (store.hasActiveOffer)
-            Positioned(
-              top: 12,
-              left: 12,
-              child: _Badge(
-                label: 'عرض',
-                color: AppColors.red,
-                icon: Icons.local_offer_outlined,
-              ),
-            ),
-
-          if (store.isPromoted)
-            Positioned(
-              bottom: 10,
-              left: 12,
-              child: _Badge(
-                label: 'مميّز',
-                color: AppColors.orangeCard,
-                icon: Icons.star_rounded,
-              ),
-            ),
-
-          Positioned(
-            bottom: 8,
-            right: 8,
-            child: Material(
-              color: AppColors.white,
+        ),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _CompactRating(store: store),
+            const SizedBox(height: 7),
+            Material(
+              color: AppColors.gray10,
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),
@@ -199,13 +167,281 @@ class _CoverStrip extends StatelessWidget {
                   padding: const EdgeInsets.all(7),
                   child: Icon(
                     store.isFavorite ? Icons.favorite : Icons.favorite_border,
-                    size: 19,
-                    color: store.isFavorite
-                        ? AppColors.red
-                        : AppColors.secondaryTextColor,
+                    size: 18,
+                    color: store.isFavorite ? AppColors.red : AppColors.gray50,
                   ),
                 ),
               ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _StoreLogo extends StatelessWidget {
+  const _StoreLogo({required this.store});
+
+  final Store store;
+
+  @override
+  Widget build(BuildContext context) {
+    final raw = (store.logoUrl ?? '').trim();
+    final image = Config.resolveImageUrl(raw);
+
+    return Container(
+      width: 58,
+      height: 58,
+      decoration: BoxDecoration(
+        color: AppColors.blueCardBackgourd,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gray20),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: raw.isEmpty
+          ? const _LogoFallback()
+          : image.startsWith('assets/')
+              ? Image.asset(
+                  image,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const _LogoFallback(),
+                )
+              : Image.network(
+                  image,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const _LogoFallback(),
+                ),
+    );
+  }
+}
+
+class _CompactRating extends StatelessWidget {
+  const _CompactRating({required this.store});
+
+  final Store store;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.star_rounded, size: 18, color: AppColors.orangeCard),
+        const SizedBox(width: 3),
+        Text(
+          store.hasRating
+              ? store.rating.toStringAsFixed(1)
+              : l10n.translate('store_new'),
+          style: AppTextStyles.sfarabicBold.copyWith(
+            fontSize: 12.5,
+            color: AppColors.gray80,
+          ),
+        ),
+        if (store.hasRating) ...[
+          const SizedBox(width: 3),
+          Text(
+            '(${store.ratingCount})',
+            style: AppTextStyles.poppinsRegular.copyWith(
+              fontSize: 10.5,
+              color: AppColors.gray50,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _StoreDetails extends StatelessWidget {
+  const _StoreDetails({required this.store});
+
+  final Store store;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final turnaround = localizedTurnaround(context, store.turnaroundHours);
+    final details = <_DetailData>[
+      if (turnaround.isNotEmpty)
+        _DetailData(
+          Icons.schedule_outlined,
+          l10n.translate('store_turnaround'),
+          turnaround,
+          AppColors.blueCard,
+          AppColors.blueCardBackgourd,
+        ),
+      if (store.minOrderTotal > 0)
+        _DetailData(
+          Icons.account_balance_wallet_outlined,
+          l10n.translate('store_min_order'),
+          '${store.minOrderTotal.toStringAsFixed(0)} ₪',
+          AppColors.prpuleCard,
+          AppColors.purbleCardBackgourd,
+        ),
+      if (store.productsCount > 0)
+        _DetailData(
+          Icons.local_laundry_service_outlined,
+          l10n.translate('store_services_available'),
+          l10n.translate(
+            'store_services_count',
+            params: {'count': '${store.productsCount}'},
+          ),
+          AppColors.greenCard,
+          AppColors.greenCardBackgourd,
+        ),
+      if (store.averagePrice != null)
+        _DetailData(
+          Icons.payments_outlined,
+          l10n.translate('store_average_price'),
+          '${store.averagePrice!.toStringAsFixed(0)} ₪',
+          AppColors.orangeCard,
+          AppColors.orangeCardBackgourd,
+        ),
+    ];
+
+    final working = (store.workingHours ?? '').trim();
+    final numericWorking = RegExp(r'^\d+(\.\d+)?$').hasMatch(working);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 330;
+        final itemWidth =
+            compact ? constraints.maxWidth : (constraints.maxWidth - 10) / 2;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              spacing: 10,
+              runSpacing: 11,
+              children: details
+                  .map((detail) => SizedBox(
+                        width: itemWidth,
+                        child: _DetailTile(data: detail),
+                      ))
+                  .toList(),
+            ),
+            if (working.isNotEmpty) ...[
+              const SizedBox(height: 11),
+              _DetailTile(
+                data: _DetailData(
+                  numericWorking
+                      ? Icons.hourglass_bottom_rounded
+                      : Icons.access_time_rounded,
+                  numericWorking
+                      ? l10n.translate('store_processing_time')
+                      : l10n.translate('store_working_hours'),
+                  numericWorking
+                      ? l10n.translate(
+                          'duration_hours',
+                          params: {'count': working},
+                        )
+                      : working,
+                  AppColors.gray60,
+                  AppColors.gray10,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DetailTile extends StatelessWidget {
+  const _DetailTile({required this.data});
+
+  final _DetailData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: data.background,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          alignment: Alignment.center,
+          child: Icon(data.icon, size: 18, color: data.color),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                data.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.sfarabicRegular.copyWith(
+                  fontSize: 10.5,
+                  color: AppColors.gray50,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                data.value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.sfarabicMedium.copyWith(
+                  fontSize: 12.5,
+                  color: AppColors.gray80,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DetailData {
+  const _DetailData(
+    this.icon,
+    this.label,
+    this.value,
+    this.color,
+    this.background,
+  );
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  final Color background;
+}
+
+class _MiniLabel extends StatelessWidget {
+  const _MiniLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.blueCardBackgourd,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: AppColors.blueCard),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: AppTextStyles.sfarabicMedium.copyWith(
+              fontSize: 10.5,
+              color: AppColors.gray70,
             ),
           ),
         ],
@@ -214,13 +450,45 @@ class _CoverStrip extends StatelessWidget {
   }
 }
 
-class _GradientCover extends StatelessWidget {
-  const _GradientCover();
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.background,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final Color background;
 
   @override
-  Widget build(BuildContext context) => const DecoratedBox(
-        decoration: BoxDecoration(gradient: AppColors.gradient),
-      );
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              style: AppTextStyles.sfarabicMedium.copyWith(
+                fontSize: 11.5,
+                color: AppColors.gray70,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _LogoFallback extends StatelessWidget {
@@ -233,130 +501,4 @@ class _LogoFallback extends StatelessWidget {
         child: const Icon(Icons.local_laundry_service_outlined,
             size: 26, color: AppColors.blueCard),
       );
-}
-
-class _RatingChip extends StatelessWidget {
-  const _RatingChip({required this.store});
-  final Store store;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.greenCardBackgourd,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.star_rounded, size: 15, color: AppColors.greenCard),
-          const SizedBox(width: 3),
-          Text(
-            store.rating.toStringAsFixed(1),
-            style: AppTextStyles.poppinsSemiBold.copyWith(
-              fontSize: 12.5,
-              color: AppColors.gray80,
-            ),
-          ),
-          const SizedBox(width: 3),
-          Text(
-            '(${store.ratingCount})',
-            style: AppTextStyles.poppinsRegular.copyWith(
-              fontSize: 11,
-              color: AppColors.secondaryTextColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// سطر البيانات: مدّة التجهيز · الحدّ الأدنى · متوسّط السعر
-class _MetaRow extends StatelessWidget {
-  const _MetaRow({required this.store});
-  final Store store;
-
-  @override
-  Widget build(BuildContext context) {
-    // ★ صنف صغير لا سجلّ ★
-    //
-    // التطبيق على Dart 2.19 ولا يدعم السجلّات (records). رفع الإصدار
-    // لأجل ثلاثة أسطر يعني إعادة فحص 247 ملفاً، فالصنف أرخص.
-    final items = <_MetaItem>[
-      if (store.turnaroundLabel != null)
-        _MetaItem(Icons.schedule, store.turnaroundLabel!),
-      if (store.minOrderTotal > 0)
-        _MetaItem(Icons.shopping_bag_outlined,
-            'أقلّ طلب ${store.minOrderTotal.toStringAsFixed(0)}₪'),
-      if (store.averagePrice != null)
-        _MetaItem(Icons.sell_outlined,
-            'متوسّط ${store.averagePrice!.toStringAsFixed(0)}₪'),
-      // ساعات العمل (٢.١.٢) — آخر السطر لأنها الأطول نصّاً
-      if ((store.workingHours ?? '').isNotEmpty)
-        _MetaItem(Icons.access_time, store.workingHours!),
-    ];
-
-    if (items.isEmpty) return const SizedBox.shrink();
-
-    return Wrap(
-      spacing: 14,
-      runSpacing: 6,
-      children: items
-          .map((e) => Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(e.icon, size: 15, color: AppColors.secondaryTextColor),
-                  const SizedBox(width: 4),
-                  Text(
-                    e.label,
-                    style: AppTextStyles.sfarabicMedium.copyWith(
-                      fontSize: 12,
-                      color: AppColors.secondaryTextColor,
-                    ),
-                  ),
-                ],
-              ))
-          .toList(),
-    );
-  }
-}
-
-class _MetaItem {
-  const _MetaItem(this.icon, this.label);
-  final IconData icon;
-  final String label;
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({required this.label, required this.color, required this.icon});
-
-  final String label;
-  final Color color;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: AppColors.white),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: AppTextStyles.sfarabicBold.copyWith(
-              fontSize: 11.5,
-              color: AppColors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

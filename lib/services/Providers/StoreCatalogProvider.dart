@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:saleem_dry_clean/services/ApiClient/ApiClient.dart';
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/services/Models/StoreProduct.dart';
+import 'package:saleem_dry_clean/services/Models/Store.dart';
 import 'package:saleem_dry_clean/services/User/TokenService.dart';
 
 /// كتالوج محل واحد بأسعاره هو.
@@ -24,14 +25,18 @@ class StoreCatalogProvider with ChangeNotifier {
 
   int? _storeId;
   List<StoreService> _services = [];
+  Store? _store;
   bool _isLoading = false;
   String? _error;
 
   int? _selectedServiceId;
   String _search = '';
+  String _lang = 'ar';
+  int _requestSeq = 0;
 
   int? get storeId => _storeId;
   List<StoreService> get services => _services;
+  Store? get store => _store;
   bool get isLoading => _isLoading;
   String? get error => _error;
   String get search => _search;
@@ -55,10 +60,12 @@ class StoreCatalogProvider with ChangeNotifier {
     if (svc == null) return const {};
 
     final q = _search.trim().toLowerCase();
-    if (q.isEmpty) return svc.byGroup;
+    final grouped =
+        svc.byGroup(fallbackGroup: _lang == 'en' ? 'Other' : 'أخرى');
+    if (q.isEmpty) return grouped;
 
     final map = <String, List<StoreProduct>>{};
-    for (final entry in svc.byGroup.entries) {
+    for (final entry in grouped.entries) {
       final hits =
           entry.value.where((p) => p.name.toLowerCase().contains(q)).toList();
       if (hits.isNotEmpty) map[entry.key] = hits;
@@ -80,51 +87,84 @@ class StoreCatalogProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> load(int storeId, {String lang = 'ar', bool force = false}) async {
+  Future<void> load(int storeId, {String? lang, bool force = false}) async {
+    final requestedLanguage = lang ?? _lang;
+    final languageChanged = requestedLanguage != _lang;
+    _lang = requestedLanguage;
+
     // نفس المحل ومحمَّل: لا نعيد النداء عند كل دخول للشاشة
-    if (!force && _storeId == storeId && _services.isNotEmpty) return;
+    if (!force &&
+        !languageChanged &&
+        _storeId == storeId &&
+        _services.isNotEmpty) return;
 
     // محل مختلف: نُفرغ القديم فوراً كي لا تُعرض أسعار محل تحت اسم آخر
-    if (_storeId != storeId) {
+    if (_storeId != storeId || languageChanged) {
       _services = [];
+      _store = null;
       _selectedServiceId = null;
       _search = '';
     }
 
     _storeId = storeId;
+    final request = ++_requestSeq;
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final uri = Uri.parse('${Config.storeDetailsApi}/$storeId/products')
-          .replace(queryParameters: {'lang': lang});
+      final detailsUri = Uri.parse('${Config.storeDetailsApi}/$storeId')
+          .replace(queryParameters: {'lang': _lang});
+      final productsUri =
+          Uri.parse('${Config.storeDetailsApi}/$storeId/products')
+              .replace(queryParameters: {'lang': _lang});
 
-      final res = await _client.get(uri);
-      if (res.statusCode != 200) {
-        _error = 'تعذّر جلب أصناف المغسلة';
+      final responses = await Future.wait([
+        _client.get(detailsUri),
+        _client.get(productsUri),
+      ]);
+      final detailsResponse = responses[0];
+      final productsResponse = responses[1];
+      if (request != _requestSeq) return;
+
+      if (productsResponse.statusCode != 200) {
+        _error = 'catalog_fetch_error';
         return;
       }
 
-      final body = jsonDecode(res.body);
+      if (detailsResponse.statusCode == 200) {
+        final detailsBody = jsonDecode(detailsResponse.body);
+        final details = detailsBody is Map ? detailsBody['dryclean'] : null;
+        if (details is Map) {
+          _store = Store.fromJson(Map<String, dynamic>.from(details));
+        }
+      }
+
+      final body = jsonDecode(productsResponse.body);
       final raw = (body is Map ? body['services'] : null) as List? ?? const [];
       _services = raw
-          .map((e) => StoreService.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map(
+              (e) => StoreService.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
 
       _selectedServiceId ??=
           _services.isEmpty ? null : _services.first.serviceId;
     } catch (_) {
-      _error = 'تعذّر الاتصال بالخادم';
+      if (request != _requestSeq) return;
+      _error = 'server_connection_error';
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (request == _requestSeq) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
   void clear() {
+    _requestSeq++;
     _storeId = null;
     _services = [];
+    _store = null;
     _selectedServiceId = null;
     _search = '';
     _error = null;

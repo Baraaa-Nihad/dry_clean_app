@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:saleem_dry_clean/services/Models/StoreProduct.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/utils/localization.dart';
+import 'package:saleem_dry_clean/utils/store_localization.dart';
 
 /// اختيار مساحة الصنف المسعَّر بالمتر المربّع.
 ///
@@ -65,17 +67,18 @@ class _ProductSizeSheetState extends State<_ProductSizeSheet> {
   }
 
   void _confirm() {
+    final l10n = AppLocalizations.of(context);
     final a = _area;
     if (a == null) {
       setState(() => _error = _custom
-          ? 'أدخل العرض والطول بالمتر'
-          : 'اختر مقاساً أولاً');
+          ? l10n.translate('size_enter_dimensions')
+          : l10n.translate('size_select_first'));
       return;
     }
     if (a > 200) {
       // حدّ أعلى معقول: خطأ في الفاصلة العشرية يحوّل ٤×٦ إلى ٤٠×٦٠
       // فتصير الفاتورة بالآلاف
-      setState(() => _error = 'المساحة كبيرة جداً — تأكّد من الأرقام');
+      setState(() => _error = l10n.translate('size_too_large'));
       return;
     }
     Navigator.pop(context, a);
@@ -83,6 +86,7 @@ class _ProductSizeSheetState extends State<_ProductSizeSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final p = widget.product;
     final area = _area;
     final total = area == null ? null : area * p.effectivePrice;
@@ -119,15 +123,17 @@ class _ProductSizeSheetState extends State<_ProductSizeSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                'يُحسب بالمتر المربّع — ${p.effectivePrice.toStringAsFixed(2)}₪ للمتر',
+                l10n.translate(
+                  'size_priced_per_sqm',
+                  params: {'price': p.effectivePrice.toStringAsFixed(2)},
+                ),
                 style: AppTextStyles.sfarabicRegular.copyWith(
                     fontSize: 12.5, color: AppColors.secondaryTextColor),
               ),
               const SizedBox(height: 18),
-
               if (p.sizes.isNotEmpty) ...[
                 Text(
-                  'اختر المقاس',
+                  l10n.translate('size_choose'),
                   style: AppTextStyles.sfarabicMedium
                       .copyWith(fontSize: 13.5, color: AppColors.gray80),
                 ),
@@ -152,7 +158,6 @@ class _ProductSizeSheetState extends State<_ProductSizeSheet> {
                   }),
                 ),
               ],
-
               if (_custom) ...[
                 const SizedBox(height: 14),
                 Row(
@@ -160,7 +165,7 @@ class _ProductSizeSheetState extends State<_ProductSizeSheet> {
                     Expanded(
                       child: _DimField(
                         controller: _width,
-                        label: 'العرض (م)',
+                        label: l10n.translate('size_width_m'),
                         onChanged: (_) => setState(() => _error = null),
                       ),
                     ),
@@ -168,40 +173,38 @@ class _ProductSizeSheetState extends State<_ProductSizeSheet> {
                     Expanded(
                       child: _DimField(
                         controller: _height,
-                        label: 'الطول (م)',
+                        label: l10n.translate('size_length_m'),
                         onChanged: (_) => setState(() => _error = null),
                       ),
                     ),
                   ],
                 ),
               ],
-
               if (total != null) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(13),
                   decoration: BoxDecoration(
-                    color: AppColors.greenCardBackgourd,
+                    color: AppColors.brandSoft,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
                       Text(
-                        '${area!.toStringAsFixed(2)} م²',
+                        '${area!.toStringAsFixed(2)} ${l10n.translate('unit_square_meter_short')}',
                         style: AppTextStyles.poppinsMedium.copyWith(
                             fontSize: 13, color: AppColors.secondaryTextColor),
                       ),
                       const Spacer(),
                       Text(
                         '${total.toStringAsFixed(2)}₪',
-                        style: AppTextStyles.poppinsSemiBold
-                            .copyWith(fontSize: 16, color: AppColors.green),
+                        style: AppTextStyles.poppinsSemiBold.copyWith(
+                            fontSize: 16, color: AppColors.brandAccent),
                       ),
                     ],
                   ),
                 ),
               ],
-
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 Text(
@@ -210,21 +213,28 @@ class _ProductSizeSheetState extends State<_ProductSizeSheet> {
                       .copyWith(fontSize: 12.5, color: AppColors.red),
                 ),
               ],
-
               const SizedBox(height: 18),
-              ElevatedButton(
-                onPressed: _confirm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.green,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13)),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: AppColors.brandGradient,
+                  borderRadius: BorderRadius.circular(13),
                 ),
-                child: Text(
-                  'إضافة للسلّة',
-                  style: AppTextStyles.sfarabicBold
-                      .copyWith(fontSize: 15, color: AppColors.white),
+                child: ElevatedButton(
+                  onPressed: _confirm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.transparent,
+                    shadowColor: AppColors.transparent,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                  ),
+                  child: Text(
+                    l10n.translate('size_add_to_basket'),
+                    style: AppTextStyles.sfarabicBold
+                        .copyWith(fontSize: 15, color: AppColors.white),
+                  ),
                 ),
               ),
             ],
@@ -253,7 +263,7 @@ class _SizeRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: selected ? AppColors.greenCardBackgourd : AppColors.backgroundColor,
+        color: selected ? AppColors.brandSoft : AppColors.backgroundColor,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -267,12 +277,14 @@ class _SizeRow extends StatelessWidget {
                       ? Icons.radio_button_checked
                       : Icons.radio_button_unchecked,
                   size: 19,
-                  color: selected ? AppColors.green : AppColors.inactiveColor,
+                  color: selected
+                      ? AppColors.brandAccent
+                      : AppColors.inactiveColor,
                 ),
                 const SizedBox(width: 11),
                 Expanded(
                   child: Text(
-                    size.label,
+                    localizedProductSize(context, size),
                     style: AppTextStyles.sfarabicMedium
                         .copyWith(fontSize: 13.5, color: AppColors.gray80),
                   ),
@@ -283,7 +295,7 @@ class _SizeRow extends StatelessWidget {
                   '${(size.area * pricePerMeter).toStringAsFixed(0)}₪',
                   style: AppTextStyles.poppinsSemiBold.copyWith(
                     fontSize: 13,
-                    color: selected ? AppColors.green : AppColors.gray60,
+                    color: selected ? AppColors.brandAccent : AppColors.gray60,
                   ),
                 ),
               ],
@@ -301,22 +313,27 @@ class _CustomToggle extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: TextButton.icon(
-          onPressed: onTap,
-          icon: Icon(Icons.straighten,
-              size: 17,
-              color: active ? AppColors.green : AppColors.secondaryTextColor),
-          label: Text(
-            'مقاس آخر',
-            style: AppTextStyles.sfarabicMedium.copyWith(
-              fontSize: 13,
-              color: active ? AppColors.green : AppColors.secondaryTextColor,
-            ),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: TextButton.icon(
+        onPressed: onTap,
+        icon: Icon(Icons.straighten,
+            size: 17,
+            color:
+                active ? AppColors.brandAccent : AppColors.secondaryTextColor),
+        label: Text(
+          l10n.translate('size_other'),
+          style: AppTextStyles.sfarabicMedium.copyWith(
+            fontSize: 13,
+            color:
+                active ? AppColors.brandAccent : AppColors.secondaryTextColor,
           ),
         ),
-      );
+      ),
+    );
+  }
 }
 
 class _DimField extends StatelessWidget {

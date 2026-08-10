@@ -109,13 +109,6 @@ class ProductSize {
   final double width;
   final double area;
 
-  /// «٤ × ٦ م» — أوضح للزبون من «٢٤ م²» وحدها
-  String get label =>
-      '${_n(width)} × ${_n(height)} م  ·  ${_n(area)} م²';
-
-  static String _n(double v) =>
-      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2);
-
   factory ProductSize.fromJson(Map<String, dynamic> j) => ProductSize(
         height: double.tryParse('${j['height'] ?? 0}') ?? 0,
         width: double.tryParse('${j['width'] ?? 0}') ?? 0,
@@ -139,7 +132,8 @@ class StoreService {
         serviceId: int.tryParse('${j['serviceId']}') ?? 0,
         serviceName: (j['serviceName'] ?? '').toString(),
         products: ((j['products'] as List?) ?? const [])
-            .map((e) => StoreProduct.fromJson(Map<String, dynamic>.from(e as Map)))
+            .map((e) =>
+                StoreProduct.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),
       );
 
@@ -147,10 +141,10 @@ class StoreService {
   ///
   /// LinkedHashMap ضمناً: ترتيب الإدخال محفوظ في Dart، والخادم يرتّب
   /// حسب sort_id — فالمجموعات تظهر بالترتيب الذي ضبطه المحل.
-  Map<String, List<StoreProduct>> get byGroup {
+  Map<String, List<StoreProduct>> byGroup({required String fallbackGroup}) {
     final map = <String, List<StoreProduct>>{};
     for (final p in products) {
-      final k = (p.groupName ?? '').isEmpty ? 'أخرى' : p.groupName!;
+      final k = (p.groupName ?? '').isEmpty ? fallbackGroup : p.groupName!;
       map.putIfAbsent(k, () => []).add(p);
     }
     return map;

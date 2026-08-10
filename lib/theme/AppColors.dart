@@ -24,6 +24,16 @@ class AppColors {
   static const Color shadowColor = Color(0x1A8B84CB);
   static const Color gradientStart = Color(0xFF01B5CF);
   static const Color gradientEnd = Color(0xFF00E213);
+  // Unified brand palette used by the customer catalogue. This matches the
+  // calmer cyan-to-teal treatment used by the app's notification and primary
+  // action controls, without the neon green used by legacy screens.
+  static const Color brandStart = Color(0xFF01B5CF);
+  static const Color brandEnd = Color(0xFF01C58E);
+  static const Color brandAccent = Color(0xFF01B99F);
+  static const Color brandSoft = Color(0xFFE8FAF8);
+  static const Gradient brandGradient = LinearGradient(
+    colors: [brandStart, brandEnd],
+  );
   static const Color activeTextColor = Color(0xFF00E213);
   static const Color inactiveTextColor = Color(0xFFACBED4);
 
@@ -90,7 +100,7 @@ class AppColors {
   static const Color infoBorder = Color(0xFFFFF6E5);
   static const Color infoIconColor = Colors.orange;
   static Color get secondaryButtonShadow =>
-      _secondaryButtonShadowBase.withOpacity(0.03);
+      _secondaryButtonShadowBase.withValues(alpha: 0.03);
   static Color get primaryButtonShadow =>
-      _primaryButtonShadowBase.withOpacity(0.2);
+      _primaryButtonShadowBase.withValues(alpha: 0.2);
 }

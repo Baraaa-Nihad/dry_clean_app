@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:saleem_dry_clean/services/ApiClient/ApiClient.dart';
@@ -32,16 +33,29 @@ extension StoreSortApi on StoreSort {
     }
   }
 
-  String get label {
+  String get translationKey {
     switch (this) {
       case StoreSort.popular:
-        return 'الأكثر شهرة';
+        return 'stores_sort_popular';
       case StoreSort.priceLow:
-        return 'الأقلّ سعراً';
+        return 'stores_sort_price_low';
       case StoreSort.priceHigh:
-        return 'الأعلى سعراً';
+        return 'stores_sort_price_high';
       case StoreSort.rating:
-        return 'الأعلى تقييماً';
+        return 'stores_sort_rating';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case StoreSort.popular:
+        return Icons.local_fire_department_outlined;
+      case StoreSort.priceLow:
+        return Icons.trending_down_rounded;
+      case StoreSort.priceHigh:
+        return Icons.trending_up_rounded;
+      case StoreSort.rating:
+        return Icons.star_outline_rounded;
     }
   }
 }
@@ -62,11 +76,13 @@ class StoresProvider with ChangeNotifier {
   List<Store> _stores = [];
   bool _isLoading = false;
   String? _error;
+  bool _isPreviewData = false;
 
   String _search = '';
   StoreSort _sort = StoreSort.rating;
   bool _favoritesOnly = false;
   int? _areaId;
+  String _lang = 'ar';
 
   /// يُلغي نداءً سابقاً لم يعد يعني شيئاً — الزبون بدّل الفلتر مرّتين
   Timer? _debounce;
@@ -75,6 +91,7 @@ class StoresProvider with ChangeNotifier {
   List<Store> get stores => _visible;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get isPreviewData => _isPreviewData;
   String get search => _search;
   StoreSort get sort => _sort;
   bool get favoritesOnly => _favoritesOnly;
@@ -120,13 +137,14 @@ class StoresProvider with ChangeNotifier {
     if (_areaId == areaId) return;
     _areaId = areaId;
     _stores = [];
+    _isPreviewData = false;
     notifyListeners();
     load(force: true);
   }
 
-  Future<void> load(
-      {int? areaId, String lang = 'ar', bool force = false}) async {
+  Future<void> load({int? areaId, String? lang, bool force = false}) async {
     if (areaId != null) _areaId = areaId;
+    if (lang != null) _lang = lang;
     if (!force && _stores.isNotEmpty) return;
 
     final seq = ++_requestSeq;
@@ -136,7 +154,7 @@ class StoresProvider with ChangeNotifier {
 
     try {
       final uri = Uri.parse(Config.storesApi).replace(queryParameters: {
-        'lang': lang,
+        'lang': _lang,
         'sort': _sort.apiKey,
         if (_areaId != null) 'areaId': '$_areaId',
         if (_search.trim().isNotEmpty) 'search': _search.trim(),
@@ -149,19 +167,35 @@ class StoresProvider with ChangeNotifier {
       if (seq != _requestSeq) return;
 
       if (res.statusCode != 200) {
-        _error = 'تعذّر جلب المغاسل';
+        _error = 'stores_fetch_error';
         return;
       }
 
       final body = jsonDecode(res.body);
       final list =
           (body is Map ? body['drycleans'] : null) as List? ?? const [];
-      _stores = list
+      final loaded = list
           .map((e) => Store.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
+
+      // Preview data is deliberately debug-only. It lets us review the new
+      // card layout in an area that has no providers yet, without placing fake
+      // laundries in the production app or database.
+      if (loaded.isEmpty &&
+          kDebugMode &&
+          _search.trim().isEmpty &&
+          !_favoritesOnly) {
+        _stores = _previewStoresForSort();
+        _isPreviewData = true;
+      } else {
+        _stores = loaded;
+        _isPreviewData = false;
+      }
     } catch (_) {
       if (seq != _requestSeq) return;
-      _error = 'تعذّر الاتصال بالخادم';
+      _stores = [];
+      _isPreviewData = false;
+      _error = 'server_connection_error';
     } finally {
       if (seq == _requestSeq) {
         _isLoading = false;
@@ -181,6 +215,8 @@ class StoresProvider with ChangeNotifier {
     final was = _stores[i].isFavorite;
     _stores[i] = _copyWithFavorite(_stores[i], !was);
     notifyListeners();
+
+    if (_isPreviewData) return;
 
     try {
       final uri = Uri.parse('${Config.storeDetailsApi}/$storeId/favorite');
@@ -229,4 +265,79 @@ class StoresProvider with ChangeNotifier {
         longitude: s.longitude,
         workingHours: s.workingHours,
       );
+
+  List<Store> _previewStoresForSort() {
+    final english = _lang == 'en';
+    final stores = <Store>[
+      Store(
+        id: -1,
+        name: english ? 'Saleem Modern Laundry' : 'مغسلة سليم الحديثة',
+        description: english
+            ? 'Complete care for clothes and delicate fabrics'
+            : 'عناية متكاملة بالملابس والأقمشة الحسّاسة',
+        rating: 4.9,
+        ratingCount: 128,
+        ordersCount: 642,
+        productsCount: 34,
+        averagePrice: 14,
+        minOrderTotal: 30,
+        turnaroundHours: 24,
+        hasActiveOffer: true,
+        isPromoted: true,
+        workingHours:
+            english ? 'Daily 8:00 AM - 10:00 PM' : 'يومياً 8:00 - 22:00',
+      ),
+      Store(
+        id: -2,
+        name: english ? 'Al Nada Laundry' : 'مغسلة الندى',
+        description: english
+            ? 'Fast washing and ironing with attention to every detail'
+            : 'غسيل وكوي سريع مع اهتمام بأدق التفاصيل',
+        rating: 4.7,
+        ratingCount: 86,
+        ordersCount: 391,
+        productsCount: 27,
+        averagePrice: 12,
+        minOrderTotal: 25,
+        turnaroundHours: 48,
+        workingHours: english
+            ? 'Saturday - Thursday 9:00 AM - 9:00 PM'
+            : 'السبت - الخميس 9:00 - 21:00',
+      ),
+      Store(
+        id: -3,
+        name: english ? 'Clean Touch Laundry' : 'مغسلة لمسة نظافة',
+        description: english
+            ? 'Professional cleaning with results your clothes deserve'
+            : 'تنظيف احترافي ونتيجة تليق بملابسك',
+        rating: 4.6,
+        ratingCount: 54,
+        ordersCount: 218,
+        productsCount: 19,
+        averagePrice: 10,
+        minOrderTotal: 20,
+        turnaroundHours: 72,
+        workingHours:
+            english ? 'Daily 10:00 AM - 8:00 PM' : 'يومياً 10:00 - 20:00',
+      ),
+    ];
+
+    switch (_sort) {
+      case StoreSort.popular:
+        stores.sort((a, b) => b.ordersCount.compareTo(a.ordersCount));
+        break;
+      case StoreSort.priceLow:
+        stores.sort(
+            (a, b) => (a.averagePrice ?? 0).compareTo(b.averagePrice ?? 0));
+        break;
+      case StoreSort.priceHigh:
+        stores.sort(
+            (a, b) => (b.averagePrice ?? 0).compareTo(a.averagePrice ?? 0));
+        break;
+      case StoreSort.rating:
+        stores.sort((a, b) => b.rating.compareTo(a.rating));
+        break;
+    }
+    return stores;
+  }
 }

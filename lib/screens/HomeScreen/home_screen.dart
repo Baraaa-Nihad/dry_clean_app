@@ -9,6 +9,7 @@ import 'package:saleem_dry_clean/components/Stores/StoresBrowser.dart';
 import 'package:saleem_dry_clean/services/Providers/BannerProvider.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/services/Providers/LanguageProvider.dart';
+import 'package:saleem_dry_clean/utils/localization.dart';
 
 /// الشاشة الرئيسية — قائمة المغاسل.
 ///
@@ -34,17 +35,23 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String? _lastLanguage;
+
   @override
-  void initState() {
-    super.initState();
-    final languageProvider =
-        Provider.of<LanguageProvider>(context, listen: false);
-    final String lang = languageProvider.locale.languageCode;
-    Provider.of<BannerProvider>(context, listen: false).fetchBannerImages(lang);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final lang = context.read<LanguageProvider>().locale.languageCode;
+    if (_lastLanguage == lang) return;
+    _lastLanguage = lang;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<BannerProvider>().fetchBannerImages(lang);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final bannerProvider = Provider.of<BannerProvider>(context);
     List<String> imagePaths = bannerProvider.bannerImages;
     List<String> displayImagePaths = imagePaths.isNotEmpty
@@ -56,14 +63,14 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(
         children: [
           StoresBrowser(
-            title: 'اختر المغسلة',
-            subtitle: 'لكل مغسلة أسعارها وخدماتها',
+            title: l10n.translate('stores_choose_title'),
+            subtitle: l10n.translate('stores_choose_subtitle'),
             header: ClipPath(
               clipper: BottomCurvedClipper(),
               child: Container(
                 color: AppColors.white,
-                child: ImageSlider(
-                    imagePaths: displayImagePaths, fem: widget.fem),
+                child:
+                    ImageSlider(imagePaths: displayImagePaths, fem: widget.fem),
               ),
             ),
           ),

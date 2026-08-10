@@ -5,6 +5,7 @@ import 'package:saleem_dry_clean/services/Models/Store.dart';
 import 'package:saleem_dry_clean/services/Providers/StoresProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/utils/localization.dart';
 
 /// قائمة المغاسل كشاشة مستقلّة.
 ///
@@ -39,6 +40,7 @@ class _StoresScreenState extends State<StoresScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
@@ -46,13 +48,15 @@ class _StoresScreenState extends State<StoresScreen> {
         foregroundColor: AppColors.gray80,
         elevation: 0,
         title: Text(
-          'المغاسل',
+          l10n.translate('stores_screen_title'),
           style: AppTextStyles.sfarabicBold
               .copyWith(fontSize: 16.5, color: AppColors.gray80),
         ),
       ),
-      body: const SafeArea(
-        child: StoresBrowser(subtitle: 'لكل مغسلة أسعارها وخدماتها'),
+      body: SafeArea(
+        child: StoresBrowser(
+          subtitle: l10n.translate('stores_choose_subtitle'),
+        ),
       ),
     );
   }

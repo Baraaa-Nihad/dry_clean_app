@@ -12,6 +12,8 @@ import 'package:saleem_dry_clean/services/Providers/OrderProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/StoreCatalogProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/utils/localization.dart';
+import 'package:saleem_dry_clean/utils/store_localization.dart';
 
 /// كتالوج المحل — أصنافه بأسعاره هو.
 ///
@@ -41,12 +43,19 @@ class StoreCatalogScreen extends StatefulWidget {
 
 class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
   final _searchController = TextEditingController();
+  String? _lastLanguage;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final language = Localizations.localeOf(context).languageCode;
+    if (_lastLanguage == language) return;
+    _lastLanguage = language;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<StoreCatalogProvider>().load(widget.store.id);
+      if (!mounted) return;
+      context
+          .read<StoreCatalogProvider>()
+          .load(widget.store.id, lang: language, force: true);
     });
   }
 
@@ -62,6 +71,7 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
   /// خسارة صامتة يكتشفها عند الدفع.
   Future<void> _add(StoreProduct p) async {
     final order = context.read<OrderProvider>();
+    final store = context.read<StoreCatalogProvider>().store ?? widget.store;
 
     // ★ المساحة قبل السعر ★
     //
@@ -75,12 +85,12 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
       area = chosen.toString();
     }
 
-    if (!order.acceptsStore(widget.store.id)) {
+    if (!order.acceptsStore(store.id)) {
       final ok = await _confirmSwitch(order.storeName);
       if (ok != true) return;
-      order.switchStore(widget.store.id, widget.store.name);
+      order.switchStore(store.id, store.name);
     } else {
-      order.bindStore(widget.store.id, widget.store.name);
+      order.bindStore(store.id, store.name);
     }
 
     order.addProduct(BasketItemData(
@@ -113,21 +123,26 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
   }
 
   Future<bool?> _confirmSwitch(String? current) {
+    final l10n = AppLocalizations.of(context);
+    final nextStore =
+        context.read<StoreCatalogProvider>().store?.name ?? widget.store.name;
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text(
-          'سلّتك من مغسلة أخرى',
+          l10n.translate('cart_other_store_title'),
           style: AppTextStyles.sfarabicBold
               .copyWith(fontSize: 17, color: AppColors.gray80),
         ),
         content: Text(
           current == null
-              ? 'الطلب الواحد من مغسلة واحدة. بالمتابعة تُفرَّغ سلّتك الحالية.'
-              : 'سلّتك تحتوي أصنافاً من «$current». الطلب الواحد من مغسلة '
-                  'واحدة، فبالمتابعة تُفرَّغ سلّتك وتبدأ من «${widget.store.name}».',
+              ? l10n.translate('cart_other_store_empty')
+              : l10n.translate(
+                  'cart_other_store_named',
+                  params: {'current': current, 'next': nextStore},
+                ),
           style: AppTextStyles.sfarabicRegular.copyWith(
             fontSize: 13.5,
             height: 1.6,
@@ -137,13 +152,13 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('إبقاء سلّتي',
+            child: Text(l10n.translate('cart_keep'),
                 style: AppTextStyles.sfarabicMedium
                     .copyWith(color: AppColors.gray60)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('تفريغ والمتابعة',
+            child: Text(l10n.translate('cart_clear_continue'),
                 style:
                     AppTextStyles.sfarabicBold.copyWith(color: AppColors.red)),
           ),
@@ -155,16 +170,17 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
   @override
   Widget build(BuildContext context) {
     final cat = context.watch<StoreCatalogProvider>();
+    final store = cat.store ?? widget.store;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       body: CustomScrollView(
         slivers: [
-          _CoverAppBar(store: widget.store),
-          SliverToBoxAdapter(child: _StoreHeadline(store: widget.store)),
+          _CoverAppBar(store: store),
+          SliverToBoxAdapter(child: _StoreHeadline(store: store)),
           // كتلة التقييم (٢.١.٣) — تحت الترويسة وفوق اختيار الخدمة
           SliverToBoxAdapter(
-            child: StoreRatingsSection(storeId: widget.store.id),
+            child: StoreRatingsSection(storeId: store.id),
           ),
           if (cat.services.length > 1)
             SliverToBoxAdapter(
@@ -186,18 +202,22 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
         ],
       ),
       bottomNavigationBar: _BasketBar(
-        storeId: widget.store.id,
+        storeId: store.id,
         onCheckout: widget.onCheckout,
       ),
     );
   }
 
   List<Widget> _buildBody(StoreCatalogProvider cat) {
+    final l10n = AppLocalizations.of(context);
+    final language = Localizations.localeOf(context).languageCode;
     if (cat.isLoading && cat.services.isEmpty) {
       return const [
         SliverFillRemaining(
           hasScrollBody: false,
-          child: Center(child: CircularProgressIndicator(color: AppColors.green)),
+          child: Center(
+            child: CircularProgressIndicator(color: AppColors.brandAccent),
+          ),
         ),
       ];
     }
@@ -208,11 +228,11 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
           hasScrollBody: false,
           child: _CatalogEmpty(
             icon: Icons.wifi_off_rounded,
-            title: cat.error!,
-            actionLabel: 'إعادة المحاولة',
+            title: l10n.translate(cat.error!),
+            actionLabel: l10n.translate('retry'),
             onAction: () => context
                 .read<StoreCatalogProvider>()
-                .load(widget.store.id, force: true),
+                .load(widget.store.id, lang: language, force: true),
           ),
         ),
       ];
@@ -226,10 +246,12 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
           hasScrollBody: false,
           child: _CatalogEmpty(
             icon: searching ? Icons.search_off : Icons.inventory_2_outlined,
-            title: searching ? 'لا صنف بهذا الاسم' : 'لا أصناف في هذه الخدمة',
+            title: searching
+                ? l10n.translate('catalog_no_product_search')
+                : l10n.translate('catalog_no_products_service'),
             subtitle: searching
-                ? 'جرّب اسماً آخر'
-                : 'لم تضبط هذه المغسلة أصنافاً لهذه الخدمة بعد',
+                ? l10n.translate('catalog_try_another')
+                : l10n.translate('catalog_no_products_subtitle'),
           ),
         ),
       ];
@@ -295,12 +317,12 @@ class _CoverAppBar extends StatelessWidget {
                 Config.resolveImageUrl(store.coverUrl),
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => const DecoratedBox(
-                  decoration: BoxDecoration(gradient: AppColors.gradient),
+                  decoration: BoxDecoration(gradient: AppColors.brandGradient),
                 ),
               )
             else
               const DecoratedBox(
-                decoration: BoxDecoration(gradient: AppColors.gradient),
+                decoration: BoxDecoration(gradient: AppColors.brandGradient),
               ),
             // تدرّج أسفل الغلاف: زر الرجوع الأبيض يختفي فوق صورة فاتحة
             const DecoratedBox(
@@ -326,6 +348,8 @@ class _StoreHeadline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final turnaround = localizedTurnaround(context, store.turnaroundHours);
     return Container(
       color: AppColors.white,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
@@ -356,8 +380,7 @@ class _StoreHeadline extends StatelessWidget {
                     Text(
                       '(${store.ratingCount})',
                       style: AppTextStyles.poppinsRegular.copyWith(
-                          fontSize: 11.5,
-                          color: AppColors.secondaryTextColor),
+                          fontSize: 11.5, color: AppColors.secondaryTextColor),
                     ),
                   ],
                 ),
@@ -380,15 +403,23 @@ class _StoreHeadline extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              if (store.turnaroundLabel != null)
+              if (turnaround.isNotEmpty)
                 _Pill(
                   icon: Icons.schedule,
-                  label: 'الجاهزية ${store.turnaroundLabel}',
+                  label: l10n.translate(
+                    'store_ready_in',
+                    params: {'duration': turnaround},
+                  ),
                 ),
               if (store.minOrderTotal > 0)
                 _Pill(
                   icon: Icons.shopping_bag_outlined,
-                  label: 'أقلّ طلب ${store.minOrderTotal.toStringAsFixed(0)}₪',
+                  label: l10n.translate(
+                    'store_min_order_value',
+                    params: {
+                      'amount': store.minOrderTotal.toStringAsFixed(0),
+                    },
+                  ),
                 ),
               // ساعات العمل (٢.١.٢)
               if ((store.workingHours ?? '').isNotEmpty)
@@ -419,7 +450,7 @@ class _Pill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: AppColors.secondaryTextColor),
+            Icon(icon, size: 14, color: AppColors.brandAccent),
             const SizedBox(width: 5),
             Text(
               label,
@@ -458,20 +489,29 @@ class _ServiceTabs extends StatelessWidget {
           final s = services[i];
           final selected = s.serviceId == selectedId;
           return Center(
-            child: Material(
-              color: selected ? AppColors.primaryColor : AppColors.backgroundColor,
-              borderRadius: BorderRadius.circular(20),
-              child: InkWell(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: selected ? null : AppColors.backgroundColor,
+                gradient: selected ? AppColors.brandGradient : null,
                 borderRadius: BorderRadius.circular(20),
-                onTap: () => onSelect(s.serviceId),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                  child: Text(
-                    s.serviceName,
-                    style: AppTextStyles.sfarabicMedium.copyWith(
-                      fontSize: 13,
-                      color: selected ? AppColors.white : AppColors.gray60,
+              ),
+              child: Material(
+                color: AppColors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => onSelect(s.serviceId),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 9,
+                    ),
+                    child: Text(
+                      s.serviceName,
+                      style: AppTextStyles.sfarabicMedium.copyWith(
+                        fontSize: 13,
+                        color: selected ? AppColors.white : AppColors.gray60,
+                      ),
                     ),
                   ),
                 ),
@@ -491,6 +531,7 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       color: AppColors.white,
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
@@ -501,7 +542,7 @@ class _SearchField extends StatelessWidget {
         style: AppTextStyles.sfarabicRegular
             .copyWith(fontSize: 14, color: AppColors.gray80),
         decoration: InputDecoration(
-          hintText: 'ابحث في أصناف المغسلة…',
+          hintText: l10n.translate('catalog_search_hint'),
           hintStyle: AppTextStyles.sfarabicRegular
               .copyWith(fontSize: 14, color: AppColors.inactiveColor),
           prefixIcon: const Icon(Icons.search, color: AppColors.inactiveColor),
@@ -545,6 +586,7 @@ class _ProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final order = context.watch<OrderProvider>();
     final line = _lineFor(order, product);
     final qty = line?.quantity ?? 0;
@@ -592,18 +634,19 @@ class _ProductTile extends StatelessWidget {
                   children: [
                     Text(
                       '${product.effectivePrice.toStringAsFixed(2)}₪',
-                      style: AppTextStyles.poppinsSemiBold
-                          .copyWith(fontSize: 14, color: AppColors.green),
+                      style: AppTextStyles.poppinsSemiBold.copyWith(
+                        fontSize: 14,
+                        color: AppColors.brandAccent,
+                      ),
                     ),
                     // «للمتر» بجانب السعر: بدونها يقرأ الزبون ١٠₪ ثمناً
                     // للسجادة كاملة ثم يفاجئه ٢٤٠ في السلّة
                     if (product.isPerSquareMeter) ...[
                       const SizedBox(width: 3),
                       Text(
-                        '/ م²',
+                        '/ ${l10n.translate('unit_square_meter_short')}',
                         style: AppTextStyles.sfarabicRegular.copyWith(
-                            fontSize: 11,
-                            color: AppColors.secondaryTextColor),
+                            fontSize: 11, color: AppColors.secondaryTextColor),
                       ),
                     ],
                     if (discount != null) ...[
@@ -663,8 +706,7 @@ class _ProductTile extends StatelessWidget {
   /// المغسول سطران مستقلّان بسعرين مختلفين.
   BasketItemData? _lineFor(OrderProvider order, StoreProduct p) {
     for (final item in order.cart) {
-      if (item.productId == p.productId &&
-          item.serviceType.id == p.serviceId) {
+      if (item.productId == p.productId && item.serviceType.id == p.serviceId) {
         return item;
       }
     }
@@ -699,15 +741,21 @@ class _Stepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (quantity == 0) {
-      return Material(
-        color: AppColors.green,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onAdd,
-          child: const Padding(
-            padding: EdgeInsets.all(7),
-            child: Icon(Icons.add, size: 20, color: AppColors.white),
+      return DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: AppColors.brandGradient,
+          shape: BoxShape.circle,
+        ),
+        child: Material(
+          color: AppColors.transparent,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onAdd,
+            child: const Padding(
+              padding: EdgeInsets.all(7),
+              child: Icon(Icons.add, size: 20, color: AppColors.white),
+            ),
           ),
         ),
       );
@@ -715,7 +763,7 @@ class _Stepper extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.greenCardBackgourd,
+        color: AppColors.brandSoft,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -757,7 +805,7 @@ class _StepButton extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(7),
-            child: Icon(icon, size: 18, color: AppColors.green),
+            child: Icon(icon, size: 18, color: AppColors.brandAccent),
           ),
         ),
       );
@@ -775,48 +823,63 @@ class _BasketBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final order = context.watch<OrderProvider>();
     final mine = order.cart.isNotEmpty && order.storeId == storeId;
     if (!mine) return const SizedBox.shrink();
 
-    return SafeArea(
-      minimum: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-      child: Material(
-        color: AppColors.green,
-        borderRadius: BorderRadius.circular(15),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(15),
-          onTap: onCheckout,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 9, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${order.totalQuantity}',
-                    style: AppTextStyles.poppinsSemiBold
-                        .copyWith(fontSize: 13, color: AppColors.green),
-                  ),
+    return Padding(
+      // مسافة مرئية ثابتة فوق مساحة النظام، لا مجرد حد أدنى قد تستهلكه
+      // قيمة الـ SafeArea على بعض الأجهزة.
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: SafeArea(
+        top: false,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: AppColors.brandGradient,
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Material(
+            color: AppColors.transparent,
+            borderRadius: BorderRadius.circular(15),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(15),
+              onTap: onCheckout,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${order.totalQuantity}',
+                        style: AppTextStyles.poppinsSemiBold.copyWith(
+                          fontSize: 13,
+                          color: AppColors.brandAccent,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 11),
+                    Text(
+                      l10n.translate('basket_view'),
+                      style: AppTextStyles.sfarabicBold
+                          .copyWith(fontSize: 15, color: AppColors.white),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${order.subtotal.toStringAsFixed(2)}₪',
+                      style: AppTextStyles.poppinsSemiBold
+                          .copyWith(fontSize: 15, color: AppColors.white),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 11),
-                Text(
-                  'عرض السلّة',
-                  style: AppTextStyles.sfarabicBold
-                      .copyWith(fontSize: 15, color: AppColors.white),
-                ),
-                const Spacer(),
-                Text(
-                  '${order.subtotal.toStringAsFixed(2)}₪',
-                  style: AppTextStyles.poppinsSemiBold
-                      .copyWith(fontSize: 15, color: AppColors.white),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -851,10 +914,10 @@ class _CatalogEmpty extends StatelessWidget {
                 width: 96,
                 height: 96,
                 decoration: const BoxDecoration(
-                  color: AppColors.blueCardBackgourd,
+                  color: AppColors.brandSoft,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 40, color: AppColors.blueCard),
+                child: Icon(icon, size: 40, color: AppColors.brandAccent),
               ),
               const SizedBox(height: 18),
               Text(
@@ -881,7 +944,7 @@ class _CatalogEmpty extends StatelessWidget {
                   child: Text(
                     actionLabel!,
                     style: AppTextStyles.sfarabicBold
-                        .copyWith(color: AppColors.green),
+                        .copyWith(color: AppColors.brandAccent),
                   ),
                 ),
               ],
