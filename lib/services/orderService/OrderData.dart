@@ -20,6 +20,7 @@ class OrderData {
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool pricePending;
 
   /// لون الحالة كما ضبطته الإدارة — الشارة تستعمله بدل جدول محلي
   final String? statusColor;
@@ -36,6 +37,18 @@ class OrderData {
   final String? drycleanPhone;
 
   List<OrderItem> items;
+
+  /// The API marks newly created pending orders directly.  This fallback also
+  /// protects older orders after their items are loaded separately on the
+  /// orders screen.
+  bool get hasPendingMeasurement =>
+      pricePending ||
+      items.any(
+        (item) =>
+            item.measurementPending ||
+            (item.unit == 'Square meter' &&
+                (item.area == null || item.area! <= 0)),
+      );
 
   OrderData({
     required this.orderId,
@@ -57,6 +70,7 @@ class OrderData {
     required this.isDeleted,
     required this.createdAt,
     required this.updatedAt,
+    this.pricePending = false,
     this.statusColor,
     this.statusCode,
     this.drycleanName,
@@ -80,8 +94,51 @@ class OrderData {
     return categorizedItems;
   }
 
+  /// يقرأ الشكلين: المسطّح والمجمّع حسب الخدمة.
+  static List<OrderItem> _readItems(dynamic raw) {
+    if (raw is! List) return <OrderItem>[];
+
+    final out = <OrderItem>[];
+    for (final entry in raw) {
+      if (entry is Map && entry['items'] is List) {
+        // مجموعة خدمة — ننزل إلى أصنافها
+        for (final item in entry['items'] as List) {
+          if (item is Map) {
+            out.add(OrderItem.fromJson(Map<String, dynamic>.from(item)));
+          }
+        }
+      } else if (entry is Map) {
+        out.add(OrderItem.fromJson(Map<String, dynamic>.from(entry)));
+      }
+    }
+    return out;
+  }
+
   /// Factory method to create an `OrderData` instance from a JSON object
   factory OrderData.fromJson(Map<String, dynamic> json) {
+    // ★ شكلان لـ order_items ★
+    //
+    // مسار الطلب العادي يرسلها قائمة مسطّحة من الأصناف. ومسار الإيصال
+    // (`?isReceipt=true`) يمرّ بـ filterReceiptData فترسلها **مجمّعة**
+    // حسب الخدمة: `[{service_type, items:[...]}]`.
+    //
+    // وقراءة المجمّعة كأنها مسطّحة تنتج أصنافاً فارغة — بلا اسم ولا
+    // وحدة ولا حالة قياس. وهذا ما كان يجعل الإيصال يفقد علامة «بانتظار
+    // القياس» فيطبع سعراً لسجادة لم تُقَس.
+    final items = _readItems(json['order_items']);
+    final serverPricePending = json['price_pending'] == true ||
+        json['price_pending'] == 1 ||
+        json['price_pending']?.toString() == '1' ||
+        json['pricePending'] == true;
+    // Older orders were saved before `measurement_pending` existed.  A carpet
+    // billed per square meter with no positive area is that same pending case.
+    final hasPendingMeasurement = items.any(
+      (item) =>
+          item.measurementPending ||
+          (item.unit == 'Square meter' &&
+              (item.area == null || item.area! <= 0)),
+    );
+
     return OrderData(
       orderId: json['id'] is int ? json['id'] : int.parse(json['id']),
       status: json['status'] ?? '',
@@ -113,6 +170,7 @@ class OrderData {
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
 
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
+      pricePending: serverPricePending || hasPendingMeasurement,
       statusColor: json['status_color'] as String?,
       statusCode: json['status_code'] as String?,
       // `DRYCLEAN` اسم قديم في الردّ يسبق `dryclean_name` — يُقرأ
@@ -120,11 +178,7 @@ class OrderData {
       drycleanName:
           (json['dryclean_name'] ?? json['DRYCLEAN']) as String?,
       drycleanPhone: json['dryclean_phone'] as String?,
-      items: json['order_items'] != null
-          ? (json['order_items'] as List<dynamic>)
-              .map((item) => OrderItem.fromJson(item))
-              .toList()
-          : [],
+      items: items,
     );
   }
 
@@ -152,6 +206,7 @@ class OrderData {
       'updated_at': updatedAt.toIso8601String(),
       'items': items.map((item) => item.toJson()).toList(),
       'is_paid': isPaid ? 1 : 0, // Convert true to 1 and false to 0
+      'price_pending': pricePending ? 1 : 0,
     };
   }
 
@@ -181,6 +236,7 @@ class OrderData {
     String? drycleanName,
     String? drycleanPhone,
     List<OrderItem>? items,
+    bool? pricePending,
   }) {
     return OrderData(
       orderId: orderId ?? this.orderId,
@@ -207,6 +263,7 @@ class OrderData {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       items: items ?? this.items,
+      pricePending: pricePending ?? this.pricePending,
     );
   }
 }
