@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:saleem_dry_clean/components/Basket/basket_item.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
-import 'package:saleem_dry_clean/utils/localization.dart';
+import 'package:saleem_dry_clean/utils/store_localization.dart';
 
 class ServiceTypeSection extends StatelessWidget {
   final String serviceType;
@@ -16,8 +15,6 @@ class ServiceTypeSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context);
-
     return Container(
       padding:
           EdgeInsets.only(left: 0 * fem, bottom: 12 * fem), // Added padding
@@ -25,7 +22,7 @@ class ServiceTypeSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${localizations?.translate('$serviceType') ?? '$serviceType'} ',
+            '${localizedCatalogValue(context, serviceType)} ',
             style: AppTextStyles.getFontFamily(
               context,
               AppTextStyles.regular16Gray80(context).copyWith(

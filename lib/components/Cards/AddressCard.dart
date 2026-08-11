@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:saleem_dry_clean/components/Badgs/StatusBadge.dart';
 import 'package:saleem_dry_clean/components/Cards/VerifiedBadge.dart';

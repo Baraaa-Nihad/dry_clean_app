@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:saleem_dry_clean/components/Tables/OrderTable.dart';
 import 'package:saleem_dry_clean/services/Models/OrderItem.dart';
 import 'package:saleem_dry_clean/services/orderService/OrderData.dart';
@@ -21,9 +21,7 @@ class ReceiptDetails extends StatelessWidget {
     // Get the categorized items
     Map<String, List<OrderItem>> categorizedItems = order.itemsByCategory();
     // Determine which date to display, prioritize createdAt, fallback to orderedAt
-    final DateTime? orderCreateDate = order.createdAt != null
-        ? order.createdAt
-        : DateTime.tryParse(order.orderedAt); // Parsing if orderedAt is String
+    final DateTime orderCreateDate = order.createdAt;
 
     return Container(
       width: double.infinity,
@@ -34,7 +32,7 @@ class ReceiptDetails extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                localizations?.translate('orderDetails') ?? 'Order Details',
+                localizations.translate('orderDetails'),
                 style: AppTextStyles.getFontFamily(
                   context,
                   AppTextStyles.regular16Gray80(context).copyWith(
@@ -46,11 +44,7 @@ class ReceiptDetails extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                orderCreateDate != null
-                    ? validationUtils
-                        .formatGeneralDateTime(orderCreateDate.toString())
-                    : localizations?.translate('noDateAvailable') ??
-                        'No Date Available',
+                validationUtils.formatGeneralDateTime(orderCreateDate.toString()),
                 style: AppTextStyles.regular16Gray80(context).copyWith(
                   fontSize: 15.0,
                   fontWeight: FontWeight.w400,
@@ -68,12 +62,14 @@ class ReceiptDetails extends StatelessWidget {
               children: [
                 OrderTable(
                   title: entry.key, // Title for the items table
+                  pricePending: order.hasPendingMeasurement,
                   items: entry.value.map((item) {
                     return {
                       'name': item.productName,
                       'qty': item.quantity,
                       'price': item.unitPrice,
                       'total': item.total,
+                      'measurementPending': item.measurementPending,
                       // 'picture': item.imagePath ?? 'default_image_path',
                       'was_missed': item.wasMissed ? 'Yes' : 'No',
                     };

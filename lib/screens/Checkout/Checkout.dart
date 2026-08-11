@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/AppBar/AppHeader.dart';
@@ -1153,6 +1153,7 @@ class _CheckoutAddressState extends State<CheckoutAddress>
       body: Consumer<UserProvider>(
         builder: (context, userProvider, child) {
           final addressesProvider = Provider.of<AddressesProvider>(context);
+          final orderProvider = context.watch<OrderProvider>();
           final addresses = addressesProvider.addresses;
           final timeSelectionProvider = Provider.of<TimeSelectionProvider>(
             context,
@@ -1318,7 +1319,11 @@ class _CheckoutAddressState extends State<CheckoutAddress>
                             buttonWidth: "full",
                             fem: widget.fem,
                             buttonText: localizations.translate(
-                              _currentStep == 3 ? 'place_order' : 'Next',
+                              _currentStep == 3
+                                  ? (orderProvider.hasPendingMeasurement
+                                      ? 'place_order_price_pending'
+                                      : 'place_order')
+                                  : 'Next',
                             ),
                             isDisabled: isDisabledButton || isAddressUpdating,
                             onPressed: () {

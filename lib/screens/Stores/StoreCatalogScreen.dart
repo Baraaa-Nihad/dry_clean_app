@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/screens/Stores/product_size_sheet.dart';
@@ -23,13 +23,44 @@ String _catalogText(
   Map<String, String>? params,
 }) {
   final l10n = AppLocalizations.of(context);
-  final translated = l10n.translate(key, params: params);
-  if (translated != key) return translated;
+  if (l10n.hasTranslation(key)) {
+    return l10n.translate(key, params: params);
+  }
   var fallback = Localizations.localeOf(context).languageCode == 'ar' ? ar : en;
   params?.forEach((name, value) {
     fallback = fallback.replaceAll('{$name}', value);
   });
   return fallback;
+}
+
+/// Formats carpet dimensions in the active app language. Arabic uses Arabic
+/// numerals and the Arabic metre unit, while English keeps the original form.
+String _localizedCarpetDimension(
+  BuildContext context,
+  double width,
+  double length,
+) {
+  String format(double value) => value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toStringAsFixed(2);
+
+  final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+  String localizeNumber(String value) {
+    if (!isArabic) return value;
+    const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+    return value
+        .replaceAllMapped(
+          RegExp(r'\d'),
+          (match) => arabicDigits[int.parse(match.group(0)!)],
+        )
+        .replaceAll('.', '٫');
+  }
+
+  final formattedWidth = localizeNumber(format(width));
+  final formattedLength = localizeNumber(format(length));
+  return isArabic
+      ? '$formattedWidth م × $formattedLength م'
+      : '$formattedWidth × $formattedLength m';
 }
 
 /// Product-first laundry catalogue.
@@ -48,11 +79,23 @@ class StoreCatalogScreen extends StatefulWidget {
   State<StoreCatalogScreen> createState() => _StoreCatalogScreenState();
 }
 
+class _PreviousMeasurementOption {
+  const _PreviousMeasurementOption({
+    required this.measurement,
+    required this.product,
+  });
+
+  final PreviousMeasurement measurement;
+  final CatalogProduct product;
+}
+
 class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
   static const double _stickyHeight = 66;
   static const double _stickyRevealOffset = 72;
 
   final _searchController = TextEditingController();
+  final _customWidthController = TextEditingController();
+  final _customLengthController = TextEditingController();
   final _scrollController = ScrollController();
   final _tabScrollController = ScrollController();
   final Map<String, GlobalKey> _groupKeys = {};
@@ -62,6 +105,7 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
   String? _activeGroup;
   bool _showStickyTabs = false;
   bool _sectionCheckScheduled = false;
+  bool _showCustomSize = false;
 
   @override
   void initState() {
@@ -88,6 +132,8 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _customWidthController.dispose();
+    _customLengthController.dispose();
     _scrollController
       ..removeListener(_handleScroll)
       ..dispose();
@@ -256,11 +302,123 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
     _scheduleSectionCheck();
   }
 
+  void _selectType(StoreCatalogProvider catalog, int id) {
+    catalog.selectType(id);
+    _searchController.clear();
+    setState(() {
+      _showCustomSize = false;
+      _activeGroup = null;
+      _showStickyTabs = false;
+    });
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  Future<void> _openCustomSize(
+    StoreCatalogProvider catalog,
+    Store store,
+  ) async {
+    final width = double.tryParse(_customWidthController.text.trim());
+    final length = double.tryParse(_customLengthController.text.trim());
+    final template = catalog.customSizeTemplate;
+    if (template == null || width == null || length == null ||
+        width <= 0 || length <= 0 || width > 100 || length > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_catalogText(
+          context,
+          'catalog_invalid_dimensions',
+          ar: 'أدخل طولاً وعرضاً صحيحين',
+          en: 'Enter a valid length and width',
+        )),
+      ));
+      return;
+    }
+    final dimension = _localizedCarpetDimension(context, width, length);
+    await _openProduct(
+      CatalogProduct(
+        productId: template.productId,
+        name: dimension,
+        description: template.description,
+        groupId: template.groupId,
+        groupName: template.groupName,
+        imagePath: template.imagePath,
+        width: width,
+        length: length,
+        customSizeTemplate: true,
+        catalogTypeName: template.catalogTypeName,
+        offerings: template.offerings,
+      ),
+      store,
+    );
+  }
+
+  Future<void> _reusePreviousMeasurement(
+    _PreviousMeasurementOption option,
+    Store store,
+  ) async {
+    final measurement = option.measurement;
+    final product = option.product;
+    final dimension = _localizedCarpetDimension(
+      context,
+      measurement.width,
+      measurement.length,
+    );
+    await _openProduct(
+      CatalogProduct(
+        productId: product.productId,
+        name: dimension,
+        description: product.description,
+        groupId: product.groupId,
+        groupName: product.groupName,
+        imagePath: product.imagePath,
+        width: measurement.width,
+        length: measurement.length,
+        catalogTypeName: product.catalogTypeName,
+        offerings: product.offerings,
+      ),
+      store,
+    );
+  }
+
+  Future<void> _showPreviousMeasurements(
+    List<_PreviousMeasurementOption> options,
+    Store store,
+  ) async {
+    final selected = await showModalBottomSheet<_PreviousMeasurementOption>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.transparent,
+      builder: (_) => _PreviousMeasurementsSheet(options: options),
+    );
+    if (selected != null && mounted) {
+      await _reusePreviousMeasurement(selected, store);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final catalog = context.watch<StoreCatalogProvider>();
     final store = catalog.store ?? widget.store;
     final groups = catalog.visibleGroups;
+    final previousMeasurements = <_PreviousMeasurementOption>[];
+    final selectedType = catalog.selectedType;
+    if (selectedType?.isPerSquareMeter == true) {
+      for (final measurement
+          in catalog.previousMeasurementsForType(selectedType!.id)) {
+        final product = catalog.productForPreviousMeasurement(measurement);
+        if (product != null) {
+          previousMeasurements.add(_PreviousMeasurementOption(
+            measurement: measurement,
+            product: product,
+          ));
+        }
+      }
+    }
     _ensureSectionKeys(groups.keys);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _scheduleSectionCheck();
@@ -285,13 +443,52 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
                   ),
                 ),
                 SliverToBoxAdapter(child: _StoreSummary(store: store)),
+                if (catalog.catalogTypes.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: _CatalogTypeBar(
+                      types: catalog.catalogTypes,
+                      selectedId: catalog.selectedTypeId,
+                      onSelected: (id) => _selectType(catalog, id),
+                    ),
+                  ),
                 SliverToBoxAdapter(
                   child: _SearchField(
                     controller: _searchController,
                     onChanged: catalog.setSearch,
                   ),
                 ),
+                if (selectedType?.isPerSquareMeter == true &&
+                    selectedType?.minimumPrice != null)
+                  SliverToBoxAdapter(
+                    child: _SquareMeterPrice(
+                      price: selectedType!.minimumPrice!,
+                      isStartingPrice:
+                          selectedType.hasVariableEffectivePrices,
+                    ),
+                  ),
+                if (previousMeasurements.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: _PreviousMeasurementsCard(
+                      options: previousMeasurements,
+                      onTap: () => _showPreviousMeasurements(
+                        previousMeasurements,
+                        store,
+                      ),
+                    ),
+                  ),
                 ..._buildCatalogue(catalog, groups, store),
+                if (catalog.selectedType?.allowCustomSize == true &&
+                    catalog.customSizeTemplate != null)
+                  SliverToBoxAdapter(
+                    child: _CustomSizeCard(
+                      expanded: _showCustomSize,
+                      widthController: _customWidthController,
+                      lengthController: _customLengthController,
+                      onToggle: () => setState(() => _showCustomSize = !_showCustomSize),
+                      onCancel: () => setState(() => _showCustomSize = false),
+                      onAdd: () => _openCustomSize(catalog, store),
+                    ),
+                  ),
                 const SliverToBoxAdapter(child: SizedBox(height: 112)),
               ],
             ),
@@ -422,7 +619,7 @@ class _CompactHeader extends StatelessWidget {
           _HeaderButton(
             onTap: () => Navigator.maybePop(context),
             child: Icon(
-              rtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+              rtl ? Icons.arrow_back_rounded : Icons.arrow_back_rounded,
               size: 21,
               color: AppColors.white,
             ),
@@ -657,6 +854,480 @@ class _SearchField extends StatelessWidget {
   }
 }
 
+class _CatalogTypeBar extends StatelessWidget {
+  const _CatalogTypeBar({
+    required this.types,
+    required this.selectedId,
+    required this.onSelected,
+  });
+
+  final List<CatalogType> types;
+  final int? selectedId;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        color: AppColors.white,
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+        child: SizedBox(
+          height: 44,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: types.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, index) {
+              final type = types[index];
+              final selected = type.id == selectedId;
+              return InkWell(
+                onTap: () => onSelected(type.id),
+                borderRadius: BorderRadius.circular(10),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  constraints: const BoxConstraints(minWidth: 76),
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: selected ? AppColors.brandGradient : null,
+                    color: selected ? null : AppColors.backgroundColor,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: selected ? AppColors.transparent : AppColors.gray20,
+                    ),
+                  ),
+                  child: Text(
+                    type.name,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.sfarabicMedium.copyWith(
+                      fontSize: 12.5,
+                      color: selected ? AppColors.white : AppColors.gray70,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+}
+
+class _SquareMeterPrice extends StatelessWidget {
+  const _SquareMeterPrice({
+    required this.price,
+    required this.isStartingPrice,
+  });
+
+  final double price;
+  final bool isStartingPrice;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 2, 20, 4),
+        child: Row(
+          children: [
+            Text(
+              isStartingPrice
+                  ? _catalogText(
+                      context,
+                      'catalog_prices_from',
+                      ar: 'ابتداءً من {price}₪',
+                      en: 'From {price}₪',
+                      params: {'price': price.toStringAsFixed(2)},
+                    )
+                  : '${price.toStringAsFixed(2)}₪',
+              style: AppTextStyles.poppinsSemiBold.copyWith(
+                fontSize: 12,
+                color: AppColors.brandAccent,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              _catalogText(
+                context,
+                'catalog_per_square_meter',
+                ar: '/ متر مربع',
+                en: '/ square metre',
+              ),
+              style: AppTextStyles.sfarabicRegular.copyWith(
+                fontSize: 10.5,
+                color: AppColors.gray50,
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _CustomSizeCard extends StatelessWidget {
+  const _CustomSizeCard({
+    required this.expanded,
+    required this.widthController,
+    required this.lengthController,
+    required this.onToggle,
+    required this.onCancel,
+    required this.onAdd,
+  });
+
+  final bool expanded;
+  final TextEditingController widthController;
+  final TextEditingController lengthController;
+  final VoidCallback onToggle;
+  final VoidCallback onCancel;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.gray20),
+        ),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          child: expanded
+              ? Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _DimensionField(
+                            controller: lengthController,
+                            label: _catalogText(context, 'catalog_length', ar: 'الطول', en: 'Length'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _DimensionField(
+                            controller: widthController,
+                            label: _catalogText(context, 'catalog_width', ar: 'العرض', en: 'Width'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: onCancel,
+                            child: Text(_catalogText(context, 'cancel', ar: 'إلغاء', en: 'Cancel')),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: onAdd,
+                            style: FilledButton.styleFrom(backgroundColor: AppColors.brandAccent),
+                            child: Text(_catalogText(context, 'add', ar: 'إضافة', en: 'Add')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              : InkWell(
+                  onTap: onToggle,
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox(
+                    height: 38,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.add_circle_outline, size: 18, color: AppColors.brandAccent),
+                        const SizedBox(width: 7),
+                        Text(
+                          _catalogText(context, 'catalog_add_custom_size', ar: 'إضافة مقاس مخصص', en: 'Add custom size'),
+                          style: AppTextStyles.sfarabicBold.copyWith(
+                            fontSize: 12.5,
+                            color: AppColors.brandAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+        ),
+      );
+}
+
+class _DimensionField extends StatelessWidget {
+  const _DimensionField({required this.controller, required this.label});
+
+  final TextEditingController controller;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => TextField(
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        textAlign: TextAlign.center,
+        decoration: InputDecoration(
+          labelText: label,
+          suffixText: _catalogText(
+            context,
+            'unit_meter_short',
+            ar: 'م',
+            en: 'm',
+          ),
+          filled: true,
+          fillColor: AppColors.backgroundColor,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: AppColors.gray20),
+          ),
+        ),
+      );
+}
+
+class _PreviousMeasurementsCard extends StatelessWidget {
+  const _PreviousMeasurementsCard({
+    required this.options,
+    required this.onTap,
+  });
+
+  final List<_PreviousMeasurementOption> options;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.brandAccent.withValues(alpha: 0.62),
+          ),
+        ),
+        child: Material(
+          color: AppColors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(13, 12, 13, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const _PreviousMeasurementSparkle(size: 15),
+                      const SizedBox(width: 8),
+                      Text(
+                        _catalogText(
+                          context,
+                          'catalog_previously_added_carpets',
+                          ar: 'مقاسات سجادك السابقة',
+                          en: 'Previously added carpets',
+                        ),
+                        style: AppTextStyles.sfarabicBold.copyWith(
+                          fontSize: 13,
+                          color: AppColors.brandAccent,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const _PreviousMeasurementSparkle(size: 15),
+                    ],
+                  ),
+                  const SizedBox(height: 7),
+                  ...options.take(3).map((option) => _PreviousMeasurementRow(
+                        option: option,
+                        compact: true,
+                        onTap: onTap,
+                      )),
+                  if (options.length > 3)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 50,
+                        top: 3,
+                        bottom: 2,
+                      ),
+                      child: Text(
+                        _catalogText(
+                          context,
+                          'catalog_previous_measurements_more',
+                          ar: 'عرض المزيد',
+                          en: 'View all',
+                        ),
+                        style: AppTextStyles.sfarabicMedium.copyWith(
+                          fontSize: 11,
+                          color: AppColors.brandAccent,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+class _PreviousMeasurementsSheet extends StatelessWidget {
+  const _PreviousMeasurementsSheet({required this.options});
+
+  final List<_PreviousMeasurementOption> options;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.72;
+    return SafeArea(
+      top: false,
+      child: Container(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 42,
+              height: 4,
+              margin: const EdgeInsets.only(top: 10, bottom: 14),
+              decoration: BoxDecoration(
+                color: AppColors.gray30,
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _catalogText(
+                        context,
+                        'catalog_previously_added_carpets',
+                        ar: 'مقاسات سجادك السابقة',
+                        en: 'Previously added carpets',
+                      ),
+                      style: AppTextStyles.sfarabicBold.copyWith(
+                        fontSize: 17,
+                        color: AppColors.gray80,
+                      ),
+                    ),
+                  ),
+                  const _PreviousMeasurementSparkle(size: 20),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: AppColors.gray20),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(16, 9, 16, 20),
+                itemCount: options.length,
+                separatorBuilder: (_, __) => const Divider(
+                  height: 1,
+                  indent: 60,
+                  endIndent: 8,
+                  color: AppColors.gray20,
+                ),
+                itemBuilder: (_, index) => _PreviousMeasurementRow(
+                  option: options[index],
+                  onTap: () => Navigator.of(context).pop(options[index]),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviousMeasurementRow extends StatelessWidget {
+  const _PreviousMeasurementRow({
+    required this.option,
+    required this.onTap,
+    this.compact = false,
+  });
+
+  final _PreviousMeasurementOption option;
+  final VoidCallback onTap;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: compact ? 5 : 10),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(9),
+                  child: SizedBox(
+                    width: compact ? 34 : 44,
+                    height: compact ? 34 : 44,
+                    child: (option.product.imagePath ?? '').isEmpty
+                        ? const _ProductImageFallback()
+                        : Image.network(
+                            Config.resolveImageUrl(option.product.imagePath),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const _ProductImageFallback(),
+                          ),
+                  ),
+                ),
+                SizedBox(width: compact ? 10 : 12),
+                Expanded(
+                  child: Text(
+                    _localizedCarpetDimension(
+                      context,
+                      option.measurement.width,
+                      option.measurement.length,
+                    ),
+                    style: AppTextStyles.poppinsSemiBold.copyWith(
+                      fontSize: compact ? 12 : 14,
+                      color: AppColors.gray70,
+                    ),
+                  ),
+                ),
+                Container(
+                  width: compact ? 20 : 25,
+                  height: compact ? 20 : 25,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.brandGradient,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.add_rounded,
+                    size: compact ? 14 : 17,
+                    color: AppColors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+class _PreviousMeasurementSparkle extends StatelessWidget {
+  const _PreviousMeasurementSparkle({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => SvgPicture.asset(
+        'assets/vectors/previous_measurement_sparkle.svg',
+        width: size,
+        height: size * 1.125,
+        fit: BoxFit.contain,
+      );
+}
+
 class _StickyCategoryBar extends StatelessWidget {
   const _StickyCategoryBar({
     required this.groups,
@@ -762,7 +1433,7 @@ class _CatalogGroup extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (products.any((product) => product.hasOffer))
+                if (products.any((product) => product.hasGroupOffer))
                   const _SaleBadge(compact: true),
               ],
             ),
@@ -829,19 +1500,22 @@ class _ProductRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 11),
                 Expanded(
-                  child: Wrap(
-                    spacing: 7,
-                    runSpacing: 5,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Wrap(
+                        spacing: 7,
+                        runSpacing: 5,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
                       Text(
-                        product.name,
+                        localizedCatalogValue(context, product.name),
                         style: AppTextStyles.sfarabicMedium.copyWith(
                           fontSize: 13.5,
                           color: AppColors.gray80,
                         ),
                       ),
-                      if (product.hasOffer) const _SaleBadge(),
+                      if (product.hasProductOffer) const _SaleBadge(),
                       if (quantity > 0)
                         Container(
                           width: 19,
@@ -856,6 +1530,24 @@ class _ProductRow extends StatelessWidget {
                             style: AppTextStyles.poppinsSemiBold.copyWith(
                               fontSize: 9.5,
                               color: AppColors.white,
+                            ),
+                          ),
+                        ),
+                        ],
+                      ),
+                      if (product.measurementPending)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            _catalogText(
+                              context,
+                              'catalog_measure_after_collection',
+                              ar: 'يُحسب السعر بعد الاستلام والقياس',
+                              en: 'Price is calculated after collection',
+                            ),
+                            style: AppTextStyles.sfarabicRegular.copyWith(
+                              fontSize: 10,
+                              color: const Color(0xFFE9A328),
                             ),
                           ),
                         ),
@@ -936,9 +1628,34 @@ class _ProductServicesPage extends StatefulWidget {
   State<_ProductServicesPage> createState() => _ProductServicesPageState();
 }
 
+class _AreaSelection {
+  const _AreaSelection({
+    required this.area,
+    this.width,
+    this.length,
+    this.measurementPending = false,
+  });
+
+  final double area;
+  final double? width;
+  final double? length;
+  final bool measurementPending;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _AreaSelection &&
+      other.area == area &&
+      other.width == width &&
+      other.length == length &&
+      other.measurementPending == measurementPending;
+
+  @override
+  int get hashCode => Object.hash(area, width, length, measurementPending);
+}
+
 class _ProductServicesPageState extends State<_ProductServicesPage> {
   final Map<int, int> _quantities = {};
-  final Map<int, List<String>> _areas = {};
+  final Map<int, List<_AreaSelection>> _areas = {};
   bool _initialized = false;
   int _initialTotal = 0;
 
@@ -957,9 +1674,17 @@ class _ProductServicesPageState extends State<_ProductServicesPage> {
             item.serviceType.id == offering.serviceId,
       );
       if (offering.isPerSquareMeter) {
-        final areas = <String>[];
+        final areas = <_AreaSelection>[];
         for (final line in lines) {
-          areas.addAll(List.filled(line.quantity, line.area));
+          areas.addAll(List.filled(
+            line.quantity,
+            _AreaSelection(
+              area: double.tryParse(line.area) ?? 0,
+              width: line.width,
+              length: line.length,
+              measurementPending: line.measurementPending,
+            ),
+          ));
         }
         _areas[offering.serviceId] = areas;
         _quantities[offering.serviceId] = areas.length;
@@ -978,9 +1703,21 @@ class _ProductServicesPageState extends State<_ProductServicesPage> {
 
   Future<void> _increase(StoreProduct offering) async {
     if (offering.isPerSquareMeter) {
-      final area = await showProductSizeSheet(context, product: offering);
-      if (area == null || !mounted) return;
-      _areas.putIfAbsent(offering.serviceId, () => []).add(area.toString());
+      _AreaSelection? selection;
+      if (widget.product.measurementPending) {
+        selection = const _AreaSelection(area: 0, measurementPending: true);
+      } else if (widget.product.width != null && widget.product.length != null) {
+        selection = _AreaSelection(
+          area: widget.product.width! * widget.product.length!,
+          width: widget.product.width,
+          length: widget.product.length,
+        );
+      } else {
+        final area = await showProductSizeSheet(context, product: offering);
+        if (area == null || !mounted) return;
+        selection = _AreaSelection(area: area);
+      }
+      _areas.putIfAbsent(offering.serviceId, () => []).add(selection);
     }
     setState(() {
       _quantities[offering.serviceId] =
@@ -1004,25 +1741,35 @@ class _ProductServicesPageState extends State<_ProductServicesPage> {
       final quantity = _quantities[offering.serviceId] ?? 0;
       if (quantity <= 0) continue;
       if (offering.isPerSquareMeter) {
-        final counts = <String, int>{};
-        for (final area in _areas[offering.serviceId] ?? const <String>[]) {
+        final counts = <_AreaSelection, int>{};
+        for (final area in
+            _areas[offering.serviceId] ?? const <_AreaSelection>[]) {
           counts[area] = (counts[area] ?? 0) + 1;
         }
         for (final entry in counts.entries) {
           result.add(_line(offering, entry.value, entry.key));
         }
       } else {
-        result.add(_line(offering, quantity, ''));
+        result.add(_line(
+          offering,
+          quantity,
+          const _AreaSelection(area: 0),
+        ));
       }
     }
     return result;
   }
 
-  BasketItemData _line(StoreProduct offering, int quantity, String area) {
+  BasketItemData _line(
+    StoreProduct offering,
+    int quantity,
+    _AreaSelection selection,
+  ) {
     return BasketItemData(
       productId: widget.product.productId,
       productName: widget.product.name,
       category: widget.product.groupName ?? '',
+      catalogTypeName: widget.product.catalogTypeName ?? '',
       serviceType: Service(
         id: offering.serviceId,
         serviceName: offering.serviceName,
@@ -1033,12 +1780,15 @@ class _ProductServicesPageState extends State<_ProductServicesPage> {
       unit: offering.unit,
       quantity: quantity,
       subCategory: widget.product.name,
-      area: area,
+      area: selection.measurementPending ? '' : selection.area.toString(),
+      width: selection.width,
+      length: selection.length,
+      measurementPending: selection.measurementPending,
       subtotal: BasketItemData.calculateSubtotal(
         offering.unit,
         offering.effectivePrice,
         quantity,
-        area,
+        selection.area.toString(),
       ),
     );
   }
@@ -1093,7 +1843,7 @@ class _ProductServicesPageState extends State<_ProductServicesPage> {
                     ),
                   ),
                   Text(
-                    widget.product.name,
+                    localizedCatalogValue(context, widget.product.name),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.sfarabicBold.copyWith(
@@ -1175,6 +1925,45 @@ class _ProductServicesPageState extends State<_ProductServicesPage> {
                         onRemove: () => _decrease(offering),
                       ),
                     ),
+                    if (widget.product.measurementPending) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFAF1),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFFFE3B3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              size: 18,
+                              color: Color(0xFFE9A328),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _catalogText(
+                                  context,
+                                  'price_calculated_after_processing',
+                                  ar: 'سيتم احتساب السعر بعد المعالجة.',
+                                  en: 'Price will be calculated once processed.',
+                                ),
+                                style: AppTextStyles.sfarabicMedium.copyWith(
+                                  fontSize: 11.5,
+                                  color: const Color(0xFFB97812),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1469,9 +2258,11 @@ class _BasketBar extends StatelessWidget {
                     ),
                     const Spacer(),
                     Text(
-                      '${order.subtotal.toStringAsFixed(2)}₪',
+                      order.hasPendingMeasurement
+                          ? l10n.translate('price_after_processing')
+                          : '${order.subtotal.toStringAsFixed(2)}₪',
                       style: AppTextStyles.poppinsSemiBold.copyWith(
-                        fontSize: 15,
+                        fontSize: order.hasPendingMeasurement ? 11.5 : 15,
                         color: AppColors.white,
                       ),
                     ),

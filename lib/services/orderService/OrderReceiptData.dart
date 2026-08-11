@@ -18,6 +18,7 @@ class OrderReceiptData {
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool pricePending;
 
   List<OrderItem> order_items;
 
@@ -39,6 +40,7 @@ class OrderReceiptData {
     required this.isDeleted,
     required this.createdAt,
     required this.updatedAt,
+    this.pricePending = false,
     this.order_items = const [],
   });
 
@@ -91,6 +93,10 @@ class OrderReceiptData {
       isDeleted: json['is_deleted'] ?? false,
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
+      pricePending: json['price_pending'] == true ||
+          json['price_pending'] == 1 ||
+          json['price_pending']?.toString() == '1' ||
+          json['pricePending'] == true,
       order_items: json['order_items'] != null
           ? (json['order_items'] as List<dynamic>)
               .map((item) => OrderItem.fromJson(item))
@@ -120,6 +126,7 @@ class OrderReceiptData {
       'updated_at': updatedAt.toIso8601String(),
       'items': order_items.map((item) => item.toJson()).toList(),
       'is_paid': isPaid ? 1 : 0, // Convert true to 1 and false to 0
+      'price_pending': pricePending ? 1 : 0,
     };
   }
 
@@ -143,6 +150,7 @@ class OrderReceiptData {
     DateTime? createdAt,
     DateTime? updatedAt,
     List<OrderItem>? order_items,
+    bool? pricePending,
   }) {
     return OrderReceiptData(
       orderId: orderId ?? this.orderId,
@@ -163,6 +171,7 @@ class OrderReceiptData {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       order_items: order_items ?? this.order_items,
+      pricePending: pricePending ?? this.pricePending,
     );
   }
 }

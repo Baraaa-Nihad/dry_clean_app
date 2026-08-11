@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:saleem_dry_clean/services/orderService/OrderData.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
@@ -11,9 +11,7 @@ class PaymentDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
-    print("isPaidisPaidisPaidisPaidisPaidisPaidisPaid");
-    print(order.isPaid);
+    final localizations = AppLocalizations.of(context);
     return Container(
       width: MediaQuery.of(context).size.width * 0.9, // Responsive width
       child: Column(
@@ -33,6 +31,38 @@ class PaymentDetails extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          if (order.hasPendingMeasurement)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFAF1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFFE3B3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded,
+                      size: 18, color: Color(0xFFE9A328)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      localizations.translate(
+                        'final_price_after_collection_measurement',
+                      ),
+                      style: AppTextStyles.getFontFamily(
+                        context,
+                        AppTextStyles.sfarabicMedium.copyWith(
+                          fontSize: 12.5,
+                          color: const Color(0xFFB97812),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

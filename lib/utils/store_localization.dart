@@ -32,6 +32,23 @@ String localizedProductSize(BuildContext context, ProductSize size) {
   );
 }
 
+/// يترجم أسماء الكتالوج المخزّنة في السلة عند تبديل لغة التطبيق.
+///
+/// بيانات السلة قد تكون أُضيفت قبل تغيير اللغة؛ لهذا لا يكفي الاعتماد على
+/// النص المحفوظ كما هو. الأسماء المعرّفة في ملفات اللغة تُترجم، والمقاسات
+/// الديناميكية تحافظ على أرقامها مع تعريب وحدة المتر فقط.
+String localizedCatalogValue(BuildContext context, String value) {
+  final l10n = AppLocalizations.of(context);
+  final translated = l10n.hasTranslation(value)
+      ? l10n.translate(value)
+      : value;
+  if (Localizations.localeOf(context).languageCode != 'ar') return translated;
+
+  return translated
+      .replaceAll('m²', 'م²')
+      .replaceAll(RegExp(r'\bm\b', caseSensitive: false), 'م');
+}
+
 String _number(double value) => value == value.roundToDouble()
     ? value.toStringAsFixed(0)
     : value.toStringAsFixed(2);

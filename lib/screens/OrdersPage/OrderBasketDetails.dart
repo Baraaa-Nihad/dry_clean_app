@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/AppBar/AppHeader.dart';
 import 'package:saleem_dry_clean/components/BackButtonWidget.dart';
@@ -44,10 +44,14 @@ class OrderBasketDetails extends StatelessWidget {
         ), // Convert serviceType string to a Service object
         imagePath: orderItem.imagePath,
         price: orderItem.unitPrice,
-        unit: 'unit', // Placeholder for unit, modify based on your data
+        unit: orderItem.unit,
         quantity: orderItem.quantity,
         subCategory: orderItem.serviceName,
         subtotal: orderItem.total, // Assuming total is already calculated
+        width: orderItem.width,
+        length: orderItem.length,
+        area: orderItem.area?.toString() ?? '',
+        measurementPending: orderItem.measurementPending,
       );
     }).toList();
   }

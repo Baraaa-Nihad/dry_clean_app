@@ -1,9 +1,8 @@
 // lib/widgets/OrderCard.dart
 
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:saleem_dry_clean/services/Models/OrderItem.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart'; // Import intl package for DateFormat
 import 'package:saleem_dry_clean/components/Cards/OrderDetails.dart';
 import 'package:saleem_dry_clean/components/Cards/OrderFooter.dart';
@@ -135,7 +134,10 @@ class OrderCard extends StatelessWidget {
                   'orderNumber': '#${order!.orderId}',
                   // يظهران في حوار تأكيد الاستلام
                   'storeName': order!.drycleanName,
-                  'total': order!.totalPrice,
+                  'total': order!.hasPendingMeasurement
+                      ? null
+                      : order!.totalPrice,
+                  'pricePending': order!.hasPendingMeasurement,
                 },
               ),
               child: Padding(

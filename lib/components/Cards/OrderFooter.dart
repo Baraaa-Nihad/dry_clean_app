@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:saleem_dry_clean/services/orderService/OrderData.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
@@ -46,11 +45,13 @@ class OrderFooter extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                '₪${order.totalPrice.toStringAsFixed(2)}',
+                order.hasPendingMeasurement
+                    ? localizations.translate('price_after_processing')
+                    : '₪${order.totalPrice.toStringAsFixed(2)}',
                 style: AppTextStyles.getFontFamily(
                   context,
                   AppTextStyles.regular16Gray80(context).copyWith(
-                      fontSize: 16.0,
+                      fontSize: order.hasPendingMeasurement ? 12.0 : 16.0,
                       fontWeight: FontWeight.w700,
                       height: 0,
                       color: AppColors.gray70),

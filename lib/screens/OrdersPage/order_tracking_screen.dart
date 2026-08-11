@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/screens/OrdersPage/damage_claim_sheet.dart';
@@ -27,6 +27,7 @@ class OrderTrackingScreen extends StatefulWidget {
     this.orderNumber,
     this.storeName,
     this.total,
+    this.pricePending = false,
   });
 
   final int orderId;
@@ -37,6 +38,7 @@ class OrderTrackingScreen extends StatefulWidget {
   /// يظهران في حوار تأكيد الاستلام كي يعرف الزبون أي طلب يؤكّد
   final String? storeName;
   final double? total;
+  final bool pricePending;
 
   @override
   State<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
@@ -76,6 +78,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
       orderNumber: widget.orderNumber,
       storeName: widget.storeName,
       total: widget.total,
+      pricePending: widget.pricePending,
     );
 
     // أجاب ⇐ نعيد الجلب: التقييم يفتح بعد التأكيد، والحالة تغيّرت

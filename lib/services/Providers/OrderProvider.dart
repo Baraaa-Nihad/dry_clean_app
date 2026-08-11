@@ -79,6 +79,11 @@ class OrderProvider with ChangeNotifier {
   // O(1) reads — cache is updated by _invalidateCache() on every mutation
   double get subtotal => _cachedSubtotal;
 
+  /// وجود قطعة تحتاج قياساً فعلياً يعني أن مجموع الطلب الحالي تقديري
+  /// ولا يجوز عرضه للزبون كسعر نهائي، حتى لو كانت بقية القطع مسعّرة.
+  bool get hasPendingMeasurement =>
+      _cart.any((item) => item.measurementPending);
+
   /// الإجمالي بعد الخصم، ولا ينزل تحت الصفر — خصم يتجاوز قيمة الطلب
   /// لا يجعل سليم تدفع للزبون
   double get total {
@@ -208,7 +213,10 @@ class OrderProvider with ChangeNotifier {
       (item) =>
           item.productId == newItem.productId &&
           item.serviceType.id == newItem.serviceType.id &&
-          item.area == newItem.area,
+          item.area == newItem.area &&
+          item.width == newItem.width &&
+          item.length == newItem.length &&
+          item.measurementPending == newItem.measurementPending,
     );
 
     if (existingIndex != -1) {
@@ -226,6 +234,7 @@ class OrderProvider with ChangeNotifier {
         productId: existingItem.productId,
         productName: existingItem.productName,
         category: existingItem.category,
+        catalogTypeName: existingItem.catalogTypeName,
         serviceType: existingItem.serviceType,
         imagePath: existingItem.imagePath,
         price: existingItem.price,
@@ -233,6 +242,9 @@ class OrderProvider with ChangeNotifier {
         quantity: updatedQuantity,
         subCategory: existingItem.subCategory,
         area: existingItem.area,
+        width: existingItem.width,
+        length: existingItem.length,
+        measurementPending: existingItem.measurementPending,
         subtotal: updatedSubtotal,
       );
     } else {
@@ -249,6 +261,7 @@ class OrderProvider with ChangeNotifier {
           productId: newItem.productId,
           productName: newItem.productName,
           category: newItem.category,
+          catalogTypeName: newItem.catalogTypeName,
           serviceType: newItem.serviceType,
           imagePath: newItem.imagePath,
           price: newItem.price,
@@ -256,6 +269,9 @@ class OrderProvider with ChangeNotifier {
           quantity: newItem.quantity,
           subCategory: newItem.subCategory,
           area: newItem.area,
+          width: newItem.width,
+          length: newItem.length,
+          measurementPending: newItem.measurementPending,
           subtotal: calculatedSubtotal,
         ),
       );
@@ -288,7 +304,10 @@ class OrderProvider with ChangeNotifier {
         (item) =>
             item.productId == line.productId &&
             item.serviceType.id == line.serviceType.id &&
-            item.area == line.area,
+            item.area == line.area &&
+            item.width == line.width &&
+            item.length == line.length &&
+            item.measurementPending == line.measurementPending,
       );
 
       if (existingIndex == -1) {
@@ -297,6 +316,7 @@ class OrderProvider with ChangeNotifier {
             productId: line.productId,
             productName: line.productName,
             category: line.category,
+            catalogTypeName: line.catalogTypeName,
             serviceType: line.serviceType,
             imagePath: line.imagePath,
             price: line.price,
@@ -304,6 +324,9 @@ class OrderProvider with ChangeNotifier {
             quantity: line.quantity,
             subCategory: line.subCategory,
             area: line.area,
+            width: line.width,
+            length: line.length,
+            measurementPending: line.measurementPending,
             subtotal: BasketItemData.calculateSubtotal(
               line.unit,
               line.price,
@@ -319,6 +342,7 @@ class OrderProvider with ChangeNotifier {
           productId: existing.productId,
           productName: existing.productName,
           category: existing.category,
+          catalogTypeName: existing.catalogTypeName,
           serviceType: existing.serviceType,
           imagePath: existing.imagePath,
           price: existing.price,
@@ -326,6 +350,9 @@ class OrderProvider with ChangeNotifier {
           quantity: quantity,
           subCategory: existing.subCategory,
           area: existing.area,
+          width: existing.width,
+          length: existing.length,
+          measurementPending: existing.measurementPending,
           subtotal: BasketItemData.calculateSubtotal(
             existing.unit,
             existing.price,
@@ -565,6 +592,7 @@ class OrderProvider with ChangeNotifier {
           productId: item.productId,
           productName: item.productName,
           category: item.category,
+          catalogTypeName: item.catalogTypeName,
           serviceType: item.serviceType,
           imagePath: item.imagePath,
           price: item.price,
@@ -572,6 +600,9 @@ class OrderProvider with ChangeNotifier {
           quantity: item.quantity,
           subCategory: item.subCategory,
           area: item.area,
+          width: item.width,
+          length: item.length,
+          measurementPending: item.measurementPending,
           subtotal: item.subtotal,
         );
       }).toList(),

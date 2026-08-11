@@ -169,6 +169,9 @@ class RouteGenerator {
               total: args['total'] == null
                   ? null
                   : double.tryParse('${args['total']}'),
+              pricePending: args['pricePending'] == true ||
+                  args['price_pending'] == true ||
+                  args['price_pending']?.toString() == '1',
             ),
           );
         }

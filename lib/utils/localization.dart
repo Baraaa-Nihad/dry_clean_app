@@ -33,6 +33,8 @@ class AppLocalizations {
 
   // Translate method to get a string based on the key
   // and replace placeholders with actual values
+  bool hasTranslation(String key) => _localizedStrings.containsKey(key);
+
   String translate(String key, {Map<String, String>? params}) {
     final hasTranslation = _localizedStrings.containsKey(key);
     String translation = _localizedStrings[key] ?? _readableFallback(key);

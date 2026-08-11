@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/services/ApiClient/ApiClient.dart';
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
@@ -50,6 +50,15 @@ class _PromoAndNoteSectionState extends State<PromoAndNoteSection> {
     final code = _code.text.trim();
     final localizations = AppLocalizations.of(context);
     final languageCode = Localizations.localeOf(context).languageCode;
+
+    if (order.hasPendingMeasurement) {
+      setState(
+        () => _error = localizations.translate(
+          'promo_unavailable_price_pending',
+        ),
+      );
+      return;
+    }
 
     if (code.isEmpty) {
       setState(() => _error = localizations.translate('promo_code_required'));
@@ -148,6 +157,7 @@ class _PromoAndNoteSectionState extends State<PromoAndNoteSection> {
   Widget build(BuildContext context) {
     final order = context.watch<OrderProvider>();
     final applied = order.discount > 0;
+    final pricePending = order.hasPendingMeasurement;
     final localizations = AppLocalizations.of(context);
     TextStyle localizedStyle(TextStyle style) =>
         AppTextStyles.getFontFamily(context, style);
@@ -179,7 +189,25 @@ class _PromoAndNoteSectionState extends State<PromoAndNoteSection> {
             ),
           ),
           const SizedBox(height: 9),
-          if (applied)
+          if (pricePending)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFAF1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFFE3B3)),
+              ),
+              child: Text(
+                localizations.translate('promo_unavailable_price_pending'),
+                style: localizedStyle(
+                  AppTextStyles.sfarabicMedium.copyWith(
+                    fontSize: 12,
+                    color: const Color(0xFFB97812),
+                  ),
+                ),
+              ),
+            )
+          else if (applied)
             _AppliedRow(
               code: order.promoCode ?? '',
               discount: order.discount,

@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
+import 'package:saleem_dry_clean/utils/store_localization.dart';
 
 class CategorySection extends StatelessWidget {
   final String title;
@@ -28,7 +29,7 @@ class CategorySection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${localizations?.translate('$title') ?? '$title'} ',
+                '${localizedCatalogValue(context, title)} ',
                 style: AppTextStyles.getFontFamily(
                   context,
                   AppTextStyles.regular16Gray80(context).copyWith(
@@ -40,7 +41,7 @@ class CategorySection extends StatelessWidget {
               ),
               if (isFirst) // Conditionally show the text
                 Text(
-                  '${localizations?.translate('swipe_to_delete') ?? 'Swipe to delete'} ',
+                  '${localizations.translate('swipe_to_delete')} ',
                   style: AppTextStyles.getFontFamily(
                     context,
                     AppTextStyles.regular16Gray80(context).copyWith(

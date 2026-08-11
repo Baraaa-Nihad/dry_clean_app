@@ -207,7 +207,9 @@ class _OrdersPageState extends State<OrdersPage>
         quantityNumber: true,
         title: localizations.translate('orders'),
         fem: widget.fem,
-        suffixIcon: NotificationButton(),
+        suffixIcon: userProvider.userSignedIn
+            ? const NotificationButton()
+            : null,
       ),
       body: userProvider.isLoading
           ? _buildGlobalShimmer()

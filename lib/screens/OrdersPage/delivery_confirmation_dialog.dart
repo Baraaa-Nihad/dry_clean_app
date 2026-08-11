@@ -1,11 +1,12 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/services/ApiClient/ApiClient.dart';
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/services/User/TokenService.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/utils/localization.dart';
 
 /// تأكيد استلام الطلب — زرّان لا أكثر.
 ///
@@ -25,6 +26,7 @@ Future<bool?> showDeliveryConfirmationDialog(
   String? orderNumber,
   String? storeName,
   double? total,
+  bool pricePending = false,
 }) {
   return showDialog<bool>(
     context: context,
@@ -36,6 +38,7 @@ Future<bool?> showDeliveryConfirmationDialog(
       orderNumber: orderNumber,
       storeName: storeName,
       total: total,
+      pricePending: pricePending,
     ),
   );
 }
@@ -46,12 +49,14 @@ class _DeliveryConfirmationDialog extends StatefulWidget {
     this.orderNumber,
     this.storeName,
     this.total,
+    this.pricePending = false,
   });
 
   final int orderId;
   final String? orderNumber;
   final String? storeName;
   final double? total;
+  final bool pricePending;
 
   @override
   State<_DeliveryConfirmationDialog> createState() =>
@@ -114,6 +119,7 @@ class _DeliveryConfirmationDialogState
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return AlertDialog(
       backgroundColor: AppColors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -174,6 +180,13 @@ class _DeliveryConfirmationDialogState
                   _Row(
                     label: 'المبلغ',
                     value: '${widget.total!.toStringAsFixed(2)}₪',
+                  ),
+                ],
+                if (widget.pricePending) ...[
+                  const SizedBox(height: 7),
+                  _Row(
+                    label: localizations.translate('total'),
+                    value: localizations.translate('price_after_processing'),
                   ),
                 ],
               ],

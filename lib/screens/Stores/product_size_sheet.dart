@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:flutter/services.dart';
 import 'package:saleem_dry_clean/services/Models/StoreProduct.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
@@ -117,7 +117,7 @@ class _ProductSizeSheetState extends State<_ProductSizeSheet> {
               ),
               const SizedBox(height: 18),
               Text(
-                p.name,
+                localizedCatalogValue(context, p.name),
                 style: AppTextStyles.sfarabicBold
                     .copyWith(fontSize: 17, color: AppColors.gray80),
               ),

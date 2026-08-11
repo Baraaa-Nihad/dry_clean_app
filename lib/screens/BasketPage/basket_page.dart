@@ -1,6 +1,6 @@
 // lib/screens/BasketPage/BasketPage.dart
 
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/AppBar/AppHeader.dart';
 import 'package:saleem_dry_clean/components/Basket/basket_card.dart';
@@ -14,6 +14,7 @@ import 'package:saleem_dry_clean/components/Notification/NotificationButton.dart
 import 'package:saleem_dry_clean/services/BasketItemData.dart';
 import 'package:saleem_dry_clean/services/Providers/NavigationProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/OrderProvider.dart';
+import 'package:saleem_dry_clean/services/Providers/UserProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
@@ -45,6 +46,7 @@ class BasketPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final orderProvider = Provider.of<OrderProvider>(context);
+    final userProvider = context.watch<UserProvider>();
     final groupedData = groupItemsByCategoryAndServiceType(orderProvider.cart);
     final localizations = AppLocalizations.of(context);
 
@@ -57,7 +59,9 @@ class BasketPage extends StatelessWidget {
           quantityNumber: true,
           title: localizations.translate('basket'),
           fem: fem,
-          suffixIcon: NotificationButton(),
+          suffixIcon: userProvider.userSignedIn
+              ? const NotificationButton()
+              : null,
           onPrefixIconTap: () {
             Navigator.pop(context);
           },
@@ -158,6 +162,7 @@ class BasketPage extends StatelessWidget {
                       fem: fem,
                       price: orderProvider.subtotal,
                       itemCount: orderProvider.totalQuantity,
+                      pricePending: orderProvider.hasPendingMeasurement,
                     ),
                   ),
                 ],

@@ -4,6 +4,7 @@ class BasketItemData {
   final int productId;
   final String productName;
   final String category;
+  final String catalogTypeName;
   final Service serviceType; // Service object instead of a String
   final String imagePath;
   final double price;
@@ -11,12 +12,16 @@ class BasketItemData {
   final int quantity;
   final String subCategory;
   final String area;
+  final double? width;
+  final double? length;
+  final bool measurementPending;
   final double subtotal;
 
   BasketItemData({
     required this.productId,
     required this.productName,
     required this.category,
+    this.catalogTypeName = '',
     required this.serviceType, // Service object
     required this.imagePath,
     required this.price,
@@ -25,6 +30,9 @@ class BasketItemData {
     required this.subCategory,
     required this.subtotal,
     this.area = "",
+    this.width,
+    this.length,
+    this.measurementPending = false,
   });
 
   factory BasketItemData.fromJson(Map<String, dynamic> json) {
@@ -32,6 +40,7 @@ class BasketItemData {
       productId: json['productId'],
       productName: json['productName'],
       category: json['category'],
+      catalogTypeName: json['catalogTypeName']?.toString() ?? '',
       serviceType:
           Service.fromJson(json['service']), // Deserialize Service object
       imagePath: json['imagePath'],
@@ -39,7 +48,10 @@ class BasketItemData {
       unit: json['unit'],
       quantity: json['quantity'],
       subCategory: json['subCategory'],
-      area: json['area'],
+      area: json['area']?.toString() ?? '',
+      width: json['width'] == null ? null : double.tryParse('${json['width']}'),
+      length: json['length'] == null ? null : double.tryParse('${json['length']}'),
+      measurementPending: json['measurementPending'] == true,
       subtotal: json['subtotal'],
     );
   }
@@ -49,6 +61,7 @@ class BasketItemData {
       'productId': productId,
       'productName': productName,
       'category': category,
+      'catalogTypeName': catalogTypeName,
       'service': serviceType.toJson(), // Serialize Service object
       'imagePath': imagePath,
       'price': price,
@@ -56,6 +69,9 @@ class BasketItemData {
       'quantity': quantity,
       'subCategory': subCategory,
       'subtotal': subtotal,
+      if (width != null) 'width': width,
+      if (length != null) 'length': length,
+      'measurementPending': measurementPending,
     };
   }
 

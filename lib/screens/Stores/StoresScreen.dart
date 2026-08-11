@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/Stores/StoresBrowser.dart';
 import 'package:saleem_dry_clean/services/Models/Store.dart';

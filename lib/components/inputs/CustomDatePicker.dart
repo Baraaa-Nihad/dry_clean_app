@@ -1,8 +1,10 @@
 // lib/widgets/CustomDatePicker.dart
 
 import 'dart:io';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+// cupertino يصدّر Text أيضاً — نُخفيه ليبقى Text واحداً هو غلاف
+// ui.dart الذي يحوّل الأرقام
+import 'package:flutter/cupertino.dart' hide Text;
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/style/CustomInputStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';

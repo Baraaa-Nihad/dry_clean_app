@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:saleem_dry_clean/components/AppBar/AppHeader.dart';
 import 'package:saleem_dry_clean/components/BackButtonWidget.dart';
 import 'package:saleem_dry_clean/components/Cards/ThankYouCard.dart';
@@ -50,11 +50,16 @@ class _OrderReceiptPageState extends State<OrderReceiptPage> {
     // Pass the TokenService to OrderService
     _orderService = OrderService(widget.tokenService);
 
-    if (widget.order != null) {
+    final orderId = widget.orderId ?? widget.order?.orderId;
+    if (orderId != null) {
+      // The active locale is inherited from the app, so wait until the first
+      // frame before reading it and requesting the localized receipt.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _fetchOrderById(orderId);
+      });
+    } else if (widget.order != null) {
       order = widget.order;
       isLoading = false;
-    } else if (widget.orderId != null) {
-      _fetchOrderById(widget.orderId!);
     }
   }
 
@@ -63,7 +68,10 @@ class _OrderReceiptPageState extends State<OrderReceiptPage> {
       setState(() {
         isLoading = true;
       });
-      OrderData fetchedOrder = await _orderService.getOrderById(orderId);
+      OrderData fetchedOrder = await _orderService.getOrderById(
+        orderId,
+        language: Localizations.localeOf(context).languageCode,
+      );
       if (mounted) {
         setState(() {
           order = fetchedOrder;

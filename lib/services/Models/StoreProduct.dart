@@ -22,8 +22,15 @@ class StoreProduct {
     this.imagePath,
     this.offerPrice,
     this.hasOffer = false,
+    this.productHasOffer = false,
+    this.groupHasOffer = false,
     this.unit = 'item',
     this.sizes = const [],
+    this.width,
+    this.length,
+    this.measurementPending = false,
+    this.customSizeTemplate = false,
+    this.catalogTypeName,
   });
 
   final int productId;
@@ -44,6 +51,8 @@ class StoreProduct {
 
   final double? offerPrice;
   final bool hasOffer;
+  final bool productHasOffer;
+  final bool groupHasOffer;
 
   /// وحدة التسعير: `item` للقطعة أو `Square meter` للمتر المربّع.
   ///
@@ -56,6 +65,11 @@ class StoreProduct {
 
   /// المقاسات الجاهزة — الزبون يختار منها بدل قياس سجادته بنفسه
   final List<ProductSize> sizes;
+  final double? width;
+  final double? length;
+  final bool measurementPending;
+  final bool customSizeTemplate;
+  final String? catalogTypeName;
 
   bool get isPerSquareMeter => unit == 'Square meter';
 
@@ -90,10 +104,21 @@ class StoreProduct {
           : _d(j['effectivePrice']),
       offerPrice: j['offerPrice'] == null ? null : _d(j['offerPrice']),
       hasOffer: j['hasOffer'] == true,
+      // Separate flags keep the Figma hierarchy exact: a category offer is
+      // badged on the category header, while a direct offer is badged on the item.
+      productHasOffer: j['productHasOffer'] == null
+          ? j['hasOffer'] == true
+          : j['productHasOffer'] == true,
+      groupHasOffer: j['groupHasOffer'] == true,
       unit: (j['unit'] ?? 'item').toString(),
       sizes: ((j['sizes'] as List?) ?? const [])
           .map((e) => ProductSize.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
+      width: j['width'] == null ? null : _d(j['width']),
+      length: j['length'] == null ? null : _d(j['length']),
+      measurementPending: j['measurementPending'] == true,
+      customSizeTemplate: j['customSizeTemplate'] == true,
+      catalogTypeName: j['catalogTypeName'] as String?,
     );
   }
 }
@@ -111,6 +136,12 @@ class CatalogProduct {
     this.groupId,
     this.groupName,
     this.imagePath,
+    this.description,
+    this.width,
+    this.length,
+    this.measurementPending = false,
+    this.customSizeTemplate = false,
+    this.catalogTypeName,
   });
 
   final int productId;
@@ -118,9 +149,20 @@ class CatalogProduct {
   final int? groupId;
   final String? groupName;
   final String? imagePath;
+  final String? description;
+  final double? width;
+  final double? length;
+  final bool measurementPending;
+  final bool customSizeTemplate;
+  final String? catalogTypeName;
   final List<StoreProduct> offerings;
 
   bool get hasOffer => offerings.any((offering) => offering.hasOffer);
+
+  bool get hasProductOffer =>
+      offerings.any((offering) => offering.productHasOffer);
+
+  bool get hasGroupOffer => offerings.any((offering) => offering.groupHasOffer);
 
   int? get bestDiscountPercent {
     int? best;
@@ -133,6 +175,173 @@ class CatalogProduct {
 
   /// A stable identity for section keys and cart badges.
   String get key => '$productId';
+}
+
+/// قياس سجادة اختاره العميل في طلب سابق.
+///
+/// القياس ليس كتالوجاً ثابتاً: يعود من سجل الطلبات، ثم تتأكد الشاشة من
+/// أن الصنف نفسه ما زال معروضاً من المغسلة قبل السماح باختياره مجدداً.
+class PreviousMeasurement {
+  const PreviousMeasurement({
+    required this.productId,
+    required this.serviceId,
+    required this.catalogTypeId,
+    required this.width,
+    required this.length,
+    required this.area,
+    required this.lastUsedAt,
+  });
+
+  final int productId;
+  final int serviceId;
+  final int catalogTypeId;
+  final double width;
+  final double length;
+  final double area;
+  final String? lastUsedAt;
+
+  factory PreviousMeasurement.fromJson(Map<String, dynamic> json) {
+    double number(dynamic value) =>
+        double.tryParse('${value ?? 0}') ?? 0;
+
+    return PreviousMeasurement(
+      productId: int.tryParse('${json['productId'] ?? 0}') ?? 0,
+      serviceId: int.tryParse('${json['serviceId'] ?? 0}') ?? 0,
+      catalogTypeId: int.tryParse('${json['catalogTypeId'] ?? 0}') ?? 0,
+      width: number(json['width']),
+      length: number(json['length']),
+      area: number(json['area']),
+      lastUsedAt: json['lastUsedAt']?.toString(),
+    );
+  }
+}
+
+class CatalogType {
+  CatalogType({
+    required this.id,
+    required this.name,
+    required this.groups,
+    required this.unit,
+    this.imagePath,
+    this.allowCustomSize = false,
+    this.allowUnknownSize = false,
+  });
+
+  final int id;
+  final String name;
+  final String? imagePath;
+  final String unit;
+  final bool allowCustomSize;
+  final bool allowUnknownSize;
+  final List<CatalogGroup> groups;
+
+  bool get isPerSquareMeter => unit == 'Square meter';
+
+  double? get minimumPrice {
+    double? value;
+    for (final group in groups) {
+      for (final product in group.products) {
+        for (final offering in product.offerings) {
+          if (value == null || offering.effectivePrice < value) {
+            value = offering.effectivePrice;
+          }
+        }
+      }
+    }
+    return value;
+  }
+
+  /// A type can include an offer for one size only. In that case its summary
+  /// must say "from" rather than implying the discounted price applies to all
+  /// carpets in the type.
+  bool get hasVariableEffectivePrices {
+    double? firstPrice;
+    for (final group in groups) {
+      for (final product in group.products) {
+        for (final offering in product.offerings) {
+          if (firstPrice == null) {
+            firstPrice = offering.effectivePrice;
+          } else if ((offering.effectivePrice - firstPrice).abs() > 0.001) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  factory CatalogType.fromJson(Map<String, dynamic> json) {
+    final typeId = int.tryParse('${json['id']}') ?? 0;
+    final typeName = (json['name'] ?? '').toString();
+    final unit = (json['unit'] ?? 'item').toString();
+    final groups = ((json['groups'] as List?) ?? const [])
+        .map((entry) => CatalogGroup.fromJson(
+              Map<String, dynamic>.from(entry as Map),
+              typeId: typeId,
+              typeName: typeName,
+              unit: unit,
+            ))
+        .toList();
+    return CatalogType(
+      id: typeId,
+      name: typeName,
+      imagePath: json['imagePath'] as String?,
+      unit: unit,
+      allowCustomSize: json['allowCustomSize'] == true,
+      allowUnknownSize: json['allowUnknownSize'] == true,
+      groups: groups,
+    );
+  }
+}
+
+class CatalogGroup {
+  CatalogGroup({required this.id, required this.name, required this.products});
+
+  final int id;
+  final String name;
+  final List<CatalogProduct> products;
+
+  factory CatalogGroup.fromJson(
+    Map<String, dynamic> json, {
+    required int typeId,
+    required String typeName,
+    required String unit,
+  }) {
+    final groupId = int.tryParse('${json['id']}') ?? 0;
+    final groupName = (json['name'] ?? '').toString();
+    final products = <CatalogProduct>[];
+    for (final raw in (json['items'] as List?) ?? const []) {
+      final item = Map<String, dynamic>.from(raw as Map);
+      final offerings = <StoreProduct>[];
+      for (final rawOffering in (item['offerings'] as List?) ?? const []) {
+        final merged = <String, dynamic>{
+          ...item,
+          ...Map<String, dynamic>.from(rawOffering as Map),
+          'groupId': groupId,
+          'groupName': groupName,
+          'unit': unit,
+          'catalogTypeName': typeName,
+        };
+        offerings.add(StoreProduct.fromJson(merged));
+      }
+      if (offerings.isEmpty) continue;
+      products.add(CatalogProduct(
+        productId: int.tryParse('${item['productId']}') ?? 0,
+        name: (item['name'] ?? '').toString(),
+        description: item['description'] as String?,
+        groupId: groupId,
+        groupName: groupName,
+        imagePath: (item['thumbnailPath'] ?? item['imagePath']) as String?,
+        width: item['width'] == null ? null : StoreProduct._d(item['width']),
+        length: item['length'] == null ? null : StoreProduct._d(item['length']),
+        measurementPending: item['measurementPending'] == true,
+        customSizeTemplate: item['customSizeTemplate'] == true,
+        catalogTypeName: typeName,
+        offerings: offerings,
+      ));
+    }
+    return CatalogGroup(id: groupId, name: groupName, products: products);
+  }
 }
 
 /// مقاس جاهز لصنف يُسعَّر بالمتر المربّع.

@@ -11,6 +11,11 @@ class OrderItem {
   final double total;
   final bool wasMissed;
   final String imagePath;
+  final String unit;
+  final double? width;
+  final double? length;
+  final double? area;
+  final bool measurementPending;
 
   OrderItem({
     required this.orderId,
@@ -23,6 +28,11 @@ class OrderItem {
     required this.total,
     required this.wasMissed,
     required this.imagePath,
+    this.unit = 'item',
+    this.width,
+    this.length,
+    this.area,
+    this.measurementPending = false,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -45,6 +55,13 @@ class OrderItem {
           : double.tryParse(json['total'].toString()) ?? 0.0,
       wasMissed: json['was_missed'] == 1,
       imagePath: Config.resolveImageUrl(json['image_path'] as String?),
+      unit: json['unit']?.toString() ?? 'item',
+      width: double.tryParse('${json['width_m'] ?? ''}'),
+      length: double.tryParse('${json['length_m'] ?? ''}'),
+      area: double.tryParse('${json['area_sqm'] ?? ''}'),
+      measurementPending: json['measurement_pending'] == true ||
+          json['measurement_pending'] == 1 ||
+          json['measurement_pending']?.toString() == '1',
     );
   }
 
@@ -60,6 +77,11 @@ class OrderItem {
       'total': total,
       'was_missed': wasMissed ? 1 : 0,
       'image_path': imagePath,
+      'unit': unit,
+      'width_m': width,
+      'length_m': length,
+      'area_sqm': area,
+      'measurement_pending': measurementPending ? 1 : 0,
     };
   }
 
@@ -76,6 +98,8 @@ class OrderItem {
       total: 0.0,
       wasMissed: false,
       imagePath: '',
+      unit: 'item',
+      measurementPending: false,
     );
   }
 }

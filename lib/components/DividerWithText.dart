@@ -1,5 +1,5 @@
 // divider_with_text.dart
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 
 class DividerWithText extends StatelessWidget {

@@ -7,6 +7,7 @@ import 'package:saleem_dry_clean/components/ImageSlider/ImageSlider.dart';
 import 'package:saleem_dry_clean/components/Notification/NotificationButton.dart';
 import 'package:saleem_dry_clean/components/Stores/StoresBrowser.dart';
 import 'package:saleem_dry_clean/services/Providers/BannerProvider.dart';
+import 'package:saleem_dry_clean/services/Providers/UserProvider.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/services/Providers/LanguageProvider.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
@@ -52,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final userProvider = context.watch<UserProvider>();
     final bannerProvider = Provider.of<BannerProvider>(context);
     List<String> imagePaths = bannerProvider.bannerImages;
     List<String> displayImagePaths = imagePaths.isNotEmpty
@@ -76,7 +78,11 @@ class _HomeScreenState extends State<HomeScreen> {
             HomeAppBar(
               fem: widget.fem,
               quantityNumber: true,
-              // suffixIconPath: NotificationButton(),
+              // Notifications belong to an account, so never show this entry
+              // point while the customer is browsing as a guest.
+              suffixIconPath: userProvider.userSignedIn
+                  ? const NotificationButton()
+                  : null,
               onPrefixIconTap: () {
                 Navigator.pop(context);
               },

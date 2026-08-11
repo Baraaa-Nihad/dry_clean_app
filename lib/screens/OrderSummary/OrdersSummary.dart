@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/Cards/CollectionDelivery.dart';
 import 'package:saleem_dry_clean/components/Cards/ItemSummary.dart';
@@ -110,10 +110,13 @@ class OrdersSummary extends StatelessWidget {
                             deliveryFees:
                                 dryCleanProvider.dryClean?.deliveryFees ?? 0.0,
                             total: orderProvider.total,
+                            pricePending:
+                                orderProvider.hasPendingMeasurement,
                           ),
                           // سطر الخصم يظهر فقط عند وجوده: صفر معروض يجعل
                           // الزبون يبحث عن خصم لم يطلبه
-                          if (orderProvider.discount > 0)
+                          if (!orderProvider.hasPendingMeasurement &&
+                              orderProvider.discount > 0)
                             _DiscountLine(
                               code: orderProvider.promoCode ?? '',
                               amount: orderProvider.discount,

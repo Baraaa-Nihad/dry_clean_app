@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:saleem_dry_clean/components/Notification/QuantityIcon.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/utils/ImageLoader.dart';
-import 'package:saleem_dry_clean/utils/localization.dart';
+import 'package:saleem_dry_clean/utils/store_localization.dart';
 
 class BasketItem extends StatefulWidget {
   final String label;
@@ -56,8 +56,6 @@ class _BasketItemState extends State<BasketItem> {
   @override
   Widget build(BuildContext context) {
     bool isRTL = Directionality.of(context) == TextDirection.rtl;
-    final localizations = AppLocalizations.of(context);
-
     return GestureDetector(
       onTap: () {
         if (_focusNode.hasFocus) {
@@ -165,7 +163,7 @@ class _BasketItemState extends State<BasketItem> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${localizations?.translate(widget.label) ?? widget.label} ',
+                                '${localizedCatalogValue(context, widget.label)} ',
                                 style: AppTextStyles.getFontFamily(
                                   context,
                                   AppTextStyles.regular16Gray70(context)
@@ -189,7 +187,7 @@ class _BasketItemState extends State<BasketItem> {
                                   ),
                                   SizedBox(width: 2),
                                   Text(
-                                    '${widget.price} / ${localizations?.translate('${widget.unit}')}',
+                                    '${widget.price} / ${localizedCatalogValue(context, widget.unit)}',
                                     style: AppTextStyles.getFontFamily(
                                       context,
                                       AppTextStyles.regular16Gray60(context)

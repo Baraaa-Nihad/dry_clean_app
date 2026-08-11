@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 // hide TextDirection: حزمة intl تُصدّر نوعاً بالاسم نفسه بلا `rtl`،
 // فيحجب نوع Flutter ويكسر أي اتجاه صريح في الملف
 import 'package:intl/intl.dart' hide TextDirection;

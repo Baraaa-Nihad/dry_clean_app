@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:saleem_dry_clean/components/Cards/CustomCard.dart';
 import 'package:saleem_dry_clean/components/Modals/LangSelectionModal.dart';
 import 'package:saleem_dry_clean/screens/ContactUs/ContactPage.dart';

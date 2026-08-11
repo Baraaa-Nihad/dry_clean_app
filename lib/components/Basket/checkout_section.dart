@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:saleem_dry_clean/ui.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/buttons/LoadingButton.dart';
 import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
@@ -13,12 +13,14 @@ class CheckoutSection extends StatelessWidget {
   final double fem;
   final double price;
   final int itemCount;
+  final bool pricePending;
 
   const CheckoutSection({
     Key? key,
     required this.fem,
     required this.price,
     required this.itemCount,
+    this.pricePending = false,
   }) : super(key: key);
 
   void _handleCheckout(BuildContext context, UserProvider userProvider) {
@@ -71,7 +73,7 @@ class CheckoutSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  width: 84,
+                  width: pricePending ? 116 : 84,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -80,7 +82,10 @@ class CheckoutSection extends StatelessWidget {
                         : CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${localizations.translate('Total')} ',
+                        pricePending
+                            ? localizations.translate('price_after_processing')
+                            : '${localizations.translate('Total')} ',
+                        maxLines: 2,
                         textAlign: isRtl ? TextAlign.right : TextAlign.left,
                         style: AppTextStyles.getFontFamily(
                           context,
@@ -89,7 +94,8 @@ class CheckoutSection extends StatelessWidget {
                           ),
                         ),
                       ),
-                      FittedBox(
+                      if (!pricePending)
+                        FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -124,7 +130,7 @@ class CheckoutSection extends StatelessWidget {
                     ],
                   ),
                 ),
-                SizedBox(width: 24 * fem),
+                SizedBox(width: (pricePending ? 12 : 24) * fem),
                 Expanded(
                   child: LoadingButton(
                     buttonWidth: "large",
