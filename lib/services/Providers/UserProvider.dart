@@ -639,7 +639,11 @@ class UserProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        await fetchUserAddress(userId, 'en', context);
+        await fetchUserAddress(
+          userId,
+          Localizations.localeOf(context).languageCode,
+          context,
+        );
       } else {
         throw Exception('Failed to set address as default');
       }

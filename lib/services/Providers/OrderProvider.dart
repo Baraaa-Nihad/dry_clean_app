@@ -8,6 +8,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'UserProvider.dart';
 
 class OrderProvider with ChangeNotifier {
+  OrderProvider() {
+    ready = loadCartFromSession();
+  }
+
+  late final Future<void> ready;
   List<BasketItemData> _cart = [];
 
   /// المحل صاحب السلّة.
@@ -44,6 +49,8 @@ class OrderProvider with ChangeNotifier {
   String? _deliveryDate;
   String? _collectionDay;
   String? _deliveryDay;
+  bool _checkoutActive = false;
+  int _checkoutStep = 0;
 
   // Cached totals — recomputed only when cart mutates, not on every getter read
   double _cachedSubtotal = 0.0;
@@ -66,6 +73,8 @@ class OrderProvider with ChangeNotifier {
   String? get deliveryDate => _deliveryDate;
   String? get collectionDay => _collectionDay;
   String? get deliveryDay => _deliveryDay;
+  bool get checkoutActive => _checkoutActive && _cart.isNotEmpty;
+  int get checkoutStep => _checkoutStep;
 
   // O(1) reads — cache is updated by _invalidateCache() on every mutation
   double get subtotal => _cachedSubtotal;
@@ -78,6 +87,33 @@ class OrderProvider with ChangeNotifier {
   }
 
   int get totalQuantity => _cachedTotalQuantity;
+
+  void startCheckout() {
+    if (_cart.isEmpty) return;
+    _checkoutActive = true;
+    _checkoutStep = _normalizeCheckoutStep(_checkoutStep);
+    saveCartToSession();
+  }
+
+  void setCheckoutStep(int step) {
+    final normalizedStep = _normalizeCheckoutStep(step);
+    if (_checkoutActive && _checkoutStep == normalizedStep) return;
+    _checkoutActive = true;
+    _checkoutStep = normalizedStep;
+    saveCartToSession();
+  }
+
+  void endCheckout() {
+    _checkoutActive = false;
+    _checkoutStep = 0;
+    saveCartToSession();
+  }
+
+  int _normalizeCheckoutStep(int step) {
+    if (step < 0) return 0;
+    if (step > 3) return 3;
+    return step;
+  }
 
   /// Recomputes cached totals. Call after any change to _cart or _deliveryFees.
   void _invalidateCache() {
@@ -333,6 +369,8 @@ class OrderProvider with ChangeNotifier {
     // آخر بعد أن أفرغ سلّته بنفسه
     _storeId = null;
     _storeName = null;
+    _checkoutActive = false;
+    _checkoutStep = 0;
     _invalidateCache();
     _scheduleSave();
     notifyListeners();
@@ -369,24 +407,28 @@ class OrderProvider with ChangeNotifier {
   // Sets the collection date
   void setCollectionDate(String date) {
     _collectionDate = date;
+    _scheduleSave();
     notifyListeners(); // Notify listeners of state change
   }
 
   // Sets the delivery date
   void setDeliveryDate(String date) {
     _deliveryDate = date;
+    _scheduleSave();
     notifyListeners(); // Notify listeners of state change
   }
 
   // Sets the collection day
   void setCollectionDay(String day) {
     _collectionDay = day;
+    _scheduleSave();
     notifyListeners(); // Notify listeners of state change
   }
 
   // Sets the delivery day
   void setDeliveryDay(String day) {
     _deliveryDay = day;
+    _scheduleSave();
     notifyListeners(); // Notify listeners of state change
   }
 
@@ -407,6 +449,15 @@ class OrderProvider with ChangeNotifier {
       'pickupTime': _pickupTime,
       'deliveryTime': _deliveryTime,
       'deliveryFees': _deliveryFees,
+      'collectionDate': _collectionDate,
+      'deliveryDate': _deliveryDate,
+      'collectionDay': _collectionDay,
+      'deliveryDay': _deliveryDay,
+      'promoCode': _promoCode,
+      'discount': _discount,
+      'customerNote': _customerNote,
+      'checkoutActive': _checkoutActive,
+      'checkoutStep': _checkoutStep,
     });
     await prefs.setString('cart', cartJson);
   }
@@ -427,6 +478,8 @@ class OrderProvider with ChangeNotifier {
     _deliveryDate = null;
     _collectionDay = null;
     _deliveryDay = null;
+    _checkoutActive = false;
+    _checkoutStep = 0;
     _invalidateCache();
     _saveDebounce?.cancel();
     clearCartFromSession();
@@ -437,20 +490,49 @@ class OrderProvider with ChangeNotifier {
   Future<void> loadCartFromSession() async {
     final prefs = await SharedPreferences.getInstance();
     final cartJson = prefs.getString('cart');
-    if (cartJson != null) {
+    if (cartJson == null) return;
+
+    try {
       final Map<String, dynamic> jsonMap = json.decode(cartJson);
-      final List<dynamic> jsonList = jsonMap['cart'];
-      _cart = jsonList.map((json) => BasketItemData.fromJson(json)).toList();
+      final jsonList = jsonMap['cart'];
+      if (jsonList is! List) return;
+      _cart = jsonList
+          .whereType<Map>()
+          .map((item) =>
+              BasketItemData.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
       // سلّة محفوظة قبل هذا التحديث لا تحمل معرّف محل. لا تُرمى — يكفي
       // أن تبقى بلا ربط، فأول إضافة تثبّت محلها.
       _storeId = jsonMap['storeId'] as int?;
       _storeName = jsonMap['storeName'] as String?;
-      _address = jsonMap['address'] as Map<String, dynamic>?;
-      _pickupTime = jsonMap['pickupTime'];
-      _deliveryTime = jsonMap['deliveryTime'];
-      _deliveryFees = jsonMap['deliveryFees'] ?? 0.0;
+      final savedAddress = jsonMap['address'];
+      _address = savedAddress is Map
+          ? Map<String, dynamic>.from(savedAddress)
+          : null;
+      _pickupTime = jsonMap['pickupTime']?.toString();
+      _deliveryTime = jsonMap['deliveryTime']?.toString();
+      _deliveryFees =
+          double.tryParse('${jsonMap['deliveryFees'] ?? 0}') ?? 0.0;
+      _collectionDate = jsonMap['collectionDate']?.toString();
+      _deliveryDate = jsonMap['deliveryDate']?.toString();
+      _collectionDay = jsonMap['collectionDay']?.toString();
+      _deliveryDay = jsonMap['deliveryDay']?.toString();
+      _customerNote = jsonMap['customerNote']?.toString() ?? '';
+      _checkoutActive = jsonMap['checkoutActive'] == true && _cart.isNotEmpty;
+      _checkoutStep = _normalizeCheckoutStep(
+        int.tryParse('${jsonMap['checkoutStep'] ?? 0}') ?? 0,
+      );
       _invalidateCache();
+      _promoCode = jsonMap['promoCode']?.toString();
+      _discount = double.tryParse('${jsonMap['discount'] ?? 0}') ?? 0.0;
       notifyListeners();
+    } catch (error) {
+      debugPrint('OrderProvider: discarded an invalid saved draft: $error');
+      await prefs.remove('cart');
+      _cart = [];
+      _checkoutActive = false;
+      _checkoutStep = 0;
+      _invalidateCache();
     }
   }
 
@@ -462,6 +544,8 @@ class OrderProvider with ChangeNotifier {
     _deliveryDate = null;
     _pickupTime = null;
     _deliveryTime = null;
+    _checkoutActive = false;
+    _checkoutStep = 0;
     notifyListeners();
   }
 

@@ -27,26 +27,25 @@ class MyRating {
 
   /// اسم الجهة كما يقرؤه الزبون. اسم المحل يأتي من الخادم، والسائقان
   /// لا يأتيان باسم — عرض معرّفهما لا يفيد الزبون بشيء.
-  String get label {
-    if ((targetName ?? '').isNotEmpty) return targetName!;
+  String get labelKey {
     switch (target) {
       case 'driver_pickup':
-        return 'سائق الاستلام';
+        return 'more_pickup_driver';
       case 'driver_delivery':
-        return 'سائق التوصيل';
+        return 'more_delivery_driver';
       default:
-        return 'المغسلة';
+        return 'more_laundry';
     }
   }
 
   factory MyRating.fromJson(Map<String, dynamic> j) => MyRating(
-        orderId: int.tryParse('${j['orderId']}') ?? 0,
-        target: (j['target'] ?? '').toString(),
-        targetName: j['targetName'] as String?,
-        score: int.tryParse('${j['score'] ?? 0}') ?? 0,
-        comment: j['comment'] as String?,
-        at: j['at'] == null ? null : DateTime.tryParse(j['at'].toString()),
-      );
+    orderId: int.tryParse('${j['orderId']}') ?? 0,
+    target: (j['target'] ?? '').toString(),
+    targetName: j['targetName'] as String?,
+    score: int.tryParse('${j['score'] ?? 0}') ?? 0,
+    comment: j['comment'] as String?,
+    at: j['at'] == null ? null : DateTime.tryParse(j['at'].toString()),
+  );
 }
 
 /// تفضيلات الإشعارات — ثلاثة مفاتيح معتمدة وقناتان.
@@ -71,22 +70,21 @@ class NotificationPrefs {
     bool? driverUpdates,
     bool? pushEnabled,
     bool? smsEnabled,
-  }) =>
-      NotificationPrefs(
-        orderUpdates: orderUpdates ?? this.orderUpdates,
-        promotions: promotions ?? this.promotions,
-        driverUpdates: driverUpdates ?? this.driverUpdates,
-        pushEnabled: pushEnabled ?? this.pushEnabled,
-        smsEnabled: smsEnabled ?? this.smsEnabled,
-      );
+  }) => NotificationPrefs(
+    orderUpdates: orderUpdates ?? this.orderUpdates,
+    promotions: promotions ?? this.promotions,
+    driverUpdates: driverUpdates ?? this.driverUpdates,
+    pushEnabled: pushEnabled ?? this.pushEnabled,
+    smsEnabled: smsEnabled ?? this.smsEnabled,
+  );
 
   Map<String, dynamic> toJson() => {
-        'orderUpdates': orderUpdates,
-        'promotions': promotions,
-        'driverUpdates': driverUpdates,
-        'pushEnabled': pushEnabled,
-        'smsEnabled': smsEnabled,
-      };
+    'orderUpdates': orderUpdates,
+    'promotions': promotions,
+    'driverUpdates': driverUpdates,
+    'pushEnabled': pushEnabled,
+    'smsEnabled': smsEnabled,
+  };
 
   factory NotificationPrefs.fromJson(Map<String, dynamic> j) =>
       NotificationPrefs(
@@ -109,7 +107,7 @@ class NotificationPrefs {
 /// في StoresProvider حيث حالة القلب محفوظة أصلاً.
 class AccountExtrasProvider with ChangeNotifier {
   AccountExtrasProvider(TokenService tokenService)
-      : _client = ApiClient.createClient(tokenService);
+    : _client = ApiClient.createClient(tokenService);
 
   final http.Client _client;
 
@@ -142,7 +140,7 @@ class AccountExtrasProvider with ChangeNotifier {
     try {
       final res = await _client.get(Uri.parse(Config.myRatingsApi));
       if (res.statusCode != 200) {
-        _ratingsError = 'تعذّر جلب تقييماتك';
+        _ratingsError = 'more_ratings_load_failed';
         return;
       }
       final body = jsonDecode(res.body);
@@ -151,7 +149,7 @@ class AccountExtrasProvider with ChangeNotifier {
           .map((e) => MyRating.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
     } catch (_) {
-      _ratingsError = 'تعذّر الاتصال بالخادم';
+      _ratingsError = 'server_connection_error';
     } finally {
       _loadingRatings = false;
       notifyListeners();
@@ -168,16 +166,18 @@ class AccountExtrasProvider with ChangeNotifier {
     try {
       final res = await _client.get(Uri.parse(Config.notificationPrefsApi));
       if (res.statusCode != 200) {
-        _prefsError = 'تعذّر جلب إعداداتك';
+        _prefsError = 'more_preferences_load_failed';
         return;
       }
       final body = jsonDecode(res.body);
       final data = body is Map && body['preferences'] is Map
           ? body['preferences']
           : body;
-      _prefs = NotificationPrefs.fromJson(Map<String, dynamic>.from(data as Map));
+      _prefs = NotificationPrefs.fromJson(
+        Map<String, dynamic>.from(data as Map),
+      );
     } catch (_) {
-      _prefsError = 'تعذّر الاتصال بالخادم';
+      _prefsError = 'server_connection_error';
     } finally {
       _loadingPrefs = false;
       notifyListeners();
@@ -224,11 +224,11 @@ class AccountExtrasProvider with ChangeNotifier {
 
       if (res.statusCode < 200 || res.statusCode >= 300) {
         _prefs = previous;
-        _prefsError = 'تعذّر حفظ الإعداد';
+        _prefsError = 'more_preference_save_failed';
       }
     } catch (_) {
       _prefs = previous;
-      _prefsError = 'تعذّر الاتصال بالخادم';
+      _prefsError = 'server_connection_error';
     } finally {
       _savingPrefs = false;
       notifyListeners();

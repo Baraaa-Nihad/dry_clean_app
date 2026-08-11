@@ -209,11 +209,12 @@ class AddressesProvider with ChangeNotifier {
   Future<void> setDefault(Map<String, dynamic> address,
       UserProvider userProvider, BuildContext context) async {
     setLoading(true);
+    final languageCode = Localizations.localeOf(context).languageCode;
 
     await userProvider.setDefaultAddress(
         userProvider.user!.id, address['id'].toString(), context);
 
-    await fetchAddresses(userProvider.user!.id, 'en');
+    await fetchAddresses(userProvider.user!.id, languageCode);
 
     setLoading(false);
   }

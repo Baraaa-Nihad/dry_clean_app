@@ -21,7 +21,10 @@ class TimeSelectionProvider with ChangeNotifier {
   /// فالمواعيد يجب أن تكون مواعيده هو — وإلّا جُدوِل الطلب على أيام عمل
   /// محل آخر، ثم لا يأتي أحد.
   Future<Map<String, dynamic>> fetchDryCleanDetails(
-      int areaId, String lang, {int? drycleanId}) async {
+    int areaId,
+    String lang, {
+    int? drycleanId,
+  }) async {
     _errorMessage = null;
     _isLoading = true;
     notifyListeners();
@@ -49,17 +52,16 @@ class TimeSelectionProvider with ChangeNotifier {
           notifyListeners();
           return responseData['data'];
         } else {
-          setErrorMessage('Invalid response format');
+          setErrorMessage('time_slots_invalid_response');
           return {};
         }
       } else {
-        final errorResponse = json.decode(response.body);
-        setErrorMessage(
-            errorResponse['message'] ?? 'Failed to load dry clean details');
+        setErrorMessage('time_slots_load_failed');
         return {};
       }
     } catch (error) {
-      setErrorMessage('Error loading dry clean details: $error');
+      debugPrint('Error loading dry clean details: $error');
+      setErrorMessage('server_connection_error');
       return {};
     } finally {
       _isLoading = false;
@@ -75,8 +77,12 @@ class TimeSelectionProvider with ChangeNotifier {
   /// [drycleanId] — المحل المختار؛ بدونه يختار الخادم أوّل محل يخدم
   /// المنطقة، فتظهر مواعيد محل آخر
   Future<Map<String, dynamic>> fetchDeliveryTimes(
-      int areaId, String lang, String pickupDate, String pickupTime,
-      {int? drycleanId}) async {
+    int areaId,
+    String lang,
+    String pickupDate,
+    String pickupTime, {
+    int? drycleanId,
+  }) async {
     _errorMessage = null;
     _isLoading = true;
     notifyListeners();
@@ -107,16 +113,16 @@ class TimeSelectionProvider with ChangeNotifier {
           notifyListeners();
           return responseData['data'] ?? {};
         } else {
-          setErrorMessage(responseData['message'] ?? 'Invalid delivery times response');
+          setErrorMessage('delivery_times_invalid_response');
           return {};
         }
       } else {
-        final errorResponse = json.decode(response.body);
-        setErrorMessage(errorResponse['message'] ?? 'Failed to load delivery times');
+        setErrorMessage('delivery_times_load_failed');
         return {};
       }
     } catch (error) {
-      setErrorMessage('Error loading delivery times: $error');
+      debugPrint('Error loading delivery times: $error');
+      setErrorMessage('server_connection_error');
       return {};
     } finally {
       _isLoading = false;

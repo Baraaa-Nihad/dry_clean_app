@@ -6,6 +6,7 @@ import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
 import 'package:saleem_dry_clean/services/Providers/StoresProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/utils/localization.dart';
 import 'package:saleem_dry_clean/utils/route_names.dart';
 
 /// المغاسل المفضّلة (٢.١.٨).
@@ -38,6 +39,7 @@ class _FavoriteStoresScreenState extends State<FavoriteStoresScreen> {
   Widget build(BuildContext context) {
     final p = context.watch<StoresProvider>();
     final favorites = p.stores.where((s) => s.isFavorite).toList();
+    final localizations = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
@@ -46,34 +48,97 @@ class _FavoriteStoresScreenState extends State<FavoriteStoresScreen> {
         foregroundColor: AppColors.gray80,
         elevation: 0,
         title: Text(
-          'المغاسل المفضّلة',
-          style: AppTextStyles.sfarabicBold
-              .copyWith(fontSize: 16.5, color: AppColors.gray80),
+          localizations.translate('favorite_laundries'),
+          style: AppTextStyles.getFontFamily(
+            context,
+            AppTextStyles.sfarabicBold.copyWith(
+              fontSize: 16.5,
+              color: AppColors.gray80,
+            ),
+          ),
         ),
       ),
       body: RefreshIndicator(
         color: AppColors.green,
         onRefresh: () => context.read<StoresProvider>().load(force: true),
-        child: favorites.isEmpty
+        child: p.isLoading && p.stores.isEmpty
+            ? ListView(
+                children: const [
+                  SizedBox(height: 150),
+                  Center(
+                    child: CircularProgressIndicator(color: AppColors.green),
+                  ),
+                ],
+              )
+            : p.error != null && p.stores.isEmpty
             ? ListView(
                 padding: const EdgeInsets.all(32),
                 children: [
                   const SizedBox(height: 70),
-                  const Icon(Icons.favorite_border,
-                      size: 54, color: AppColors.inactiveColor),
+                  const Icon(
+                    Icons.wifi_off_rounded,
+                    size: 54,
+                    color: AppColors.inactiveColor,
+                  ),
                   const SizedBox(height: 14),
                   Text(
-                    'لا مغاسل في مفضّلتك',
+                    localizations.translate(p.error!),
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.sfarabicBold
-                        .copyWith(fontSize: 15, color: AppColors.gray80),
+                    style: AppTextStyles.getFontFamily(
+                      context,
+                      AppTextStyles.sfarabicBold.copyWith(
+                        fontSize: 15,
+                        color: AppColors.gray80,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'اضغط القلب على أي مغسلة لتظهر هنا',
+                    localizations.translate('more_pull_to_retry'),
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.sfarabicRegular.copyWith(
-                        fontSize: 12.5, color: AppColors.secondaryTextColor),
+                    style: AppTextStyles.getFontFamily(
+                      context,
+                      AppTextStyles.sfarabicRegular.copyWith(
+                        fontSize: 12.5,
+                        color: AppColors.secondaryTextColor,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : favorites.isEmpty
+            ? ListView(
+                padding: const EdgeInsets.all(32),
+                children: [
+                  const SizedBox(height: 70),
+                  const Icon(
+                    Icons.favorite_border,
+                    size: 54,
+                    color: AppColors.inactiveColor,
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    localizations.translate('stores_no_favorites'),
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.getFontFamily(
+                      context,
+                      AppTextStyles.sfarabicBold.copyWith(
+                        fontSize: 15,
+                        color: AppColors.gray80,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    localizations.translate('more_favorites_empty_hint'),
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.getFontFamily(
+                      context,
+                      AppTextStyles.sfarabicRegular.copyWith(
+                        fontSize: 12.5,
+                        color: AppColors.secondaryTextColor,
+                      ),
+                    ),
                   ),
                 ],
               )

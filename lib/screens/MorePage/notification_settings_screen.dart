@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/services/Providers/AccountExtrasProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/utils/localization.dart';
 
 /// إعدادات الإشعارات (٢.١.٨).
 ///
@@ -36,6 +37,7 @@ class _NotificationSettingsScreenState
   Widget build(BuildContext context) {
     final p = context.watch<AccountExtrasProvider>();
     final prefs = p.prefs;
+    final localizations = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
@@ -44,14 +46,20 @@ class _NotificationSettingsScreenState
         foregroundColor: AppColors.gray80,
         elevation: 0,
         title: Text(
-          'إعدادات الإشعارات',
-          style: AppTextStyles.sfarabicBold
-              .copyWith(fontSize: 16.5, color: AppColors.gray80),
+          localizations.translate('notification_settings'),
+          style: AppTextStyles.getFontFamily(
+            context,
+            AppTextStyles.sfarabicBold.copyWith(
+              fontSize: 16.5,
+              color: AppColors.gray80,
+            ),
+          ),
         ),
       ),
       body: p.isLoadingPrefs
           ? const Center(
-              child: CircularProgressIndicator(color: AppColors.green))
+              child: CircularProgressIndicator(color: AppColors.green),
+            )
           : ListView(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
               children: [
@@ -64,64 +72,85 @@ class _NotificationSettingsScreenState
                       border: Border.all(color: AppColors.errorBorder),
                     ),
                     child: Text(
-                      p.prefsError!,
-                      style: AppTextStyles.sfarabicMedium
-                          .copyWith(fontSize: 12.5, color: AppColors.red),
+                      localizations.translate(p.prefsError!),
+                      style: AppTextStyles.getFontFamily(
+                        context,
+                        AppTextStyles.sfarabicMedium.copyWith(
+                          fontSize: 12.5,
+                          color: AppColors.red,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
                 ],
 
-                _SectionTitle('ما الذي يصلك'),
-                _Group(children: [
-                  _PrefSwitch(
-                    title: 'حالة الطلب',
-                    subtitle: 'عند انتقال طلبك من مرحلة إلى أخرى',
-                    value: prefs.orderUpdates,
-                    onChanged: (v) => context
-                        .read<AccountExtrasProvider>()
-                        .togglePref('orderUpdates', v),
-                  ),
-                  _PrefSwitch(
-                    title: 'حركة السائق',
-                    subtitle: 'عند تعيين سائق أو خروجه إليك',
-                    value: prefs.driverUpdates,
-                    onChanged: (v) => context
-                        .read<AccountExtrasProvider>()
-                        .togglePref('driverUpdates', v),
-                  ),
-                  _PrefSwitch(
-                    title: 'العروض والرسائل',
-                    subtitle: 'خصومات المغاسل ورسائل إدارة سليم',
-                    value: prefs.promotions,
-                    onChanged: (v) => context
-                        .read<AccountExtrasProvider>()
-                        .togglePref('promotions', v),
-                    isLast: true,
-                  ),
-                ]),
+                _SectionTitle(localizations.translate('more_what_reaches_you')),
+                _Group(
+                  children: [
+                    _PrefSwitch(
+                      title: localizations.translate('more_order_status'),
+                      subtitle: localizations.translate(
+                        'more_order_status_hint',
+                      ),
+                      value: prefs.orderUpdates,
+                      onChanged: (v) => context
+                          .read<AccountExtrasProvider>()
+                          .togglePref('orderUpdates', v),
+                    ),
+                    _PrefSwitch(
+                      title: localizations.translate('more_driver_updates'),
+                      subtitle: localizations.translate(
+                        'more_driver_updates_hint',
+                      ),
+                      value: prefs.driverUpdates,
+                      onChanged: (v) => context
+                          .read<AccountExtrasProvider>()
+                          .togglePref('driverUpdates', v),
+                    ),
+                    _PrefSwitch(
+                      title: localizations.translate('more_offers_messages'),
+                      subtitle: localizations.translate(
+                        'more_offers_messages_hint',
+                      ),
+                      value: prefs.promotions,
+                      onChanged: (v) => context
+                          .read<AccountExtrasProvider>()
+                          .togglePref('promotions', v),
+                      isLast: true,
+                    ),
+                  ],
+                ),
 
                 const SizedBox(height: 22),
-                _SectionTitle('كيف يصلك'),
-                _Group(children: [
-                  _PrefSwitch(
-                    title: 'إشعارات التطبيق',
-                    subtitle: 'تظهر على شاشة هاتفك',
-                    value: prefs.pushEnabled,
-                    onChanged: (v) => context
-                        .read<AccountExtrasProvider>()
-                        .togglePref('pushEnabled', v),
-                  ),
-                  _PrefSwitch(
-                    title: 'رسائل نصّية',
-                    subtitle: 'تصلك رسالة SMS — قد تُحتسب من رصيدك',
-                    value: prefs.smsEnabled,
-                    onChanged: (v) => context
-                        .read<AccountExtrasProvider>()
-                        .togglePref('smsEnabled', v),
-                    isLast: true,
-                  ),
-                ]),
+                _SectionTitle(
+                  localizations.translate('more_how_it_reaches_you'),
+                ),
+                _Group(
+                  children: [
+                    _PrefSwitch(
+                      title: localizations.translate('more_push_notifications'),
+                      subtitle: localizations.translate(
+                        'more_push_notifications_hint',
+                      ),
+                      value: prefs.pushEnabled,
+                      onChanged: (v) => context
+                          .read<AccountExtrasProvider>()
+                          .togglePref('pushEnabled', v),
+                    ),
+                    _PrefSwitch(
+                      title: localizations.translate('more_sms_messages'),
+                      subtitle: localizations.translate(
+                        'more_sms_messages_hint',
+                      ),
+                      value: prefs.smsEnabled,
+                      onChanged: (v) => context
+                          .read<AccountExtrasProvider>()
+                          .togglePref('smsEnabled', v),
+                      isLast: true,
+                    ),
+                  ],
+                ),
               ],
             ),
     );
@@ -134,13 +163,18 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10, right: 4),
-        child: Text(
-          text,
-          style: AppTextStyles.sfarabicBold
-              .copyWith(fontSize: 14, color: AppColors.gray70),
+    padding: const EdgeInsetsDirectional.only(bottom: 10, start: 4),
+    child: Text(
+      text,
+      style: AppTextStyles.getFontFamily(
+        context,
+        AppTextStyles.sfarabicBold.copyWith(
+          fontSize: 14,
+          color: AppColors.gray70,
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _Group extends StatelessWidget {
@@ -149,12 +183,12 @@ class _Group extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(children: children),
-      );
+    decoration: BoxDecoration(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Column(children: children),
+  );
 }
 
 class _PrefSwitch extends StatelessWidget {
@@ -179,18 +213,30 @@ class _PrefSwitch extends StatelessWidget {
         SwitchListTile.adaptive(
           value: value,
           onChanged: onChanged,
-          activeColor: AppColors.green,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 15, vertical: 4),
+          activeThumbColor: AppColors.green,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 15,
+            vertical: 4,
+          ),
           title: Text(
             title,
-            style: AppTextStyles.sfarabicMedium
-                .copyWith(fontSize: 14.5, color: AppColors.gray80),
+            style: AppTextStyles.getFontFamily(
+              context,
+              AppTextStyles.sfarabicMedium.copyWith(
+                fontSize: 14.5,
+                color: AppColors.gray80,
+              ),
+            ),
           ),
           subtitle: Text(
             subtitle,
-            style: AppTextStyles.sfarabicRegular.copyWith(
-                fontSize: 12, color: AppColors.secondaryTextColor),
+            style: AppTextStyles.getFontFamily(
+              context,
+              AppTextStyles.sfarabicRegular.copyWith(
+                fontSize: 12,
+                color: AppColors.secondaryTextColor,
+              ),
+            ),
           ),
         ),
         if (!isLast)

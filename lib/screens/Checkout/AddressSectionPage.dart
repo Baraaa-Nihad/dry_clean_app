@@ -40,6 +40,19 @@ class AddressSectionPage extends StatelessWidget {
 
         int defaultAddressIndex =
             addresses.indexWhere((address) => address['is_default'] == 1);
+        final orderedAddresses = addresses.asMap().entries.toList()
+          ..sort((first, second) {
+            final effectiveDefaultIndex = selectedAddressIndex != null &&
+                    selectedAddressIndex! >= 0
+                ? selectedAddressIndex!
+                : defaultAddressIndex;
+            final firstIsDefault = first.key == effectiveDefaultIndex;
+            final secondIsDefault = second.key == effectiveDefaultIndex;
+            if (firstIsDefault == secondIsDefault) {
+              return first.key.compareTo(second.key);
+            }
+            return firstIsDefault ? -1 : 1;
+          });
 
         if (addresses.isEmpty) {
           return EmptyPage(
@@ -77,12 +90,17 @@ class AddressSectionPage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    ...addresses.map((address) {
-                      final index = addresses.indexOf(address);
-                      print(address);
-                      final addressNameKey = 'addressName';
-                      final areaNameKey =
-                          address[addressNameKey] ?? address['id'].toString();
+                    ...orderedAddresses.map((entry) {
+                      final index = entry.key;
+                      final address = entry.value;
+                      final hasExplicitSelection = selectedAddressIndex != null &&
+                          selectedAddressIndex! >= 0;
+                      final isSelected = hasExplicitSelection
+                          ? selectedAddressIndex == index
+                          : index == defaultAddressIndex;
+                      final isEffectiveDefault = hasExplicitSelection
+                          ? isSelected
+                          : address['is_default'] == 1;
 
                       final governateNameKey = languageCode == 'ar'
                           ? 'governateName_ar'
@@ -93,8 +111,6 @@ class AddressSectionPage extends StatelessWidget {
                       final areaName = languageCode == 'ar'
                           ? address['areaName_ar'].toString()
                           : address['areaName_en'].toString();
-                      print("addressName");
-                      print(addressName);
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 20.0),
                         child: AddressCard(
@@ -107,10 +123,8 @@ class AddressSectionPage extends StatelessWidget {
                           street: address['street'] ?? '',
                           building: address['building'] ?? '',
                           extraInfo: address['extraInfo'] ?? '',
-                          isDefault: (address['is_default'] == 1),
-                          isSelected: selectedAddressIndex == index ||
-                              (selectedAddressIndex == null &&
-                                  index == defaultAddressIndex),
+                          isDefault: isEffectiveDefault,
+                          isSelected: isSelected,
                           onSelect: () => onAddressSelected(index),
                           onEdit: () => onEdit(context, address),
                           onSetDefult: () => onSetDefault(context, address),

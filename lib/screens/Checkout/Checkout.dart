@@ -44,16 +44,14 @@ import 'CheckoutPickupTime.dart';
 class CheckoutAddress extends StatefulWidget {
   final double fem;
 
-  const CheckoutAddress({
-    Key? key,
-    required this.fem,
-  }) : super(key: key);
+  const CheckoutAddress({Key? key, required this.fem}) : super(key: key);
 
   @override
   _CheckoutAddressState createState() => _CheckoutAddressState();
 }
 
-class _CheckoutAddressState extends State<CheckoutAddress> {
+class _CheckoutAddressState extends State<CheckoutAddress>
+    with WidgetsBindingObserver {
   int _currentStep = 0;
   bool isDisabledButton = true;
   int selectedAddressIndex = -1;
@@ -66,6 +64,9 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
   DryClean? dryClean;
   final TokenService _tokenService = TokenService();
   bool _isLoading = false; // Manage loading state
+  bool _isLoadingAddresses = true;
+  bool _isPersistingDefaultAddress = false;
+  bool _isRestoringCheckout = true;
   String? _errorMessage; // Store error messages
   List<Map<String, dynamic>> pickupDays = [];
   List<String> pickupPeriods = ["AM", "PM"];
@@ -75,8 +76,11 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
   List<Map<String, String>> deliveryTimeSlots = [];
   int orderId = 0;
 
-  String _stringValue(Map<String, dynamic> data, List<String> keys,
-      {String fallback = ''}) {
+  String _stringValue(
+    Map<String, dynamic> data,
+    List<String> keys, {
+    String fallback = '',
+  }) {
     for (final key in keys) {
       final value = data[key];
       if (value != null && value.toString().isNotEmpty) {
@@ -91,23 +95,107 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
 
     return rawSlots
         .whereType<Map>()
-        .map((timeSlot) => {
-              "start_time": timeSlot["start_time"]?.toString() ?? '',
-              "end_time": timeSlot["end_time"]?.toString() ?? '',
-            })
-        .where((timeSlot) =>
-            timeSlot["start_time"]!.isNotEmpty &&
-            timeSlot["end_time"]!.isNotEmpty)
+        .map(
+          (timeSlot) => {
+            "start_time": timeSlot["start_time"]?.toString() ?? '',
+            "end_time": timeSlot["end_time"]?.toString() ?? '',
+          },
+        )
+        .where(
+          (timeSlot) =>
+              timeSlot["start_time"]!.isNotEmpty &&
+              timeSlot["end_time"]!.isNotEmpty,
+        )
         .toList();
   }
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeProviders(); // Initialize providers after the first frame is rendered
-      _fetchAddresses(); // Fetch addresses when the screen is opened
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initializeCheckout());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      Provider.of<OrderProvider>(context, listen: false).saveCartToSession();
+    }
+  }
+
+  Future<void> _initializeCheckout() async {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    await orderProvider.ready;
+    if (!mounted) return;
+
+    if (!orderProvider.checkoutActive) {
+      orderProvider.startCheckout();
+    }
+
+    final restoredStep = _validatedRestoredStep(orderProvider);
+    if (restoredStep != orderProvider.checkoutStep) {
+      orderProvider.setCheckoutStep(restoredStep);
+    }
+    final pickupParts = _splitStoredTime(orderProvider.pickupTime);
+    final deliveryParts = _splitStoredTime(orderProvider.deliveryTime);
+    setState(() {
+      _currentStep = restoredStep;
+      selectedPickupDay = orderProvider.collectionDay;
+      selectedPickupPeriod = pickupParts[0];
+      selectedPickupTimeSlot = pickupParts[1];
+      selectedDeliveryDay = orderProvider.deliveryDay;
+      selectedDeliveryPeriod = deliveryParts[0];
+      selectedDeliveryTimeSlot = deliveryParts[1];
+      _isRestoringCheckout = false;
+      if (_currentStep == 0) {
+        isDisabledButton = true;
+      } else if (_currentStep == 1) {
+        isDisabledButton = selectedPickupTimeSlot == null;
+      } else if (_currentStep == 2) {
+        isDisabledButton = selectedDeliveryTimeSlot == null;
+      } else {
+        isDisabledButton = false;
+      }
     });
+
+    _initializeProviders();
+    await _fetchAddresses();
+    if (!mounted) return;
+    await _restoreTimeOptions();
+  }
+
+  int _validatedRestoredStep(OrderProvider orderProvider) {
+    final step = orderProvider.checkoutStep;
+    if (step >= 1 && orderProvider.address == null) return 0;
+    if (step >= 2 &&
+        ((orderProvider.collectionDate ?? '').isEmpty ||
+            (orderProvider.pickupTime ?? '').isEmpty)) {
+      return 1;
+    }
+    if (step >= 3 &&
+        ((orderProvider.deliveryDate ?? '').isEmpty ||
+            (orderProvider.deliveryTime ?? '').isEmpty)) {
+      return 2;
+    }
+    return step;
+  }
+
+  List<String?> _splitStoredTime(String? value) {
+    if (value == null || value.trim().isEmpty) return [null, null];
+    final match = RegExp(
+      r'^(AM|PM)\s+(.+)$',
+      caseSensitive: false,
+    ).firstMatch(value.trim());
+    if (match == null) return [null, value.trim()];
+    return [match.group(1)?.toUpperCase(), match.group(2)];
   }
 
   void setLoading(bool value) {
@@ -118,8 +206,10 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
 
   void _initializeProviders() {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final addressesProvider =
-        Provider.of<AddressesProvider>(context, listen: false);
+    final addressesProvider = Provider.of<AddressesProvider>(
+      context,
+      listen: false,
+    );
 
     if (userProvider.user != null) {
       addressesProvider.initialize(userProvider.userAddresses);
@@ -127,36 +217,149 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
     }
   }
 
-  void _fetchAddresses() async {
-    setLoading(true); // Show loading state
+  Future<void> _fetchAddresses() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _isLoadingAddresses = true;
+      });
+    }
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final addressesProvider =
-          Provider.of<AddressesProvider>(context, listen: false);
+      final addressesProvider = Provider.of<AddressesProvider>(
+        context,
+        listen: false,
+      );
 
       if (userProvider.user != null) {
         Locale currentLocale = Localizations.localeOf(context);
         await addressesProvider.fetchAddresses(
-            userProvider.user!.id, currentLocale.languageCode);
+          userProvider.user!.id,
+          currentLocale.languageCode,
+        );
 
         _selectDefaultAddress(
-            addressesProvider.addresses); // Select the default address if any
+          addressesProvider.addresses,
+        ); // Select the default address if any
       }
     } catch (error) {
       print('Error fetching addresses: $error');
     } finally {
-      setLoading(false); // Hide loading state
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isLoadingAddresses = false;
+        });
+      }
     }
   }
 
   void _selectDefaultAddress(List<Map<String, dynamic>> addresses) {
-    int defaultIndex =
-        addresses.indexWhere((address) => address['is_default'] == 1);
-    if (defaultIndex != -1) {
-      setState(() {
-        selectedAddressIndex = defaultIndex;
-        isDisabledButton = false;
-      });
+    if (addresses.isEmpty || !mounted) return;
+
+    final savedAddressId = Provider.of<OrderProvider>(
+      context,
+      listen: false,
+    ).address?['id']?.toString();
+    final savedIndex = savedAddressId == null
+        ? -1
+        : addresses.indexWhere(
+            (address) => address['id']?.toString() == savedAddressId,
+          );
+    int defaultIndex = addresses.indexWhere(
+      (address) => address['is_default'] == 1,
+    );
+    final selectedIndex =
+        savedIndex >= 0 ? savedIndex : (defaultIndex >= 0 ? defaultIndex : 0);
+    final selectedAddress = addresses[selectedIndex];
+
+    setState(() {
+      selectedAddressIndex = selectedIndex;
+      isDisabledButton = false;
+    });
+    Provider.of<OrderProvider>(
+      context,
+      listen: false,
+    ).setAddress(selectedAddress);
+
+    if (defaultIndex < 0 && addresses.length == 1) {
+      _persistDefaultAddress(selectedAddress);
+    }
+  }
+
+  Future<void> _restoreTimeOptions() async {
+    if (_currentStep == 0 || selectedAddressIndex < 0) return;
+
+    final addresses = Provider.of<AddressesProvider>(
+      context,
+      listen: false,
+    ).addresses;
+    if (selectedAddressIndex >= addresses.length) return;
+    final areaId = int.tryParse(
+      '${addresses[selectedAddressIndex]['area_id']}',
+    );
+    if (areaId == null) return;
+
+    await _fetchDryCleanDetails(areaId);
+    if (!mounted) return;
+    if (_currentStep >= 2 &&
+        (Provider.of<OrderProvider>(context, listen: false).collectionDate ??
+                '')
+            .isNotEmpty) {
+      await _fetchDeliveryTimes();
+    }
+  }
+
+  Future<void> _selectAddress(int index) async {
+    final addressesProvider = Provider.of<AddressesProvider>(
+      context,
+      listen: false,
+    );
+    if (index < 0 || index >= addressesProvider.addresses.length) return;
+
+    final selectedAddress = addressesProvider.addresses[index];
+    setState(() {
+      selectedAddressIndex = index;
+      isDisabledButton = false;
+    });
+    Provider.of<OrderProvider>(
+      context,
+      listen: false,
+    ).setAddress(selectedAddress);
+
+    if (selectedAddress['is_default'] != 1) {
+      await _persistDefaultAddress(selectedAddress);
+    }
+  }
+
+  Future<void> _persistDefaultAddress(Map<String, dynamic> address) async {
+    if (_isPersistingDefaultAddress) return;
+
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    if (userProvider.user == null) return;
+
+    _isPersistingDefaultAddress = true;
+    try {
+      final addressesProvider = Provider.of<AddressesProvider>(
+        context,
+        listen: false,
+      );
+      await addressesProvider.setDefault(address, userProvider, context);
+
+      if (!mounted) return;
+      final refreshedIndex = addressesProvider.addresses.indexWhere(
+        (item) => item['id'].toString() == address['id'].toString(),
+      );
+      if (refreshedIndex >= 0) {
+        final refreshedAddress = addressesProvider.addresses[refreshedIndex];
+        setState(() => selectedAddressIndex = refreshedIndex);
+        Provider.of<OrderProvider>(
+          context,
+          listen: false,
+        ).setAddress(refreshedAddress);
+      }
+    } finally {
+      _isPersistingDefaultAddress = false;
     }
   }
 
@@ -185,22 +388,24 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
 
           try {
             Locale currentLocale = Localizations.localeOf(context);
-            await Provider.of<AddressesProvider>(context, listen: false)
-                .addAddress(
-                    newItem,
-                    Provider.of<UserProvider>(context, listen: false),
-                    currentLocale.languageCode,
-                    context);
+            await Provider.of<AddressesProvider>(
+              context,
+              listen: false,
+            ).addAddress(
+              newItem,
+              Provider.of<UserProvider>(context, listen: false),
+              currentLocale.languageCode,
+              context,
+            );
 
-            // Update selected address index
-            setState(() {
-              selectedAddressIndex =
-                  Provider.of<AddressesProvider>(context, listen: false)
-                          .addresses
-                          .length -
-                      1;
-              isDisabledButton = false;
-            });
+            final addressesProvider = Provider.of<AddressesProvider>(
+              context,
+              listen: false,
+            );
+            final newAddressIndex = addressesProvider.addresses.length - 1;
+            if (newAddressIndex >= 0) {
+              await _selectAddress(newAddressIndex);
+            }
           } catch (error) {
             // Handle any errors during address addition
             print('Error adding address: $error');
@@ -219,65 +424,73 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
   }
 
   void handlePickupTimeSelected(String day, String period, String timeSlot) {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     setState(() {
       selectedPickupDay = day;
       selectedPickupPeriod = period;
       selectedPickupTimeSlot = timeSlot;
 
       // Find the day that matches the selected day
-      final selectedDayData = pickupDays
-          .firstWhere((dayItem) => dayItem['day'] == day, orElse: () => {});
+      final selectedDayData = pickupDays.firstWhere(
+        (dayItem) => dayItem['day'] == day,
+        orElse: () => {},
+      );
 
       if (selectedDayData.isNotEmpty &&
           selectedDayData.containsKey('pickupTimeSlots')) {
         // Assign the time slots for the selected day
-        pickupTimeSlots =
-            List<Map<String, String>>.from(selectedDayData['pickupTimeSlots']);
+        pickupTimeSlots = List<Map<String, String>>.from(
+          selectedDayData['pickupTimeSlots'],
+        );
 
         // Store the original date with the year in OrderProvider
         String collectionDate = selectedDayData['date'];
         print("setCollectionDate");
         print(collectionDate);
-        Provider.of<OrderProvider>(context, listen: false)
-            .setCollectionDate(collectionDate);
+        orderProvider.setCollectionDate(collectionDate);
         // Store the original date with the year in OrderProvider
         String collectionDay = selectedDayData['day'];
         print("day");
         print(collectionDay);
-        Provider.of<OrderProvider>(context, listen: false)
-            .setCollectionDay(collectionDay);
+        orderProvider.setCollectionDay(collectionDay);
       }
     });
+
+    orderProvider.setPickupTime('$period $timeSlot');
 
     updateButtonState(true);
   }
 
   void handleDeliveryTimeSelected(String day, String period, String timeSlot) {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     setState(() {
       selectedDeliveryDay = day;
       selectedDeliveryPeriod = period;
       selectedDeliveryTimeSlot = timeSlot;
 
       // Find the day that matches the selected day
-      final selectedDayData = deliveryDays
-          .firstWhere((dayItem) => dayItem['day'] == day, orElse: () => {});
+      final selectedDayData = deliveryDays.firstWhere(
+        (dayItem) => dayItem['day'] == day,
+        orElse: () => {},
+      );
 
       if (selectedDayData.isNotEmpty &&
           selectedDayData.containsKey('deliveryTimeSlots')) {
         // Assign the time slots for the selected day
         deliveryTimeSlots = List<Map<String, String>>.from(
-            selectedDayData['deliveryTimeSlots']);
+          selectedDayData['deliveryTimeSlots'],
+        );
 
         // Store the original date with the year in OrderProvider
         String deliveryDate = selectedDayData['date'];
-        Provider.of<OrderProvider>(context, listen: false)
-            .setDeliveryDate(deliveryDate);
+        orderProvider.setDeliveryDate(deliveryDate);
         // Store the original date with the year in OrderProvider
         String deliveryDay = selectedDayData['day'];
-        Provider.of<OrderProvider>(context, listen: false)
-            .setDeliveryDay(deliveryDay);
+        orderProvider.setDeliveryDay(deliveryDay);
       }
     });
+
+    orderProvider.setDeliveryTime('$period $timeSlot');
 
     updateButtonState(true);
   }
@@ -297,18 +510,21 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
   }
 
   void _showSetDefaultModal(
-      BuildContext context, Map<String, dynamic> address) {
+    BuildContext context,
+    Map<String, dynamic> address,
+  ) {
     final localizations = AppLocalizations.of(context);
     final isArabic = localizations?.locale.languageCode == 'ar';
     final addressName =
         isArabic ? address['addressName_ar'] : address['addressName_en'];
 
-// Fetch the localized message template
+    // Fetch the localized message template
     String messageTemplate = localizations?.translate(
-            'Are you sure that you want to set "{addressName}" as a default address?') ??
+          'Are you sure that you want to set "{addressName}" as a default address?',
+        ) ??
         'Are you sure that you want to set "{addressName}" as a default address?';
 
-// Replace the placeholder with the actual address name
+    // Replace the placeholder with the actual address name
     String message = messageTemplate.replaceAll('{addressName}', addressName);
 
     SmallModal.show(
@@ -318,41 +534,46 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
       onPrefixIconTap: () => Navigator.of(context).pop(),
       fem: widget.fem,
       primaryButtonLable:
-          localizations?.translate('Set As Default') ?? 'Set As Default',
+          localizations?.translate('Set as Default') ?? 'Set as Default',
       title: localizations?.translate('Set as Default') ?? 'Set as Default',
       message: message, // Use the modified message string here
 
       onPressed: () async {
         Navigator.of(context).pop();
         await Provider.of<AddressesProvider>(context, listen: false).setDefault(
-            address,
-            Provider.of<UserProvider>(context, listen: false),
-            context);
+          address,
+          Provider.of<UserProvider>(context, listen: false),
+          context,
+        );
       },
       onCancel: () => Navigator.of(context).pop(),
     );
   }
 
   Future<void> _fetchDryCleanDetails(int areaId) async {
-    final timeSelectionProvider =
-        Provider.of<TimeSelectionProvider>(context, listen: false);
-    final dryCleanProvider =
-        Provider.of<DryCleanProvider>(context, listen: false);
+    final timeSelectionProvider = Provider.of<TimeSelectionProvider>(
+      context,
+      listen: false,
+    );
+    final dryCleanProvider = Provider.of<DryCleanProvider>(
+      context,
+      listen: false,
+    );
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    final languageProvider =
-        Provider.of<LanguageProvider>(context, listen: false);
+    final languageProvider = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
+    );
     final String lang = languageProvider.locale.languageCode;
 
     setLoading(true); // Start loading
 
     try {
-      final data =
-          await timeSelectionProvider.fetchDryCleanDetails(
+      final data = await timeSelectionProvider.fetchDryCleanDetails(
         areaId,
         lang,
         // مواعيد المحل المختار لا مواعيد أوّل محل يخدم المنطقة
-        drycleanId:
-            Provider.of<OrderProvider>(context, listen: false).storeId,
+        drycleanId: Provider.of<OrderProvider>(context, listen: false).storeId,
       );
       if (data.isNotEmpty) {
         if (data['dryclean'] != null) {
@@ -361,66 +582,73 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
           dryCleanProvider.setDryClean(dryClean);
         }
         print(
-            'pickupDayspickupDayspickupDayspickupDayspickupDayspickupDayspickupDayspickupDays');
+          'pickupDayspickupDayspickupDayspickupDayspickupDayspickupDayspickupDayspickupDays',
+        );
         print(data['pickup_days']);
         // Extract pickupDays and pickupTimeSlots
         if (data['pickup_days'] != null) {
           pickupDays = List<Map<String, dynamic>>.from(
-              (data['pickup_days'] as List).whereType<Map>().map((rawDayItem) {
-            final dayItem = Map<String, dynamic>.from(rawDayItem);
-            final dayLabel = _stringValue(
-              dayItem,
-              ['formattedDay', 'formatted_day', 'day'],
-            );
+            (data['pickup_days'] as List).whereType<Map>().map((rawDayItem) {
+              final dayItem = Map<String, dynamic>.from(rawDayItem);
+              final dayLabel = _stringValue(dayItem, [
+                'formattedDay',
+                'formatted_day',
+                'day',
+              ]);
 
-            return {
-              "id": _stringValue(dayItem, ["id"]),
-              "day": dayLabel,
-              "formattedDay": dayLabel,
-              "date": _stringValue(
-                dayItem,
-                ["date", "formattedDate", "formatted_date"],
-              ),
-              "pickupTimeSlots": _parseTimeSlots(dayItem['pickup_time_slots']),
-            };
-          }).where((dayItem) => dayItem['day'].toString().isNotEmpty));
+              return {
+                "id": _stringValue(dayItem, ["id"]),
+                "day": dayLabel,
+                "formattedDay": dayLabel,
+                "date": _stringValue(dayItem, [
+                  "date",
+                  "formattedDate",
+                  "formatted_date",
+                ]),
+                "pickupTimeSlots": _parseTimeSlots(
+                  dayItem['pickup_time_slots'],
+                ),
+              };
+            }).where((dayItem) => dayItem['day'].toString().isNotEmpty),
+          );
         }
         print(
-            'delivery_daysdelivery_daysdelivery_daysdelivery_daysdelivery_days');
+          'delivery_daysdelivery_daysdelivery_daysdelivery_daysdelivery_days',
+        );
         print(data['delivery_days']);
         // Extract deliveryDays and deliveryTimeSlots
         if (data['delivery_days'] != null) {
           deliveryDays = List<Map<String, dynamic>>.from(
-              (data['delivery_days'] as List)
-                  .whereType<Map>()
-                  .map((rawDayItem) {
-            final dayItem = Map<String, dynamic>.from(rawDayItem);
-            final dayLabel = _stringValue(
-              dayItem,
-              ['formattedDay', 'formatted_day', 'day'],
-            );
+            (data['delivery_days'] as List).whereType<Map>().map((rawDayItem) {
+              final dayItem = Map<String, dynamic>.from(rawDayItem);
+              final dayLabel = _stringValue(dayItem, [
+                'formattedDay',
+                'formatted_day',
+                'day',
+              ]);
 
-            return {
-              "id": _stringValue(dayItem, ["id"]),
-              "day": dayLabel,
-              "formattedDay": dayLabel,
-              "date": _stringValue(
-                dayItem,
-                ["date", "formattedDate", "formatted_date"],
-              ),
-              "deliveryTimeSlots":
-                  _parseTimeSlots(dayItem['delivery_time_slots']),
-            };
-          }).where((dayItem) => dayItem['day'].toString().isNotEmpty));
+              return {
+                "id": _stringValue(dayItem, ["id"]),
+                "day": dayLabel,
+                "formattedDay": dayLabel,
+                "date": _stringValue(dayItem, [
+                  "date",
+                  "formattedDate",
+                  "formatted_date",
+                ]),
+                "deliveryTimeSlots": _parseTimeSlots(
+                  dayItem['delivery_time_slots'],
+                ),
+              };
+            }).where((dayItem) => dayItem['day'].toString().isNotEmpty),
+          );
         }
       } else {
-        timeSelectionProvider
-            .setErrorMessage('No available time slots for this area');
+        timeSelectionProvider.setErrorMessage('no_available_time_slots');
       }
     } catch (error) {
       print('Error fetching dry clean details: $error');
-      timeSelectionProvider
-          .setErrorMessage('Error fetching details for the selected address');
+      timeSelectionProvider.setErrorMessage('time_slots_load_failed');
     } finally {
       setLoading(false); // Stop loading
     }
@@ -428,18 +656,20 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
 
   void _nextStep() async {
     if (_currentStep == 0 && selectedAddressIndex != -1) {
-      final selectedAddress =
-          Provider.of<AddressesProvider>(context, listen: false)
-              .addresses[selectedAddressIndex];
+      final selectedAddress = Provider.of<AddressesProvider>(
+        context,
+        listen: false,
+      ).addresses[selectedAddressIndex];
       final areaId = selectedAddress['area_id'];
 
       if (areaId != null) {
         await _fetchDryCleanDetails(areaId);
       } else {
-        final timeSelectionProvider =
-            Provider.of<TimeSelectionProvider>(context, listen: false);
-        timeSelectionProvider
-            .setErrorMessage('Area ID is missing for the selected address');
+        final timeSelectionProvider = Provider.of<TimeSelectionProvider>(
+          context,
+          listen: false,
+        );
+        timeSelectionProvider.setErrorMessage('address_area_missing');
       }
     }
 
@@ -455,22 +685,32 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
       setState(() {
         _currentStep += 1;
       });
+      Provider.of<OrderProvider>(
+        context,
+        listen: false,
+      ).setCheckoutStep(_currentStep);
       updateButtonState(
-          false); // Ensure button state is reset for the next step
+        false,
+      ); // Ensure button state is reset for the next step
     }
   }
 
   /// Fetches available delivery days/slots based on the user's chosen pickup
   /// date + time and the dry-clean's operation time.
   Future<void> _fetchDeliveryTimes() async {
-    final timeSelectionProvider =
-        Provider.of<TimeSelectionProvider>(context, listen: false);
-    final orderProvider =
-        Provider.of<OrderProvider>(context, listen: false);
-    final languageProvider =
-        Provider.of<LanguageProvider>(context, listen: false);
-    final addressesProvider =
-        Provider.of<AddressesProvider>(context, listen: false);
+    final timeSelectionProvider = Provider.of<TimeSelectionProvider>(
+      context,
+      listen: false,
+    );
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final languageProvider = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
+    );
+    final addressesProvider = Provider.of<AddressesProvider>(
+      context,
+      listen: false,
+    );
 
     final collectionDate = orderProvider.collectionDate;
     if (collectionDate == null || collectionDate.isEmpty) return;
@@ -497,41 +737,54 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
       if (data.isNotEmpty && data['delivery_days'] != null) {
         setState(() {
           deliveryDays = List<Map<String, dynamic>>.from(
-              (data['delivery_days'] as List)
-                  .whereType<Map>()
-                  .map((rawDayItem) {
-            final dayItem = Map<String, dynamic>.from(rawDayItem);
-            final dayLabel = _stringValue(
-              dayItem,
-              ['formattedDay', 'formatted_day', 'day'],
-            );
-            return {
-              "id": _stringValue(dayItem, ["id"]),
-              "day": dayLabel,
-              "formattedDay": dayLabel,
-              "date": _stringValue(
-                  dayItem, ["date", "formattedDate", "formatted_date"]),
-              "deliveryTimeSlots":
-                  _parseTimeSlots(dayItem['delivery_time_slots']),
-            };
-          }).where((d) => d['day'].toString().isNotEmpty));
+            (data['delivery_days'] as List).whereType<Map>().map((rawDayItem) {
+              final dayItem = Map<String, dynamic>.from(rawDayItem);
+              final dayLabel = _stringValue(dayItem, [
+                'formattedDay',
+                'formatted_day',
+                'day',
+              ]);
+              return {
+                "id": _stringValue(dayItem, ["id"]),
+                "day": dayLabel,
+                "formattedDay": dayLabel,
+                "date": _stringValue(dayItem, [
+                  "date",
+                  "formattedDate",
+                  "formatted_date",
+                ]),
+                "deliveryTimeSlots": _parseTimeSlots(
+                  dayItem['delivery_time_slots'],
+                ),
+              };
+            }).where((d) => d['day'].toString().isNotEmpty),
+          );
         });
       }
     } catch (error) {
       print('Error fetching delivery times: $error');
+      timeSelectionProvider.setErrorMessage('delivery_times_load_failed');
     } finally {
       setLoading(false);
     }
   }
 
   void _previousStep() {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     if (_currentStep > 0) {
       setState(() {
         _currentStep -= 1;
       });
+      orderProvider.setCheckoutStep(_currentStep);
       updateButtonState(false);
     } else {
-      Navigator.pop(context);
+      orderProvider.endCheckout();
+      orderProvider.saveCartToSession();
+      if (Navigator.of(context).canPop()) {
+        Navigator.pop(context);
+      } else {
+        NavigatorService.navigateToAndRemoveUntil(RouteNames.main);
+      }
     }
   }
 
@@ -592,10 +845,11 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
                 style: AppTextStyles.getFontFamily(
                   context,
                   AppTextStyles.bold16Gradient(context).copyWith(
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.w600,
-                      height: 0,
-                      color: AppColors.white),
+                    fontSize: 16.0,
+                    fontWeight: FontWeight.w600,
+                    height: 0,
+                    color: AppColors.white,
+                  ),
                 ),
               ),
               if (isRtl)
@@ -623,8 +877,10 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
     NavigatorService.navigateToAndRemoveUntil(RouteNames.main);
     print('_handleOrdersTap3');
     Future.delayed(Duration(milliseconds: 100), () {
-      Provider.of<NavigationProvider>(context, listen: false)
-          .navigateToOrders(); // Adjust based on your navigation logic
+      Provider.of<NavigationProvider>(
+        context,
+        listen: false,
+      ).navigateToOrders(); // Adjust based on your navigation logic
     });
   }
 
@@ -635,6 +891,10 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
   }
 
   Future<void> _placeOrder(BuildContext context) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (_errorMessage != null) {
+      setState(() => _errorMessage = null);
+    }
     setLoading(true); // Set loading state to true
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
@@ -682,7 +942,9 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
           orderProvider.deliveryDate == null) {
         setLoading(false); // Stop loading state
         setState(() {
-          _errorMessage = "Please complete all steps before placing the order.";
+          _errorMessage = AppLocalizations.of(
+            context,
+          ).translate('checkout_complete_steps_error');
         });
         return;
       }
@@ -713,19 +975,60 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
         // Show success modal on order placement
         _showSuccessModal(context);
       } else {
-        final responseData = json.decode(response.body);
+        dynamic responseData;
+        try {
+          responseData = json.decode(response.body);
+        } catch (_) {
+          responseData = const <String, dynamic>{};
+        }
 
         setState(() {
-          _errorMessage = responseData['message'] ?? 'Failed to place order';
+          _errorMessage = _localizedOrderError(
+            responseData,
+            response.statusCode,
+          );
         });
       }
     } catch (error) {
+      debugPrint('Error placing order: $error');
       setState(() {
-        _errorMessage = 'Error placing order: $error';
+        _errorMessage = AppLocalizations.of(
+          context,
+        ).translate('server_connection_error');
       });
     } finally {
       setLoading(false); // Reset loading state
     }
+  }
+
+  String _localizedOrderError(dynamic responseData, int statusCode) {
+    final localizations = AppLocalizations.of(context);
+    final code = responseData is Map
+        ? (responseData['code'] ?? '').toString().trim().toUpperCase()
+        : '';
+    const keysByCode = <String, String>{
+      'MISSING_ORDER_DATA': 'order_missing_data',
+      'ADDRESS_NOT_FOUND': 'order_address_not_found',
+      'ADDRESS_NOT_YOURS': 'order_address_not_yours',
+      'NO_DRYCLEAN_FOR_AREA': 'order_no_laundry_for_area',
+      'DRYCLEAN_UNAVAILABLE': 'order_laundry_unavailable',
+      'DRYCLEAN_NOT_IN_AREA': 'order_laundry_not_in_area',
+      'PRODUCTS_UNAVAILABLE': 'order_items_unavailable',
+      'INVALID_CODE': 'promo_code_invalid',
+      'WRONG_STORE': 'promo_wrong_laundry',
+      'BELOW_MINIMUM': 'promo_below_minimum',
+      'CODE_EXHAUSTED': 'promo_usage_limit_reached',
+      'ALREADY_USED': 'promo_already_used',
+      'AUTH_REQUIRED': 'sign_in_required_to_continue',
+      'UNAUTHORIZED': 'sign_in_required_to_continue',
+    };
+    final key = keysByCode[code] ??
+        ((statusCode == 401 || statusCode == 403)
+            ? 'sign_in_required_to_continue'
+            : statusCode >= 500
+                ? 'unexpected_error_try_again'
+                : 'order_failed_try_again');
+    return localizations.translate(key);
   }
 
   void _showSignInModal(BuildContext context) {
@@ -755,13 +1058,9 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
   Widget _buildCurrentStepContent() {
     return Consumer2<AddressesProvider, TimeSelectionProvider>(
       builder: (context, addressesProvider, timeSelectionProvider, child) {
-        if (addressesProvider.isLoading) {
-          // Show LoadingDots while addresses are loading
-          return Center(
-            child: LoadingDots(
-              fem: widget.fem,
-            ),
-          );
+        if (_isRestoringCheckout ||
+            (_currentStep == 0 && _isLoadingAddresses)) {
+          return Center(child: LoadingDots(fem: widget.fem));
         }
 
         switch (_currentStep) {
@@ -769,15 +1068,7 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
             return AddressSectionPage(
               fem: widget.fem,
               selectedAddressIndex: selectedAddressIndex,
-              onAddressSelected: (index) {
-                setState(() {
-                  selectedAddressIndex = index;
-                  isDisabledButton = false;
-                });
-                final selectedAddress = addressesProvider.addresses[index];
-                Provider.of<OrderProvider>(context, listen: false)
-                    .setAddress(selectedAddress);
-              },
+              onAddressSelected: _selectAddress,
               onAddNew: () {
                 // Add new address logic here
                 _addNewAddress(context);
@@ -795,11 +1086,7 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
             );
           case 1:
             return timeSelectionProvider.isLoading
-                ? Center(
-                    child: LoadingDots(
-                      fem: widget.fem,
-                    ),
-                  )
+                ? Center(child: LoadingDots(fem: widget.fem))
                 : CheckoutPickupTime(
                     fem: widget.fem,
                     selectedDay: selectedPickupDay,
@@ -814,11 +1101,7 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
 
           case 2:
             return timeSelectionProvider.isLoading
-                ? Center(
-                    child: LoadingDots(
-                      fem: widget.fem,
-                    ),
-                  )
+                ? Center(child: LoadingDots(fem: widget.fem))
                 : CheckoutDeliveryTime(
                     fem: widget.fem,
                     selectedDay: selectedDeliveryDay,
@@ -837,12 +1120,20 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
                   _currentStep = 0;
                   isDisabledButton = selectedAddressIndex == -1;
                 });
+                Provider.of<OrderProvider>(
+                  context,
+                  listen: false,
+                ).setCheckoutStep(0);
               },
               EditTimeButton: () {
                 setState(() {
                   _currentStep = 1;
                   isDisabledButton = selectedPickupTimeSlot == null;
                 });
+                Provider.of<OrderProvider>(
+                  context,
+                  listen: false,
+                ).setCheckoutStep(1);
               },
             );
           default:
@@ -857,89 +1148,146 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
     final localizations = AppLocalizations.of(context);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
+      backgroundColor: AppColors.white,
       body: Consumer<UserProvider>(
         builder: (context, userProvider, child) {
-          if (userProvider.isLoading) {
-            return Center(
-                child: LoadingDots(
-              fem: 1,
-            ));
-          }
-
           final addressesProvider = Provider.of<AddressesProvider>(context);
           final addresses = addressesProvider.addresses;
+          final timeSelectionProvider = Provider.of<TimeSelectionProvider>(
+            context,
+          );
+          final isInitialAddressLoading = _currentStep == 0 &&
+              (_isRestoringCheckout || _isLoadingAddresses);
+          final isAddressUpdating = _currentStep == 0 &&
+              !isInitialAddressLoading &&
+              (addressesProvider.isLoading ||
+                  userProvider.isLoading ||
+                  _isLoading);
 
-          bool isRtl = Directionality.of(context) == TextDirection.rtl;
+          final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+          final actionBarHeight = keyboardVisible ? 72.0 : 124.0;
+          final timeErrorKey = timeSelectionProvider.errorMessage;
+          final visibleError = _errorMessage ??
+              (timeErrorKey == null
+                  ? null
+                  : localizations.translate(timeErrorKey));
 
           return Scaffold(
+            backgroundColor: AppColors.white,
             body: Stack(
               children: [
-                Container(
-                  width: double.infinity,
-                  height: double.infinity,
-                  decoration: ShapeDecoration(
-                    color: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(40),
+                AbsorbPointer(
+                  absorbing: isAddressUpdating,
+                  child: Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    decoration: ShapeDecoration(
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(40),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 116,
+                          child: AppHeader(
+                            quantityNumber: false,
+                            prefixIcon: BackButtonWidget(onTap: _previousStep),
+                            title: _currentStep == 3
+                                ? 'OrderSummary'
+                                : 'Checkout', // Updated title
+                            fem: widget.fem,
+                          ),
+                        ),
+                        ProgressBar(progressIndicator: _currentStep + 1),
+                        Expanded(child: _buildCurrentStepContent()),
+                      ],
                     ),
                   ),
-                  child: Column(
-                    children: [
-                      Container(
-                        height: 116,
-                        child: AppHeader(
-                          quantityNumber: false,
-                          prefixIcon: BackButtonWidget(
-                            onTap: _previousStep,
-                          ),
-                          title: _currentStep == 3
-                              ? 'OrderSummary'
-                              : 'Checkout', // Updated title
-                          fem: widget.fem,
-                        ),
+                ),
+                Positioned.fill(
+                  top: 120,
+                  child: IgnorePointer(
+                    child: Center(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        reverseDuration: const Duration(milliseconds: 160),
+                        transitionBuilder: (child, animation) {
+                          final scale =
+                              Tween<double>(begin: 0.92, end: 1.0).animate(
+                            CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeOutCubic,
+                            ),
+                          );
+                          return FadeTransition(
+                            opacity: animation,
+                            child: ScaleTransition(scale: scale, child: child),
+                          );
+                        },
+                        child: isAddressUpdating
+                            ? KeyedSubtree(
+                                key: const ValueKey('address-loading'),
+                                child: LoadingDots(fem: widget.fem),
+                              )
+                            : const SizedBox.shrink(
+                                key: ValueKey('address-idle'),
+                              ),
                       ),
-                      ProgressBar(progressIndicator: _currentStep + 1),
-                      Expanded(
-                        child: _buildCurrentStepContent(),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-                if (Provider.of<TimeSelectionProvider>(context).errorMessage !=
-                    null)
+                if (visibleError != null)
                   Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
+                    bottom: actionBarHeight + 8,
+                    left: 16,
+                    right: 16,
                     child: Container(
-                      color: Colors.redAccent,
-                      padding: EdgeInsets.all(8),
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        12,
+                        9,
+                        6,
+                        9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.errorBackground,
+                        border: Border.all(color: AppColors.errorBorder),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.error_outline, color: Colors.white),
-                          SizedBox(width: 8),
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            size: 19,
+                            color: AppColors.red,
+                          ),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              Provider.of<TimeSelectionProvider>(context)
-                                  .errorMessage!,
-                              style: AppTextStyles.regular16Gray80(context)
-                                  .copyWith(
-                                fontSize: 14.0,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.red,
-                                height: 1.2,
+                              visibleError,
+                              textAlign: TextAlign.start,
+                              style: AppTextStyles.getFontFamily(
+                                context,
+                                AppTextStyles.sfarabicMedium.copyWith(
+                                  fontSize: 13,
+                                  color: AppColors.red,
+                                  height: 1.35,
+                                ),
                               ),
                             ),
                           ),
                           IconButton(
-                            icon: Icon(Icons.close, color: Colors.white),
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              size: 18,
+                              color: AppColors.red,
+                            ),
                             onPressed: () {
-                              setState(() {
-                                Provider.of<TimeSelectionProvider>(context,
-                                        listen: false)
-                                    .clearErrorMessage();
-                              });
+                              setState(() => _errorMessage = null);
+                              timeSelectionProvider.clearErrorMessage();
                             },
                           ),
                         ],
@@ -950,65 +1298,71 @@ class _CheckoutAddressState extends State<CheckoutAddress> {
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
                     color: AppColors.white,
                     width: 428,
-                    height: 124,
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    height: actionBarHeight,
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      keyboardVisible ? 8 : 0,
+                      24,
+                      keyboardVisible ? 8 : 0,
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (_isLoading) ...[
-                          LoadingDots(
-                              fem: widget
-                                  .fem), // Show loading dots while loading
-                        ] else ...[
+                        if (!_isLoading) ...[
                           LoadingButton(
                             buttonWidth: "full",
                             fem: widget.fem,
                             buttonText: localizations.translate(
-                                _currentStep == 3 ? 'place_order' : 'Next'),
-                            isDisabled: isDisabledButton ||
-                                _isLoading, // Disable button while loading
+                              _currentStep == 3 ? 'place_order' : 'Next',
+                            ),
+                            isDisabled: isDisabledButton || isAddressUpdating,
                             onPressed: () {
                               if (_currentStep == 0 &&
                                   selectedAddressIndex != -1) {
                                 final selectedAddress =
                                     addresses[selectedAddressIndex];
-                                Provider.of<CheckoutModel>(context,
-                                        listen: false)
-                                    .setCustomerAddress(selectedAddress);
-                                Provider.of<OrderProvider>(context,
-                                        listen: false)
-                                    .setAddress(selectedAddress);
+                                Provider.of<CheckoutModel>(
+                                  context,
+                                  listen: false,
+                                ).setCustomerAddress(selectedAddress);
+                                Provider.of<OrderProvider>(
+                                  context,
+                                  listen: false,
+                                ).setAddress(selectedAddress);
                                 _nextStep();
                               } else if (_currentStep == 1 &&
                                   selectedPickupTimeSlot != null) {
                                 final pickupTime =
                                     '$selectedPickupPeriod $selectedPickupTimeSlot';
-                                Provider.of<CheckoutModel>(context,
-                                        listen: false)
-                                    .setPickupData(
-                                  selectedPickupDay!,
-                                  pickupTime,
-                                );
-                                Provider.of<OrderProvider>(context,
-                                        listen: false)
-                                    .setPickupTime(pickupTime);
+                                Provider.of<CheckoutModel>(
+                                  context,
+                                  listen: false,
+                                ).setPickupData(selectedPickupDay!, pickupTime);
+                                Provider.of<OrderProvider>(
+                                  context,
+                                  listen: false,
+                                ).setPickupTime(pickupTime);
                                 _nextStep();
                               } else if (_currentStep == 2 &&
                                   selectedDeliveryTimeSlot != null) {
                                 final deliveryTime =
                                     '$selectedDeliveryPeriod $selectedDeliveryTimeSlot';
-                                Provider.of<CheckoutModel>(context,
-                                        listen: false)
-                                    .setDeliveryData(
+                                Provider.of<CheckoutModel>(
+                                  context,
+                                  listen: false,
+                                ).setDeliveryData(
                                   selectedDeliveryDay!,
                                   deliveryTime,
                                 );
-                                Provider.of<OrderProvider>(context,
-                                        listen: false)
-                                    .setDeliveryTime(deliveryTime);
+                                Provider.of<OrderProvider>(
+                                  context,
+                                  listen: false,
+                                ).setDeliveryTime(deliveryTime);
                                 _nextStep();
                               } else if (_currentStep == 3) {
                                 _placeOrder(context);

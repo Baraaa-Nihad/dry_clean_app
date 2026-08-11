@@ -103,12 +103,14 @@ class _AddressCardState extends State<AddressCard> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (widget.isDefault) SizedBox(width: 8),
-                    StatusBadge(
-                        status:
-                            localizations?.translate('default') ?? 'default',
+                    if (widget.isDefault) ...[
+                      const SizedBox(width: 8),
+                      StatusBadge(
+                        status: localizations.translate('default'),
                         isStatus: false,
-                        color: AppColors.gray40)
+                        color: AppColors.gray40,
+                      ),
+                    ],
                   ],
                 ),
                 SizedBox(height: 12 * widget.fem),
@@ -165,12 +167,11 @@ class _AddressCardState extends State<AddressCard> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    if (!widget.isDefault)
+                    if (!widget.isDefault && !widget.isSelected)
                       GestureDetector(
                         onTap: widget.onSetDefult,
                         child: Text(
-                          localizations?.translate('Set as Default') ??
-                              'Set as default',
+                          localizations.translate('Set as Default'),
                           style: AppTextStyles.getFontFamily(
                             context,
                             AppTextStyles.regular16Gray80(context).copyWith(

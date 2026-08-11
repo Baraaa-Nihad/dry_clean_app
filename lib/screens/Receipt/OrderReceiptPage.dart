@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/AppBar/AppHeader.dart';
 import 'package:saleem_dry_clean/components/BackButtonWidget.dart';
 import 'package:saleem_dry_clean/components/Cards/ThankYouCard.dart';
@@ -7,14 +6,12 @@ import 'package:saleem_dry_clean/components/Cards/payment_method.dart';
 import 'package:saleem_dry_clean/components/LoadingDots/LoadingDotsPrimary.dart';
 import 'package:saleem_dry_clean/screens/Receipt/PaymentDetails.dart';
 import 'package:saleem_dry_clean/screens/Receipt/ReceiptDetails.dart';
-import 'package:saleem_dry_clean/services/Navigator/navigator_service.dart';
-import 'package:saleem_dry_clean/services/Providers/NavigationProvider.dart';
+import 'package:saleem_dry_clean/screens/main_navigation.dart';
 import 'package:saleem_dry_clean/services/User/TokenService.dart';
 import 'package:saleem_dry_clean/services/orderService/OrderData.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 import 'package:saleem_dry_clean/services/orderService/OrderService.dart';
-import 'package:saleem_dry_clean/utils/route_names.dart';
 
 class OrderReceiptPage extends StatefulWidget {
   final OrderData? order;
@@ -36,6 +33,15 @@ class _OrderReceiptPageState extends State<OrderReceiptPage> {
   bool isLoading = true;
   OrderData? order;
   late OrderService _orderService;
+
+  void _goToMainNavigation() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const MainNavigation(initialIndex: 0),
+      ),
+      (_) => false,
+    );
+  }
 
   @override
   void initState() {
@@ -79,28 +85,27 @@ class _OrderReceiptPageState extends State<OrderReceiptPage> {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
 
-    return Scaffold(
-      appBar: AppHeader(
-        quantityNumber: false,
-        prefixIcon: BackButtonWidget(
-          onTap: () {
-            print('_handleOrdersTap3');
-            Future.delayed(Duration(milliseconds: 100), () {
-              Provider.of<NavigationProvider>(context, listen: false)
-                  .goBack(context); // Adjust based on your navigation logic
-            });
-          },
+    return PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _goToMainNavigation();
+      },
+      child: Scaffold(
+        appBar: AppHeader(
+          quantityNumber: false,
+          prefixIcon: BackButtonWidget(
+            onTap: _goToMainNavigation,
+          ),
+          title: localizations.translate('orderReceipt'),
+          fem: 1,
         ),
-        title: localizations.translate('orderReceipt'),
-        fem: 1,
-      ),
-      backgroundColor: AppColors.white,
-      body: isLoading
-          ? Center(child: LoadingDotsPrimary(fem: 1))
-          : order != null
-              ? SingleChildScrollView(
+        backgroundColor: AppColors.white,
+        body: isLoading
+            ? Center(child: LoadingDotsPrimary(fem: 1))
+            : order != null
+                ? SingleChildScrollView(
                   child: Column(
                     children: [
                       Container(
@@ -131,8 +136,11 @@ class _OrderReceiptPageState extends State<OrderReceiptPage> {
                       SizedBox(height: 60),
                     ],
                   ),
-                )
-              : Center(child: Text(localizations.translate('orderNotFound'))),
+                  )
+                : Center(
+                    child: Text(localizations.translate('orderNotFound')),
+                  ),
+      ),
     );
   }
 }

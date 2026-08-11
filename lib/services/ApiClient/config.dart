@@ -115,12 +115,20 @@ class Config {
   static String get _placeholderUrl => 'assets/images/placeholder.jpg';
 
   static String resolveImageUrl(String? imagePath) {
-    if (imagePath == null || imagePath.isEmpty) return _placeholderUrl;
+    if (imagePath == null || imagePath.trim().isEmpty) return _placeholderUrl;
 
-    if (!imagePath.startsWith('http')) return imagePath;
+    final normalizedPath = imagePath.trim().replaceAll('\\', '/');
+    if (normalizedPath.startsWith('assets/')) return normalizedPath;
+
     try {
       final serverUri = Uri.parse(apiUrl);
-      final imageUri = Uri.parse(imagePath);
+      if (normalizedPath.startsWith('//')) {
+        return '${serverUri.scheme}:$normalizedPath';
+      }
+
+      final imageUri = normalizedPath.startsWith('http')
+          ? Uri.parse(normalizedPath)
+          : serverUri.resolve(normalizedPath);
       final imgHost = imageUri.host;
       final serverHost = serverUri.host;
 
@@ -139,7 +147,7 @@ class Config {
           imgHost == '127.0.0.1' ||
           RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$').hasMatch(imgHost);
 
-      if (!isBackendUrl) return imagePath;
+      if (!isBackendUrl) return normalizedPath;
 
       return imageUri
           .replace(

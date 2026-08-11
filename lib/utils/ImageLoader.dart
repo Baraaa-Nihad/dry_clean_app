@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 
 class ImageLoader extends StatelessWidget {
@@ -9,6 +10,7 @@ class ImageLoader extends StatelessWidget {
   final double height;
   final double width;
   final double borderRadius;
+  final BoxFit fit;
 
   const ImageLoader({
     Key? key,
@@ -16,14 +18,18 @@ class ImageLoader extends StatelessWidget {
     required this.height,
     required this.width,
     this.borderRadius = 16.0,
+    this.fit = BoxFit.cover,
   }) : super(key: key);
 
+  String get _resolvedImageUrl => Config.resolveImageUrl(imageUrl);
+
   bool get _isNetwork =>
-      imageUrl.startsWith('http://') || imageUrl.startsWith('https://');
+      _resolvedImageUrl.startsWith('http://') ||
+      _resolvedImageUrl.startsWith('https://');
 
   bool get _isSvg =>
-      imageUrl.toLowerCase().endsWith('.svg') ||
-      imageUrl.toLowerCase().contains('.svg?');
+      _resolvedImageUrl.toLowerCase().endsWith('.svg') ||
+      _resolvedImageUrl.toLowerCase().contains('.svg?');
 
   Widget _shimmer() => Shimmer.fromColors(
         baseColor: AppColors.gray10,
@@ -72,16 +78,21 @@ class ImageLoader extends StatelessWidget {
 
   Widget _buildImage() {
     if (_isNetwork && _isSvg) {
-      debugPrint('ImageLoader: remote SVG skipped $imageUrl');
-      return _errorPlaceholder();
+      return SvgPicture.network(
+        _resolvedImageUrl,
+        height: height,
+        width: width,
+        fit: fit,
+        placeholderBuilder: (_) => _shimmer(),
+      );
     }
 
     if (_isNetwork) {
       return CachedNetworkImage(
-        imageUrl: imageUrl,
+        imageUrl: _resolvedImageUrl,
         height: height,
         width: width,
-        fit: BoxFit.cover,
+        fit: fit,
         fadeInDuration: Duration.zero,
         fadeOutDuration: Duration.zero,
         placeholder: (context, url) => _shimmer(),
@@ -94,16 +105,16 @@ class ImageLoader extends StatelessWidget {
 
     if (_isSvg) {
       return SvgPicture.asset(
-        imageUrl,
-        fit: BoxFit.cover,
+        _resolvedImageUrl,
+        fit: fit,
         height: height,
         width: width,
       );
     }
 
     return Image.asset(
-      imageUrl,
-      fit: BoxFit.cover,
+      _resolvedImageUrl,
+      fit: fit,
       height: height,
       width: width,
       errorBuilder: (_, __, ___) => _errorPlaceholder(),

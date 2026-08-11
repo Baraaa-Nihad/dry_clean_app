@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/services/Providers/LanguageProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/LocationScopeProvider.dart';
+import 'package:saleem_dry_clean/services/Providers/OrderProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/StoresProvider.dart';
 import 'package:saleem_dry_clean/utils/OnboardingProvider.dart';
 import 'package:saleem_dry_clean/utils/route_names.dart';
@@ -17,6 +18,7 @@ class StartupRouter {
     final onboarding = context.read<OnboardingProvider>();
     final location = context.read<LocationScopeProvider>();
     final stores = context.read<StoresProvider>();
+    final order = context.read<OrderProvider>();
     final languageCode = context.read<LanguageProvider>().locale.languageCode;
 
     await onboarding.ready;
@@ -35,6 +37,10 @@ class StartupRouter {
     }
 
     stores.setArea(location.area!.id);
+    await order.ready;
+    if (order.checkoutActive) {
+      return RouteNames.checkout;
+    }
     return RouteNames.main;
   }
 }

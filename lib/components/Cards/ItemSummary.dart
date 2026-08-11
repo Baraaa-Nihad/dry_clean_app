@@ -43,9 +43,8 @@ class ItemSummary extends StatelessWidget {
           children: [
             Text(
               localizations
-                      ?.translate('items')
-                      ?.replaceFirst('%d', '$itemCount') ??
-                  'Items ($itemCount)', // Translate "Items"
+                  .translate('items')
+                  .replaceFirst('%d', '$itemCount'),
               style: AppTextStyles.getFontFamily(
                 context,
                 AppTextStyles.regular16Gray80(context).copyWith(
@@ -62,8 +61,7 @@ class ItemSummary extends StatelessWidget {
               child: Row(
                 children: [
                   GradientText(
-                    text: localizations?.translate('show_all') ??
-                        'Show all', // Translate "Show all"
+                    text: localizations.translate('show_all'),
                     style: AppTextStyles.getFontFamily(
                       context,
                       AppTextStyles.bold16GradientSmall(context).copyWith(
@@ -91,11 +89,10 @@ class ItemSummary extends StatelessWidget {
         const SizedBox(height: 24),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          reverse: isRtl,
           child: Row(
             children: items.map((item) {
               return Padding(
-                padding: const EdgeInsets.only(right: 16),
+                padding: const EdgeInsetsDirectional.only(end: 16),
                 child: Stack(
                   children: [
                     ImageLoader(
@@ -103,6 +100,7 @@ class ItemSummary extends StatelessWidget {
                       height: 50,
                       width: 48,
                       borderRadius: 12,
+                      fit: BoxFit.contain,
                     ),
                     Positioned(
                       right: 0,

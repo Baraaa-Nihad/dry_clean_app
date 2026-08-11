@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/services/Providers/AccountExtrasProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/utils/localization.dart';
 
 /// سجلّ تقييمات الزبون السابقة (٢.١.٨).
 ///
@@ -33,6 +34,7 @@ class _MyRatingsScreenState extends State<MyRatingsScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<AccountExtrasProvider>();
+    final localizations = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
@@ -41,24 +43,30 @@ class _MyRatingsScreenState extends State<MyRatingsScreen> {
         foregroundColor: AppColors.gray80,
         elevation: 0,
         title: Text(
-          'تقييماتي',
-          style: AppTextStyles.sfarabicBold
-              .copyWith(fontSize: 16.5, color: AppColors.gray80),
+          localizations.translate('my_ratings'),
+          style: AppTextStyles.getFontFamily(
+            context,
+            AppTextStyles.sfarabicBold.copyWith(
+              fontSize: 16.5,
+              color: AppColors.gray80,
+            ),
+          ),
         ),
       ),
       body: RefreshIndicator(
         color: AppColors.green,
         onRefresh: () =>
             context.read<AccountExtrasProvider>().loadRatings(force: true),
-        child: _body(p),
+        child: _body(p, localizations),
       ),
     );
   }
 
-  Widget _body(AccountExtrasProvider p) {
+  Widget _body(AccountExtrasProvider p, AppLocalizations localizations) {
     if (p.isLoadingRatings && p.ratings.isEmpty) {
       return const Center(
-          child: CircularProgressIndicator(color: AppColors.green));
+        child: CircularProgressIndicator(color: AppColors.green),
+      );
     }
 
     if (p.ratings.isEmpty) {
@@ -74,19 +82,31 @@ class _MyRatingsScreenState extends State<MyRatingsScreen> {
           ),
           const SizedBox(height: 14),
           Text(
-            p.ratingsError ?? 'لم تقيّم أي طلب بعد',
+            p.ratingsError == null
+                ? localizations.translate('more_no_ratings_yet')
+                : localizations.translate(p.ratingsError!),
             textAlign: TextAlign.center,
-            style: AppTextStyles.sfarabicBold
-                .copyWith(fontSize: 15, color: AppColors.gray80),
+            style: AppTextStyles.getFontFamily(
+              context,
+              AppTextStyles.sfarabicBold.copyWith(
+                fontSize: 15,
+                color: AppColors.gray80,
+              ),
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             p.ratingsError == null
-                ? 'بعد استلام طلبك يمكنك تقييم المغسلة والسائق'
-                : 'اسحب للأسفل لإعادة المحاولة',
+                ? localizations.translate('more_ratings_empty_hint')
+                : localizations.translate('more_pull_to_retry'),
             textAlign: TextAlign.center,
-            style: AppTextStyles.sfarabicRegular.copyWith(
-                fontSize: 12.5, color: AppColors.secondaryTextColor),
+            style: AppTextStyles.getFontFamily(
+              context,
+              AppTextStyles.sfarabicRegular.copyWith(
+                fontSize: 12.5,
+                color: AppColors.secondaryTextColor,
+              ),
+            ),
           ),
         ],
       );
@@ -106,6 +126,11 @@ class _RatingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final ratingLabel = (rating.targetName ?? '').trim().isNotEmpty
+        ? rating.targetName!.trim()
+        : localizations.translate(rating.labelKey);
     return Container(
       margin: const EdgeInsets.only(bottom: 11),
       padding: const EdgeInsets.all(15),
@@ -128,11 +153,16 @@ class _RatingCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  rating.label,
+                  ratingLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.sfarabicBold
-                      .copyWith(fontSize: 14.5, color: AppColors.gray80),
+                  style: AppTextStyles.getFontFamily(
+                    context,
+                    AppTextStyles.sfarabicBold.copyWith(
+                      fontSize: 14.5,
+                      color: AppColors.gray80,
+                    ),
+                  ),
                 ),
               ),
               _Stars(score: rating.score),
@@ -142,16 +172,32 @@ class _RatingCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                'طلب #${rating.orderId}',
-                style: AppTextStyles.poppinsRegular.copyWith(
-                    fontSize: 11.5, color: AppColors.secondaryTextColor),
+                localizations.translate(
+                  'more_order_number',
+                  params: {'number': '${rating.orderId}'},
+                ),
+                style: AppTextStyles.getFontFamily(
+                  context,
+                  AppTextStyles.poppinsRegular.copyWith(
+                    fontSize: 11.5,
+                    color: AppColors.secondaryTextColor,
+                  ),
+                ),
               ),
               if (rating.at != null) ...[
                 const SizedBox(width: 8),
                 Text(
-                  DateFormat('d MMMM yyyy', 'ar').format(rating.at!.toLocal()),
-                  style: AppTextStyles.sfarabicRegular.copyWith(
-                      fontSize: 11.5, color: AppColors.secondaryTextColor),
+                  DateFormat(
+                    'd MMMM yyyy',
+                    languageCode,
+                  ).format(rating.at!.toLocal()),
+                  style: AppTextStyles.getFontFamily(
+                    context,
+                    AppTextStyles.sfarabicRegular.copyWith(
+                      fontSize: 11.5,
+                      color: AppColors.secondaryTextColor,
+                    ),
+                  ),
                 ),
               ],
             ],
@@ -167,8 +213,14 @@ class _RatingCard extends StatelessWidget {
               ),
               child: Text(
                 rating.comment!,
-                style: AppTextStyles.sfarabicRegular.copyWith(
-                    fontSize: 13, height: 1.5, color: AppColors.gray70),
+                style: AppTextStyles.getFontFamily(
+                  context,
+                  AppTextStyles.sfarabicRegular.copyWith(
+                    fontSize: 13,
+                    height: 1.5,
+                    color: AppColors.gray70,
+                  ),
+                ),
               ),
             ),
           ],
@@ -185,15 +237,14 @@ class _Stars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        textDirection: TextDirection.rtl,
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(5, (i) {
-          final filled = i < score;
-          return Icon(
-            filled ? Icons.star_rounded : Icons.star_border_rounded,
-            size: 17,
-            color: filled ? AppColors.orangeCard : AppColors.inactiveColor,
-          );
-        }),
+    mainAxisSize: MainAxisSize.min,
+    children: List.generate(5, (i) {
+      final filled = i < score;
+      return Icon(
+        filled ? Icons.star_rounded : Icons.star_border_rounded,
+        size: 17,
+        color: filled ? AppColors.orangeCard : AppColors.inactiveColor,
       );
+    }),
+  );
 }

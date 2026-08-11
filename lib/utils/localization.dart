@@ -34,13 +34,31 @@ class AppLocalizations {
   // Translate method to get a string based on the key
   // and replace placeholders with actual values
   String translate(String key, {Map<String, String>? params}) {
-    String translation = _localizedStrings[key] ?? key;
+    final hasTranslation = _localizedStrings.containsKey(key);
+    String translation = _localizedStrings[key] ?? _readableFallback(key);
+    if (!hasTranslation) {
+      debugPrint(
+        'Missing ${locale.languageCode} translation for key: $key',
+      );
+    }
     if (params != null) {
       params.forEach((placeholder, value) {
         translation = translation.replaceAll('{$placeholder}', value);
       });
     }
     return translation;
+  }
+
+  String _readableFallback(String key) {
+    if (!key.contains('_')) return key;
+
+    final text = key
+        .split('_')
+        .where((part) => part.isNotEmpty)
+        .join(' ')
+        .trim();
+    if (text.isEmpty) return key;
+    return '${text[0].toUpperCase()}${text.substring(1)}';
   }
 }
 
@@ -63,6 +81,8 @@ class _AppLocalizationsDelegate
 
   @override
   bool shouldReload(covariant LocalizationsDelegate<AppLocalizations> old) {
-    return false;
+    // Reload the asset map when MaterialApp rebuilds so newly added or updated
+    // translations are not kept behind an older in-memory copy.
+    return true;
   }
 }

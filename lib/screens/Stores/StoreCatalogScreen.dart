@@ -13,6 +13,7 @@ import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 import 'package:saleem_dry_clean/utils/store_localization.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 String _catalogText(
   BuildContext context,
@@ -446,10 +447,11 @@ class _CompactHeader extends StatelessWidget {
               _HeaderButton(
                 onTap: onBasket,
                 light: true,
-                child: const Icon(
-                  Icons.shopping_basket_outlined,
-                  size: 22,
-                  color: AppColors.gray80,
+                child: SvgPicture.asset(
+                  'assets/Icons/Basket.svg',
+                  width: 20,
+                  height: 20,
+                  fit: BoxFit.contain,
                 ),
               ),
               if (count > 0)

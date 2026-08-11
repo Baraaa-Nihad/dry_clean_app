@@ -40,21 +40,18 @@ class OtherSettingsSection extends StatelessWidget {
 
     void openLangModal() {
       String currentLanguage = currentLocale.languageCode;
-      LangSelectionModal.show(
-        context,
-        fem,
-        currentLanguage,
-        (String currentLanguage) {
-          _changeLanguage(currentLanguage);
-        },
-      );
+      LangSelectionModal.show(context, fem, currentLanguage, (
+        String currentLanguage,
+      ) {
+        _changeLanguage(currentLanguage);
+      });
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          localizations?.translate('Other') ?? "Other",
+          localizations.translate('Other'),
           style: AppTextStyles.getFontFamily(
             context,
             AppTextStyles.regular16Gray80(context).copyWith(
@@ -74,23 +71,22 @@ class OtherSettingsSection extends StatelessWidget {
         if (userSignedIn) ...[
           CustomCard(
             heightType: HeightType.normal,
-            title: 'المغاسل المفضّلة',
+            title: localizations.translate('favorite_laundries'),
             leadingIcon: true,
-            leadingIconPath: 'assets/Icons/comment.svg',
+            leadingIconPath: 'assets/Icons/favoriteLaundries.svg',
             trailingIcon: true,
             trailingIconPath: 'assets/Icons/rightSmallArrow.svg',
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (_) => const FavoriteStoresScreen()),
+              MaterialPageRoute(builder: (_) => const FavoriteStoresScreen()),
             ),
           ),
           SizedBox(height: 12),
           CustomCard(
             heightType: HeightType.normal,
-            title: 'تقييماتي',
+            title: localizations.translate('my_ratings'),
             leadingIcon: true,
-            leadingIconPath: 'assets/Icons/comment.svg',
+            leadingIconPath: 'assets/Icons/myRatings.svg',
             trailingIcon: true,
             trailingIconPath: 'assets/Icons/rightSmallArrow.svg',
             onTap: () => Navigator.push(
@@ -101,15 +97,16 @@ class OtherSettingsSection extends StatelessWidget {
           SizedBox(height: 12),
           CustomCard(
             heightType: HeightType.normal,
-            title: 'إعدادات الإشعارات',
+            title: localizations.translate('notification_settings'),
             leadingIcon: true,
-            leadingIconPath: 'assets/Icons/comment.svg',
+            leadingIconPath: 'assets/Icons/notificationSettings.svg',
             trailingIcon: true,
             trailingIconPath: 'assets/Icons/rightSmallArrow.svg',
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) => const NotificationSettingsScreen()),
+                builder: (_) => const NotificationSettingsScreen(),
+              ),
             ),
           ),
           SizedBox(height: 12),
@@ -117,9 +114,9 @@ class OtherSettingsSection extends StatelessWidget {
 
         CustomCard(
           heightType: HeightType.normal,
-          title: localizations?.translate('App language') ?? "App language",
+          title: localizations.translate('app_language'),
           leadingIcon: true,
-          leadingIconPath: 'assets/Icons/comment.svg',
+          leadingIconPath: 'assets/Icons/appLanguage.svg',
           trailingIcon: true,
           trailingIconPath: 'assets/Icons/rightSmallArrow.svg',
           onTap: openLangModal,
@@ -127,8 +124,7 @@ class OtherSettingsSection extends StatelessWidget {
         SizedBox(height: 12),
         CustomCard(
           heightType: HeightType.normal,
-          title: localizations?.translate('Feedback & Suggestions') ??
-              "Feedback & Suggestions",
+          title: localizations.translate('Feedback & Suggestions'),
           leadingIcon: true,
           leadingIconPath: 'assets/Icons/comment.svg',
           trailingIcon: true,
@@ -150,7 +146,7 @@ class OtherSettingsSection extends StatelessWidget {
         SizedBox(height: 12),
         CustomCard(
           heightType: HeightType.normal,
-          title: localizations?.translate('Contact us') ?? "Contact us",
+          title: localizations.translate('Contact us'),
           leadingIcon: true,
           leadingIconPath: 'assets/Icons/phone.svg',
           trailingIcon: true,
@@ -172,7 +168,7 @@ class OtherSettingsSection extends StatelessWidget {
         SizedBox(height: 12),
         CustomCard(
           heightType: HeightType.normal,
-          title: localizations?.translate('Privacy Policy') ?? "Privacy Policy",
+          title: localizations.translate('Privacy Policy'),
           leadingIcon: true,
           leadingIconPath: 'assets/Icons/privacy.svg',
           trailingIcon: true,
@@ -197,7 +193,7 @@ class OtherSettingsSection extends StatelessWidget {
         SizedBox(height: 12),
         CustomCard(
           heightType: HeightType.normal,
-          title: localizations?.translate('Terms of Use') ?? "Terms of Use",
+          title: localizations.translate('Terms of Use'),
           leadingIcon: true,
           leadingIconPath: 'assets/Icons/terms.svg',
           trailingIcon: true,
@@ -222,7 +218,7 @@ class OtherSettingsSection extends StatelessWidget {
         SizedBox(height: 12),
         CustomCard(
           heightType: HeightType.normal,
-          title: localizations?.translate('Rate app') ?? "Rate app",
+          title: localizations.translate('Rate app'),
           leadingIcon: true,
           leadingIconPath: 'assets/Icons/rate.svg',
           trailingIcon: true,

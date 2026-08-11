@@ -21,13 +21,10 @@ import 'package:saleem_dry_clean/utils/localization.dart';
 class BasketPage extends StatelessWidget {
   final double fem;
 
-  const BasketPage({
-    Key? key,
-    required this.fem,
-  }) : super(key: key);
+  const BasketPage({Key? key, required this.fem}) : super(key: key);
 
   Map<String, Map<String, List<BasketItemData>>>
-      groupItemsByCategoryAndServiceType(List<BasketItemData> items) {
+  groupItemsByCategoryAndServiceType(List<BasketItemData> items) {
     final Map<String, Map<String, List<BasketItemData>>> groupedData = {};
 
     for (var item in items) {
@@ -73,9 +70,10 @@ class BasketPage extends StatelessWidget {
                 title: localizations.translate("no_items_yet"),
                 subtitle: localizations.translate("no_items_basket_message"),
                 showButton: true,
-                buttonAction: () =>
-                    Provider.of<NavigationProvider>(context, listen: false)
-                        .setSelectedIndex(0),
+                buttonAction: () => Provider.of<NavigationProvider>(
+                  context,
+                  listen: false,
+                ).setSelectedIndex(0),
                 buttonText: localizations.translate("add_items_now"),
               )
             : Column(
@@ -126,7 +124,8 @@ class BasketPage extends StatelessWidget {
                                         unit: item.unit,
                                         quantity: item.quantity,
                                         fem: fem,
-                                        serviceType: item.serviceType
+                                        serviceType: item
+                                            .serviceType
                                             .serviceName, // Correct access to serviceName
                                         subCategory: item.subCategory,
                                         onDelete: () {
@@ -196,6 +195,22 @@ class _StoreBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    const translationKey = 'basket_order_from';
+    final translated = localizations.translate(translationKey);
+    final template = translated == translationKey
+        ? (Localizations.localeOf(context).languageCode == 'ar'
+              ? 'طلبك من {store}'
+              : 'Your order from {store}')
+        : translated;
+    final markerIndex = template.indexOf('{store}');
+    final beforeStore = markerIndex < 0
+        ? '$template '
+        : template.substring(0, markerIndex);
+    final afterStore = markerIndex < 0
+        ? ''
+        : template.substring(markerIndex + '{store}'.length);
+
     return Container(
       width: double.infinity,
       color: AppColors.white,
@@ -210,16 +225,23 @@ class _StoreBanner extends StatelessWidget {
           const SizedBox(width: 9),
           Expanded(
             child: RichText(
+              textDirection: Directionality.of(context),
+              textAlign: TextAlign.start,
               text: TextSpan(
                 style: AppTextStyles.sfarabicRegular.copyWith(
-                    fontSize: 13, color: AppColors.secondaryTextColor),
+                  fontSize: 13,
+                  color: AppColors.secondaryTextColor,
+                ),
                 children: [
-                  const TextSpan(text: 'طلبك من '),
+                  TextSpan(text: beforeStore),
                   TextSpan(
                     text: storeName,
-                    style: AppTextStyles.sfarabicBold
-                        .copyWith(fontSize: 13.5, color: AppColors.gray80),
+                    style: AppTextStyles.sfarabicBold.copyWith(
+                      fontSize: 13.5,
+                      color: AppColors.gray80,
+                    ),
                   ),
+                  if (afterStore.isNotEmpty) TextSpan(text: afterStore),
                 ],
               ),
             ),
