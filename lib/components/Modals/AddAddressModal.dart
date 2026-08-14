@@ -118,17 +118,17 @@ class _NewAddressModalState extends State<NewAddressModal> {
     final governateName = widget.isNewAddress && selectedGovernate != null
         ? selectedGovernate.name
         : (isRtl
-                  ? widget.item['governateName_ar']
-                  : widget.item['governateName_en']) ??
-              widget.item['governate'] ??
-              selectedGovernate?.name ??
-              '';
+                ? widget.item['governateName_ar']
+                : widget.item['governateName_en']) ??
+            widget.item['governate'] ??
+            selectedGovernate?.name ??
+            '';
     final areaName = widget.isNewAddress && selectedArea != null
         ? selectedArea.name
         : (isRtl ? widget.item['areaName_ar'] : widget.item['areaName_en']) ??
-              widget.item['area'] ??
-              selectedArea?.name ??
-              '';
+            widget.item['area'] ??
+            selectedArea?.name ??
+            '';
 
     setState(() {
       _governateController.text = governateName.toString();
@@ -137,8 +137,8 @@ class _NewAddressModalState extends State<NewAddressModal> {
       final governateId = widget.isNewAddress && selectedGovernate != null
           ? selectedGovernate.id
           : widget.item['governateId'] ??
-                widget.item['governate_id'] ??
-                selectedGovernate?.id;
+              widget.item['governate_id'] ??
+              selectedGovernate?.id;
       final areaId = widget.isNewAddress && selectedArea != null
           ? selectedArea.id
           : widget.item['areaId'] ?? widget.item['area_id'] ?? selectedArea?.id;
@@ -217,8 +217,7 @@ class _NewAddressModalState extends State<NewAddressModal> {
 
   void _validateForm() {
     setState(() {
-      _isFormValid =
-          _addressNameController.text.isNotEmpty &&
+      _isFormValid = _addressNameController.text.isNotEmpty &&
           _governateController.text.isNotEmpty &&
           _areaController.text.isNotEmpty &&
           (widget.item['areaId'] ?? widget.item['area_id']) != null &&
@@ -243,8 +242,8 @@ class _NewAddressModalState extends State<NewAddressModal> {
     widget.item['areaId'] ??= widget.item['area_id'];
 
     if (_selectedIndex >= 0 && _selectedIndex < addressNames.length) {
-      widget.item['addressNameId'] = addressNames[_selectedIndex]['id']
-          .toString();
+      widget.item['addressNameId'] =
+          addressNames[_selectedIndex]['id'].toString();
     }
 
     if (widget.isNewAddress) {
@@ -327,10 +326,8 @@ class _NewAddressModalState extends State<NewAddressModal> {
                         onItemSelected: (index) {
                           setState(() {
                             _selectedIndex = index;
-                            _addressNameController.text =
-                                addressNames[index][isRtl
-                                    ? 'name_ar'
-                                    : 'name_en'] ??
+                            _addressNameController.text = addressNames[index]
+                                    [isRtl ? 'name_ar' : 'name_en'] ??
                                 '';
                             _isCustomName = false;
                             _validateForm();
@@ -338,8 +335,33 @@ class _NewAddressModalState extends State<NewAddressModal> {
                           widget.onItemSelected(index);
                         },
                       )
+                    // ★ حالة الفراغ ★
+                    //
+                    // كانت هنا جملة إنجليزية ثابتة تظهر للزبون العربي كما
+                    // هي، ثم أُبدلت بنصّ فارغ — وذلك أسوأ: الزبون يرى مساحة
+                    // بيضاء بلا سبب، ولا يعرف أن عليه كتابة اسم بنفسه.
+                    //
+                    // فصارت رسالة مترجَمة تقول ما وقع وما العمل.
                     else
-                      Center(child: Text('No address names available')),
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24.0,
+                          vertical: 8 * widget.fem,
+                        ),
+                        child: Text(
+                          localizations.translate('no_address_names_available'),
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.getFontFamily(
+                            context,
+                            AppTextStyles.regular16Gray80(context).copyWith(
+                              fontSize: 13.0 * widget.fem,
+                              fontWeight: FontWeight.w500,
+                              height: 1.5,
+                              color: AppColors.gray50,
+                            ),
+                          ),
+                        ),
+                      ),
 
                     // Add padding for the rest of the content
                     Padding(
@@ -486,9 +508,8 @@ class _NewAddressModalState extends State<NewAddressModal> {
                                   buttonWidth: "medium",
                                   isDisabled: !_isFormValid || _isSubmitting,
                                   text: localizations.translate('add'),
-                                  onPressed: _isFormValid
-                                      ? _handleSubmit
-                                      : null,
+                                  onPressed:
+                                      _isFormValid ? _handleSubmit : null,
                                 ),
                               ),
                               SizedBox(width: 16 * widget.fem),

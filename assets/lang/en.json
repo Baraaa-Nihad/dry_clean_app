@@ -274,6 +274,7 @@
   "add_address_details": "Add Address Details",
   "fill_out_location_info": "Please fill out the information for the location where you want us to pick up from and deliver to your laundry.",
   "or_enter_custom_name": "Or enter custom name",
+  "no_address_names_available": "No ready address names — type your own below",
   "address_name": "Address Name",
   "governate": "Governate",
   "area": "Area",
