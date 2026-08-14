@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:saleem_dry_clean/services/ApiClient/ApiClient.dart';
@@ -79,7 +78,6 @@ class StoresProvider with ChangeNotifier {
   List<Store> _stores = [];
   bool _isLoading = false;
   String? _error;
-  bool _isPreviewData = false;
 
   String _search = '';
   StoreSort _sort = StoreSort.rating;
@@ -96,7 +94,6 @@ class StoresProvider with ChangeNotifier {
   List<Store> get stores => _visible;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isPreviewData => _isPreviewData;
   String get search => _search;
   StoreSort get sort => _sort;
   bool get favoritesOnly => _favoritesOnly;
@@ -142,7 +139,6 @@ class StoresProvider with ChangeNotifier {
     if (_areaId == areaId) return;
     _areaId = areaId;
     _stores = [];
-    _isPreviewData = false;
     notifyListeners();
     load(force: true);
   }
@@ -189,26 +185,19 @@ class StoresProvider with ChangeNotifier {
         }
       }
 
-      // Complete the list to four cards in debug builds so the stacked layout
-      // can be reviewed without creating fake production laundries.
-      if (kDebugMode &&
-          loaded.length < 4 &&
-          _search.trim().isEmpty &&
-          !_favoritesOnly) {
-        final missing = 4 - loaded.length;
-        _stores = [
-          ...loaded,
-          ..._previewStoresForSort().take(missing),
-        ];
-        _isPreviewData = true;
-      } else {
-        _stores = loaded;
-        _isPreviewData = false;
-      }
+      // ★ ما يُعرض هو ما ردّه الخادم — لا أكثر ★
+      //
+      // كانت القائمة تُكمَّل إلى أربع بطاقات ببيانات مخترَعة حين ترد أقلّ،
+      // ليُراجَع تصميم الكرت المتراكم. والثمن أن الزبون يرى مغاسل غير
+      // موجودة تحمل تقييمات وعروضاً وأسعاراً لا مصدر لها — ولو ضغط
+      // إحداها لم يحدث شيء.
+      //
+      // ومنطقةٌ فيها محل واحد يجب أن تُظهر محلاً واحداً: ذاك هو الواقع،
+      // وإخفاؤه بثلاثة أشباح يخفي مشكلة التغطية عمّن يملك حلّها.
+      _stores = loaded;
     } catch (_) {
       if (seq != _requestSeq) return;
       _stores = [];
-      _isPreviewData = false;
       _error = 'server_connection_error';
     } finally {
       if (seq == _requestSeq) {
@@ -314,98 +303,4 @@ class StoresProvider with ChangeNotifier {
         workingHours: s.workingHours,
       );
 
-  List<Store> _previewStoresForSort() {
-    final english = _lang == 'en';
-    final stores = <Store>[
-      Store(
-        id: -1,
-        name: english ? 'Saleem Modern Laundry' : 'مغسلة سليم الحديثة',
-        description: english
-            ? 'Complete care for clothes and delicate fabrics'
-            : 'عناية متكاملة بالملابس والأقمشة الحسّاسة',
-        rating: 4.9,
-        ratingCount: 128,
-        ordersCount: 642,
-        productsCount: 34,
-        averagePrice: 14,
-        minOrderTotal: 30,
-        turnaroundHours: 24,
-        hasActiveOffer: true,
-        discountPercent: 20,
-        isPromoted: true,
-        workingHours:
-            english ? 'Daily 8:00 AM - 10:00 PM' : 'يومياً 8:00 - 22:00',
-      ),
-      Store(
-        id: -2,
-        name: english ? 'Al Nada Laundry' : 'مغسلة الندى',
-        description: english
-            ? 'Fast washing and ironing with attention to every detail'
-            : 'غسيل وكوي سريع مع اهتمام بأدق التفاصيل',
-        rating: 4.7,
-        ratingCount: 86,
-        ordersCount: 391,
-        productsCount: 27,
-        averagePrice: 12,
-        minOrderTotal: 25,
-        turnaroundHours: 48,
-        hasActiveOffer: true,
-        discountPercent: 15,
-        workingHours: english
-            ? 'Saturday - Thursday 9:00 AM - 9:00 PM'
-            : 'السبت - الخميس 9:00 - 21:00',
-      ),
-      Store(
-        id: -3,
-        name: english ? 'Clean Touch Laundry' : 'مغسلة لمسة نظافة',
-        description: english
-            ? 'Professional cleaning with results your clothes deserve'
-            : 'تنظيف احترافي ونتيجة تليق بملابسك',
-        rating: 4.6,
-        ratingCount: 54,
-        ordersCount: 218,
-        productsCount: 19,
-        averagePrice: 10,
-        minOrderTotal: 20,
-        turnaroundHours: 72,
-        workingHours:
-            english ? 'Daily 10:00 AM - 8:00 PM' : 'يومياً 10:00 - 20:00',
-      ),
-      Store(
-        id: -4,
-        name: english ? 'White Cloud Laundry' : 'مغسلة الغيمة البيضاء',
-        description: english
-            ? 'Gentle fabric care and precise finishing'
-            : 'عناية لطيفة بالأقمشة وتشطيب دقيق',
-        rating: 4.5,
-        ratingCount: 41,
-        ordersCount: 176,
-        productsCount: 23,
-        averagePrice: 13,
-        minOrderTotal: 25,
-        turnaroundHours: 36,
-        workingHours: english
-            ? 'Saturday - Thursday 8:30 AM - 9:30 PM'
-            : 'السبت - الخميس 8:30 - 21:30',
-      ),
-    ];
-
-    switch (_sort) {
-      case StoreSort.popular:
-        stores.sort((a, b) => b.ordersCount.compareTo(a.ordersCount));
-        break;
-      case StoreSort.priceLow:
-        stores.sort(
-            (a, b) => (a.averagePrice ?? 0).compareTo(b.averagePrice ?? 0));
-        break;
-      case StoreSort.priceHigh:
-        stores.sort(
-            (a, b) => (b.averagePrice ?? 0).compareTo(a.averagePrice ?? 0));
-        break;
-      case StoreSort.rating:
-        stores.sort((a, b) => b.rating.compareTo(a.rating));
-        break;
-    }
-    return stores;
-  }
 }

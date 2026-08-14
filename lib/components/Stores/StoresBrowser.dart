@@ -68,16 +68,6 @@ class _StoresBrowserState extends State<StoresBrowser> {
   }
 
   void _open(Store store) {
-    if (store.id < 0) {
-      final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.translate('stores_preview_message')),
-        ),
-      );
-      return;
-    }
-
     NavigatorService.navigateTo(
       RouteNames.storeCatalog,
       arguments: {'store': store},
@@ -220,8 +210,6 @@ class _StoresBrowserState extends State<StoresBrowser> {
               onFiltersTap: _showFilters,
             ),
           ),
-          if (p.isPreviewData)
-            const SliverToBoxAdapter(child: _PreviewNotice()),
           _body(p),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
@@ -581,43 +569,6 @@ class _GradientIcon extends StatelessWidget {
       blendMode: BlendMode.srcIn,
       shaderCallback: (bounds) => AppColors.brandGradient.createShader(bounds),
       child: Icon(icon, size: size, color: AppColors.white),
-    );
-  }
-}
-
-class _PreviewNotice extends StatelessWidget {
-  const _PreviewNotice();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: AppColors.blueCardBackgourd,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.gray20),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.visibility_outlined,
-            size: 18,
-            color: AppColors.blueCard,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              l10n.translate('stores_preview_notice'),
-              style: AppTextStyles.sfarabicMedium.copyWith(
-                fontSize: 11.5,
-                color: AppColors.gray70,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
