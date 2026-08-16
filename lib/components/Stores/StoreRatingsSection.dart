@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:saleem_dry_clean/ui.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
+import 'package:saleem_dry_clean/components/Rating/RatingStars.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/theme/AppIcons.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 
 /// كتلة تقييم المحل (٢.١.٣): متوسّط عام، ثلاثة محاور، وتعليقات تُفتح
@@ -214,8 +217,7 @@ class _AxisRow extends StatelessWidget {
                   .copyWith(fontSize: 13.5, color: AppColors.gray80),
             ),
             const SizedBox(width: 3),
-            const Icon(Icons.star_rounded,
-                size: 16, color: AppColors.orangeCard),
+            SvgPicture.asset(AppIcons.ratingStar, width: 16, height: 16),
             const SizedBox(width: 5),
             Text(
               '($count)',
@@ -260,19 +262,7 @@ class _CommentTile extends StatelessWidget {
                     .copyWith(fontSize: 12.5, color: AppColors.gray80),
               ),
               const SizedBox(width: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                  5,
-                  (i) => Icon(
-                    i < score ? Icons.star_rounded : Icons.star_border_rounded,
-                    size: 13,
-                    color: i < score
-                        ? AppColors.orangeCard
-                        : AppColors.inactiveColor,
-                  ),
-                ),
-              ),
+              RatingStars(score: score.toDouble(), size: 13, gap: 0.5),
             ],
           ),
           const SizedBox(height: 6),

@@ -1,5 +1,6 @@
 import 'package:saleem_dry_clean/ui.dart';
 import 'package:provider/provider.dart';
+import 'package:saleem_dry_clean/components/Rating/RatingStars.dart';
 import 'package:saleem_dry_clean/services/Models/OrderTracking.dart';
 import 'package:saleem_dry_clean/services/Providers/OrderTrackingProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
@@ -224,23 +225,17 @@ class _Stars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      textDirection: TextDirection.rtl,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(5, (i) {
-        final value = i + 1;
-        final filled = value <= score;
-        return IconButton(
-          onPressed: () => onChanged(value),
-          iconSize: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 3),
-          constraints: const BoxConstraints(),
-          icon: Icon(
-            filled ? Icons.star_rounded : Icons.star_border_rounded,
-            color: filled ? AppColors.orangeCard : AppColors.inactiveColor,
-          ),
-        );
-      }),
+    // النجوم تُملأ من اليمين في العربية: الأولى هي أوّل ما تراه العين
+    return Center(
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: RatingStars(
+          score: score.toDouble(),
+          size: 36,
+          gap: 3,
+          onRate: onChanged,
+        ),
+      ),
     );
   }
 }

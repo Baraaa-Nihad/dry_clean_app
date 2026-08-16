@@ -16,9 +16,17 @@ class AppIcons {
 
   // ── التقييم ──
   //
-  // ممتلئة: التقييم حقيقة مثبتة لا خيار يُضغط. وتُقابلها في شاشات
-  // إدخال التقييم نجومٌ ذهبية قابلة للضغط — تلك أداة اختيار لا عرض.
+  // ثلاث حالات: ممتلئة وفارغة ونصفية. والثلاث تخدم العرض والإدخال معاً
+  // — كانت شاشات الإدخال على نجوم ذهبية من Material، فتبدو أداةً من
+  // تطبيق آخر داخل تطبيقنا.
   static const ratingStar = 'assets/Icons/storeRatingStar.svg';
+  static const ratingStarOutline = 'assets/Icons/storeRatingStarOutline.svg';
+
+  /// نصف نجمة — الحشو مقصوص عند المنتصف والحدّ كامل.
+  ///
+  /// تلزم لعرض متوسّط كسريّ: تقييم ‎4.3‎ بأربع نجوم يكذب بنقصان، وبخمس
+  /// يكذب بزيادة. والنصف يقول الحقيقة بلا رقم.
+  static const ratingStarHalf = 'assets/Icons/storeRatingStarHalf.svg';
 
   // ── المفضّلة ──
   //
@@ -39,6 +47,8 @@ class AppIcons {
   /// كلّها — للاختبار الذي يرسمها ويتحقّق من سلامتها
   static const all = <String>[
     ratingStar,
+    ratingStarOutline,
+    ratingStarHalf,
     heart,
     heartFilled,
     workingHours,

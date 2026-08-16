@@ -1,4 +1,5 @@
 import 'package:saleem_dry_clean/ui.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/screens/OrdersPage/damage_claim_sheet.dart';
@@ -8,6 +9,7 @@ import 'package:saleem_dry_clean/services/Models/OrderTracking.dart';
 import 'package:saleem_dry_clean/services/Providers/OrderTrackingProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/theme/AppIcons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// تتبّع الطلب — أين وصل، ومتى، وماذا بقي.
@@ -321,8 +323,8 @@ class _DriverCard extends StatelessWidget {
                         ),
                         if (driver.rating != null && driver.rating! > 0) ...[
                           const SizedBox(width: 7),
-                          const Icon(Icons.star_rounded,
-                              size: 15, color: AppColors.orangeCard),
+                          SvgPicture.asset(AppIcons.ratingStar,
+                              width: 15, height: 15),
                           const SizedBox(width: 2),
                           Text(
                             driver.rating!.toStringAsFixed(1),

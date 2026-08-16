@@ -3,6 +3,7 @@ import 'package:saleem_dry_clean/ui.dart';
 // فيحجب نوع Flutter ويكسر أي اتجاه صريح في الملف
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:provider/provider.dart';
+import 'package:saleem_dry_clean/components/Rating/RatingStars.dart';
 import 'package:saleem_dry_clean/services/Providers/AccountExtrasProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
@@ -236,15 +237,9 @@ class _Stars extends StatelessWidget {
   final int score;
 
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: List.generate(5, (i) {
-      final filled = i < score;
-      return Icon(
-        filled ? Icons.star_rounded : Icons.star_border_rounded,
-        size: 17,
-        color: filled ? AppColors.orangeCard : AppColors.inactiveColor,
-      );
-    }),
+  Widget build(BuildContext context) => RatingStars(
+    score: score.toDouble(),
+    size: 17,
+    gap: 1,
   );
 }
