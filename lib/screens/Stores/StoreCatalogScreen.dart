@@ -11,6 +11,7 @@ import 'package:saleem_dry_clean/services/Providers/OrderProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/StoreCatalogProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/theme/AppIcons.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 import 'package:saleem_dry_clean/utils/store_localization.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -742,12 +743,12 @@ class _StoreSummary extends StatelessWidget {
             children: [
               if ((store.workingHours ?? '').trim().isNotEmpty)
                 _InfoPill(
-                  icon: Icons.schedule_rounded,
+                  icon: AppIcons.workingHours,
                   label: store.workingHours!,
                 ),
               if (store.minOrderTotal > 0)
                 _InfoPill(
-                  icon: Icons.shopping_bag_outlined,
+                  icon: AppIcons.minOrder,
                   label: l10n.translate(
                     'store_min_order_value',
                     params: {'amount': store.minOrderTotal.toStringAsFixed(0)},
@@ -755,7 +756,7 @@ class _StoreSummary extends StatelessWidget {
                 ),
               if (turnaround.isNotEmpty)
                 _InfoPill(
-                  icon: Icons.timelapse_rounded,
+                  icon: AppIcons.turnaround,
                   label: l10n.translate(
                     'store_ready_in',
                     params: {'duration': turnaround},
@@ -763,7 +764,7 @@ class _StoreSummary extends StatelessWidget {
                 ),
               if (store.hasRating)
                 _InfoPill(
-                  icon: Icons.star_rounded,
+                  icon: AppIcons.ratingStar,
                   label:
                       '${store.rating.toStringAsFixed(1)} (${store.ratingCount})',
                 ),
@@ -778,7 +779,8 @@ class _StoreSummary extends StatelessWidget {
 class _InfoPill extends StatelessWidget {
   const _InfoPill({required this.icon, required this.label});
 
-  final IconData icon;
+  /// مسار SVG — الشارة تشارك لغة أيقونات البطاقة
+  final String icon;
   final String label;
 
   @override
@@ -791,7 +793,7 @@ class _InfoPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: AppColors.brandAccent),
+            SvgPicture.asset(icon, width: 14, height: 14),
             const SizedBox(width: 5),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 230),

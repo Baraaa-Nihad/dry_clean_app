@@ -1,4 +1,5 @@
 import 'package:saleem_dry_clean/ui.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:saleem_dry_clean/components/StoreCard.dart';
 import 'package:saleem_dry_clean/services/Models/Store.dart';
@@ -7,6 +8,7 @@ import 'package:saleem_dry_clean/services/Providers/LocationScopeProvider.dart';
 import 'package:saleem_dry_clean/services/Providers/StoresProvider.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/theme/AppIcons.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 import 'package:saleem_dry_clean/utils/route_names.dart';
 import 'package:saleem_dry_clean/utils/store_favorite_action.dart';
@@ -127,13 +129,14 @@ class _StoresBrowserState extends State<StoresBrowser> {
                     value: provider.favoritesOnly,
                     onChanged: provider.setFavoritesOnly,
                     activeThumbColor: AppColors.brandAccent,
-                    secondary: Icon(
+                    // القلب نفسه الذي في البطاقة: الفلتر يقول «أرِني
+                    // ما وضعتُ عليه هذا» — فاختلاف الشكل يقطع الصلة
+                    secondary: SvgPicture.asset(
                       provider.favoritesOnly
-                          ? Icons.favorite
-                          : Icons.favorite_border,
-                      color: provider.favoritesOnly
-                          ? AppColors.red
-                          : AppColors.gray60,
+                          ? AppIcons.heartFilled
+                          : AppIcons.heart,
+                      width: 22,
+                      height: 22,
                     ),
                     title: Text(
                       l10n.translate('stores_favorites_only'),

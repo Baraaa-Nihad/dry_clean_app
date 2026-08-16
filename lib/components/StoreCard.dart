@@ -4,26 +4,8 @@ import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/services/Models/Store.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
+import 'package:saleem_dry_clean/theme/AppIcons.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
-
-/// أيقونات البطاقة — نفس لغة أيقونات صفحة الحساب.
-///
-/// ★ لماذا ملفات SVG لا أيقونات Material ★
-///
-/// أيقونات الإعدادات مرسومة بخطّ ‎1.5‎ وتدرّج العلامة ‎#00E213→#01B5CF‎.
-/// وأيقونات Material لها سُمك آخر وزوايا أخرى ولون مصمت — فوضعُها إلى
-/// جانب تلك يجعل الشاشتين تبدوان من تطبيقين.
-///
-/// والمسارات هنا لا مبعثرة في الشيفرة: تبديل أيقونة يقع في سطر.
-class _CardIcons {
-  static const star = 'assets/Icons/storeRatingStar.svg';
-  static const heart = 'assets/Icons/storeFavoriteHeart.svg';
-  static const heartFilled = 'assets/Icons/storeFavoriteHeartFilled.svg';
-  static const clock = 'assets/Icons/storeWorkingHours.svg';
-  static const minOrder = 'assets/Icons/storeMinOrder.svg';
-  static const offer = 'assets/Icons/storeOffer.svg';
-  static const info = 'assets/Icons/storeInfo.svg';
-}
 
 /// بطاقة المحل في قائمة الاختيار.
 ///
@@ -89,7 +71,7 @@ class StoreCard extends StatelessWidget {
                         const SizedBox(height: 12),
                         if (store.hasActiveOffer)
                           _StatusPill(
-                            icon: _CardIcons.offer,
+                            icon: AppIcons.offer,
                             label: (store.discountPercent ?? 0) > 0
                                 ? l10n.translate(
                                     'store_discount_up_to',
@@ -102,7 +84,7 @@ class StoreCard extends StatelessWidget {
                           ),
                         if (disabled)
                           _StatusPill(
-                            icon: _CardIcons.info,
+                            icon: AppIcons.info,
                             label: l10n.translate('store_pricing_unavailable'),
                             background: AppColors.orangeCardBackgourd,
                           ),
@@ -190,8 +172,8 @@ class _StoreHeader extends StatelessWidget {
                     ),
                     child: SvgPicture.asset(
                       store.isFavorite
-                          ? _CardIcons.heartFilled
-                          : _CardIcons.heart,
+                          ? AppIcons.heartFilled
+                          : AppIcons.heart,
                       key: ValueKey<bool>(store.isFavorite),
                       width: 18,
                       height: 18,
@@ -255,7 +237,7 @@ class _CompactRating extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         // ممتلئة: التقييم حقيقة مثبتة لا خيار يُضغط
-        SvgPicture.asset(_CardIcons.star, width: 17, height: 17),
+        SvgPicture.asset(AppIcons.ratingStar, width: 17, height: 17),
         const SizedBox(width: 3),
         Text(
           store.hasRating
@@ -293,14 +275,14 @@ class _StoreDetails extends StatelessWidget {
     final details = <_DetailData>[
       if (workingHours.isNotEmpty)
         _DetailData(
-          _CardIcons.clock,
+          AppIcons.workingHours,
           l10n.translate('store_working_hours'),
           workingHours,
           AppColors.blueCardBackgourd,
         ),
       if (store.minOrderTotal > 0)
         _DetailData(
-          _CardIcons.minOrder,
+          AppIcons.minOrder,
           l10n.translate('store_min_order'),
           '${store.minOrderTotal.toStringAsFixed(0)} ₪',
           AppColors.purbleCardBackgourd,
@@ -420,14 +402,23 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
+/// ما يُعرض حين لا شعار للمحل.
+///
+/// ★ لماذا لا حرفٌ ولا صورة عامّة ★
+///
+/// الحرف الأول من الاسم يجعل «مغسلة النور» و«مغسلة النجاح» بطاقتين
+/// متطابقتين. وصورة مغسلة عامّة تُقرأ كأنها صورة هذا المحل فعلاً —
+/// والزبون يبني عليها انطباعاً كاذباً.
+///
+/// فالبديل رمزٌ محايد صريح: هذا محلّ، ولا صورة له بعد. وهو بلغة أيقونات
+/// التطبيق نفسها كي لا يبدو المكان معطوباً.
 class _LogoFallback extends StatelessWidget {
   const _LogoFallback();
 
   @override
   Widget build(BuildContext context) => Container(
-        color: AppColors.blueCardBackgourd,
+        color: AppColors.brandSoft,
         alignment: Alignment.center,
-        child: const Icon(Icons.local_laundry_service_outlined,
-            size: 26, color: AppColors.blueCard),
+        child: SvgPicture.asset(AppIcons.storeLogoFallback, width: 27, height: 27),
       );
 }

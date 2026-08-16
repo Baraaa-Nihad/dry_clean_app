@@ -13,32 +13,20 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-/// المسارات كما في `_CardIcons` — مكرّرة هنا عمداً.
-///
-/// الصنف خاصّ بملفّه (بادئة `_`)، واستيراده يوجب فتحه للعموم لأجل
-/// اختبار. والتكرار هنا مقصود: لو غُيّر مسار في الشيفرة ونُسي هنا،
-/// سقط الاختبار — وذاك تنبيه لا إزعاج.
-const _icons = <String, String>{
-  'النجمة': 'assets/Icons/storeRatingStar.svg',
-  'القلب الفارغ': 'assets/Icons/storeFavoriteHeart.svg',
-  'القلب الممتلئ': 'assets/Icons/storeFavoriteHeartFilled.svg',
-  'الساعة': 'assets/Icons/storeWorkingHours.svg',
-  'أقلّ طلب': 'assets/Icons/storeMinOrder.svg',
-  'العرض': 'assets/Icons/storeOffer.svg',
-  'المعلومة': 'assets/Icons/storeInfo.svg',
-};
+import 'package:saleem_dry_clean/theme/AppIcons.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('أيقونات بطاقة المحل', () {
-    for (final entry in _icons.entries) {
-      testWidgets('${entry.key} تُرسم بلا خطأ', (tester) async {
+    // الفهرس هو المصدر: أيقونة تُضاف إليه تُفحص هنا تلقائياً، ولا
+    // تحتاج من يتذكّر أن يضيفها للاختبار
+    for (final path in AppIcons.all) {
+      testWidgets('$path تُرسم بلا خطأ', (tester) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Center(
-              child: SvgPicture.asset(entry.value, width: 24, height: 24),
+              child: SvgPicture.asset(path, width: 24, height: 24),
             ),
           ),
         );
@@ -47,7 +35,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(SvgPicture), findsOneWidget);
-        expect(tester.takeException(), isNull, reason: entry.value);
+        expect(tester.takeException(), isNull, reason: path);
       });
     }
 
@@ -58,9 +46,8 @@ void main() {
     test('القلب الممتلئ يشارك الفارغ مساره', () {
       // القراءة من القرص لا من حزمة الأصول: `rootBundle` في بيئة
       // الاختبار يحتاج ربطاً حيّاً، والملفّان على القرص أمامنا.
-      final empty = File('assets/Icons/storeFavoriteHeart.svg').readAsStringSync();
-      final filled =
-          File('assets/Icons/storeFavoriteHeartFilled.svg').readAsStringSync();
+      final empty = File(AppIcons.heart).readAsStringSync();
+      final filled = File(AppIcons.heartFilled).readAsStringSync();
 
       final path = RegExp(r'M12 20\.25C12 20\.25 3\.75 15\.65');
       expect(path.hasMatch(empty), isTrue, reason: 'الفارغ');
@@ -72,7 +59,7 @@ void main() {
     });
 
     test('كلّها على تدرّج العلامة نفسه', () {
-      for (final path in _icons.values) {
+      for (final path in AppIcons.all) {
         final file = File(path);
         expect(file.existsSync(), isTrue, reason: 'مفقود: $path');
         final svg = file.readAsStringSync();
