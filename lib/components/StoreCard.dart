@@ -1,9 +1,29 @@
 import 'package:saleem_dry_clean/ui.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/services/Models/Store.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
 import 'package:saleem_dry_clean/theme/AppColors.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
+
+/// أيقونات البطاقة — نفس لغة أيقونات صفحة الحساب.
+///
+/// ★ لماذا ملفات SVG لا أيقونات Material ★
+///
+/// أيقونات الإعدادات مرسومة بخطّ ‎1.5‎ وتدرّج العلامة ‎#00E213→#01B5CF‎.
+/// وأيقونات Material لها سُمك آخر وزوايا أخرى ولون مصمت — فوضعُها إلى
+/// جانب تلك يجعل الشاشتين تبدوان من تطبيقين.
+///
+/// والمسارات هنا لا مبعثرة في الشيفرة: تبديل أيقونة يقع في سطر.
+class _CardIcons {
+  static const star = 'assets/Icons/storeRatingStar.svg';
+  static const heart = 'assets/Icons/storeFavoriteHeart.svg';
+  static const heartFilled = 'assets/Icons/storeFavoriteHeartFilled.svg';
+  static const clock = 'assets/Icons/storeWorkingHours.svg';
+  static const minOrder = 'assets/Icons/storeMinOrder.svg';
+  static const offer = 'assets/Icons/storeOffer.svg';
+  static const info = 'assets/Icons/storeInfo.svg';
+}
 
 /// بطاقة المحل في قائمة الاختيار.
 ///
@@ -69,7 +89,7 @@ class StoreCard extends StatelessWidget {
                         const SizedBox(height: 12),
                         if (store.hasActiveOffer)
                           _StatusPill(
-                            icon: Icons.local_offer_outlined,
+                            icon: _CardIcons.offer,
                             label: (store.discountPercent ?? 0) > 0
                                 ? l10n.translate(
                                     'store_discount_up_to',
@@ -78,14 +98,12 @@ class StoreCard extends StatelessWidget {
                                     },
                                   )
                                 : l10n.translate('store_offer_available'),
-                            color: AppColors.orangeCard,
                             background: AppColors.orangeCardBackgourd,
                           ),
                         if (disabled)
                           _StatusPill(
-                            icon: Icons.info_outline_rounded,
+                            icon: _CardIcons.info,
                             label: l10n.translate('store_pricing_unavailable'),
-                            color: AppColors.orangeCard,
                             background: AppColors.orangeCardBackgourd,
                           ),
                       ],
@@ -157,10 +175,27 @@ class _StoreHeader extends StatelessWidget {
                 onTap: onFavoriteTap,
                 child: Padding(
                   padding: const EdgeInsets.all(7),
-                  child: Icon(
-                    store.isFavorite ? Icons.favorite : Icons.favorite_border,
-                    size: 18,
-                    color: store.isFavorite ? AppColors.red : AppColors.gray50,
+                  // ★ الفراغ والامتلاء ★
+                  //
+                  // القلب فارغ حتى يُضغط: الشكل نفسه يحمل الحالتين، فلا
+                  // يتعلّم الزبون أيقونتين لمعنى واحد.
+                  //
+                  // والانتقال متدرّج لا قفزة — الضغط يقع والقلب يمتلئ
+                  // أمام العين، فيتأكّد أن فعله وصل.
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    transitionBuilder: (child, animation) => ScaleTransition(
+                      scale: animation,
+                      child: FadeTransition(opacity: animation, child: child),
+                    ),
+                    child: SvgPicture.asset(
+                      store.isFavorite
+                          ? _CardIcons.heartFilled
+                          : _CardIcons.heart,
+                      key: ValueKey<bool>(store.isFavorite),
+                      width: 18,
+                      height: 18,
+                    ),
                   ),
                 ),
               ),
@@ -219,7 +254,8 @@ class _CompactRating extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.star_rounded, size: 18, color: AppColors.orangeCard),
+        // ممتلئة: التقييم حقيقة مثبتة لا خيار يُضغط
+        SvgPicture.asset(_CardIcons.star, width: 17, height: 17),
         const SizedBox(width: 3),
         Text(
           store.hasRating
@@ -257,18 +293,16 @@ class _StoreDetails extends StatelessWidget {
     final details = <_DetailData>[
       if (workingHours.isNotEmpty)
         _DetailData(
-          Icons.access_time_rounded,
+          _CardIcons.clock,
           l10n.translate('store_working_hours'),
           workingHours,
-          AppColors.blueCard,
           AppColors.blueCardBackgourd,
         ),
       if (store.minOrderTotal > 0)
         _DetailData(
-          Icons.account_balance_wallet_outlined,
+          _CardIcons.minOrder,
           l10n.translate('store_min_order'),
           '${store.minOrderTotal.toStringAsFixed(0)} ₪',
-          AppColors.blueCard,
           AppColors.purbleCardBackgourd,
         ),
     ];
@@ -305,7 +339,7 @@ class _DetailTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(9),
             ),
             alignment: Alignment.center,
-            child: Icon(data.icon, size: 16, color: data.color),
+            child: SvgPicture.asset(data.icon, width: 16, height: 16),
           ),
           const SizedBox(width: 5),
           Expanded(
@@ -336,18 +370,13 @@ class _DetailTile extends StatelessWidget {
 }
 
 class _DetailData {
-  const _DetailData(
-    this.icon,
-    this.label,
-    this.value,
-    this.color,
-    this.background,
-  );
+  const _DetailData(this.icon, this.label, this.value, this.background);
 
-  final IconData icon;
+  /// مسار ملفّ SVG لا `IconData`: اللون صار في التدرّج داخل الملفّ
+  /// نفسه، فلم يبقَ للون معامل يُمرَّر.
+  final String icon;
   final String label;
   final String value;
-  final Color color;
   final Color background;
 }
 
@@ -355,13 +384,12 @@ class _StatusPill extends StatelessWidget {
   const _StatusPill({
     required this.icon,
     required this.label,
-    required this.color,
     required this.background,
   });
 
-  final IconData icon;
+  /// مسار SVG — الشارة تشارك لغة بقيّة أيقونات البطاقة
+  final String icon;
   final String label;
-  final Color color;
   final Color background;
 
   @override
@@ -375,7 +403,7 @@ class _StatusPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
+          SvgPicture.asset(icon, width: 15, height: 15),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
