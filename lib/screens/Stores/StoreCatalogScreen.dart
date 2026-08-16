@@ -15,6 +15,7 @@ import 'package:saleem_dry_clean/theme/AppIcons.dart';
 import 'package:saleem_dry_clean/utils/localization.dart';
 import 'package:saleem_dry_clean/utils/store_localization.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:saleem_dry_clean/components/Rating/RatingStars.dart';
 
 String _catalogText(
   BuildContext context,
@@ -762,11 +763,18 @@ class _StoreSummary extends StatelessWidget {
                     params: {'duration': turnaround},
                   ),
                 ),
+              // ★ التقييم صفّ لا أيقونة ★
+              //
+              // بقيّة الشارات معلومات تُقرأ («٨:٠٠ – ٢٣:٠٠»)، والتقييم
+              // حكمٌ يُقارَن. والصفّ يُقارَن بلمحة بين محل وآخر، والرقم
+              // يحتاج قراءةً ووزناً.
+              //
+              // والرقم يبقى بجانبه: الصفّ يقول «جيّد» ولا يفرّق بين
+              // ‎4.3‎ و‎4.5‎، وهما فرقٌ عند من يفاضل.
               if (store.hasRating)
-                _InfoPill(
-                  icon: AppIcons.ratingStar,
-                  label:
-                      '${store.rating.toStringAsFixed(1)} (${store.ratingCount})',
+                _RatingPill(
+                  score: store.rating,
+                  count: store.ratingCount,
                 ),
             ],
           ),
@@ -774,6 +782,48 @@ class _StoreSummary extends StatelessWidget {
       ),
     );
   }
+}
+
+/// شارة التقييم — صفّ النجوم ثم الرقم وعدد المقيّمين.
+///
+/// تشارك بقيّة الشارات شكلها الخارجي كي يبقى الصفّ واحداً، وتختلف عنها
+/// في محتواها: خمس نجوم بدل أيقونة.
+class _RatingPill extends StatelessWidget {
+  const _RatingPill({required this.score, required this.count});
+
+  final double score;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.backgroundColor,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RatingStars(score: score, size: 13, gap: 0.5),
+            const SizedBox(width: 6),
+            Text(
+              score.toStringAsFixed(1),
+              style: AppTextStyles.sfarabicBold.copyWith(
+                fontSize: 11.5,
+                color: AppColors.gray80,
+              ),
+            ),
+            const SizedBox(width: 3),
+            Text(
+              '($count)',
+              style: AppTextStyles.poppinsRegular.copyWith(
+                fontSize: 10.5,
+                color: AppColors.gray50,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _InfoPill extends StatelessWidget {

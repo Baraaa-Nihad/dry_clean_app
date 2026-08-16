@@ -1,5 +1,6 @@
 import 'package:saleem_dry_clean/ui.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:saleem_dry_clean/components/Rating/RatingStars.dart';
 import 'package:saleem_dry_clean/services/ApiClient/config.dart';
 import 'package:saleem_dry_clean/services/Models/Store.dart';
 import 'package:saleem_dry_clean/style/AppTextStyles.dart';
@@ -233,31 +234,60 @@ class _CompactRating extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // ممتلئة: التقييم حقيقة مثبتة لا خيار يُضغط
-        SvgPicture.asset(AppIcons.ratingStar, width: 17, height: 17),
-        const SizedBox(width: 3),
-        Text(
-          store.hasRating
-              ? store.rating.toStringAsFixed(1)
-              : l10n.translate('store_new'),
-          style: AppTextStyles.sfarabicBold.copyWith(
-            fontSize: 12.5,
-            color: AppColors.gray80,
-          ),
-        ),
-        if (store.hasRating) ...[
+
+    // ★ المحل بلا تقييم ★
+    //
+    // خمس نجوم فارغة تُقرأ «قُيّم بصفر» لا «لم يُقيَّم بعد» — وهي تهمة
+    // على محل جديد. فنجمة واحدة وكلمة «جديد» تقول الحقيقة.
+    if (!store.hasRating) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SvgPicture.asset(AppIcons.ratingStar, width: 15, height: 15),
           const SizedBox(width: 3),
           Text(
-            '(${store.ratingCount})',
-            style: AppTextStyles.poppinsRegular.copyWith(
-              fontSize: 10.5,
-              color: AppColors.gray50,
+            l10n.translate('store_new'),
+            style: AppTextStyles.sfarabicBold.copyWith(
+              fontSize: 12.5,
+              color: AppColors.gray80,
             ),
           ),
         ],
+      );
+    }
+
+    // ★ ولماذا الصفّ فوق الرقم لا بجانبه ★
+    //
+    // الصفّ يحتاج نحو ستّين بكسلاً، والرقم والعدد نحو خمسين. وفي سطر
+    // واحد يخنقان اسم المحل ووصفه — وهما ما يقرؤه الزبون أوّلاً.
+    //
+    // والصفّ يُقرأ بلمحة قبل الرقم، فيعلوه.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        RatingStars(score: store.rating, size: 12, gap: 0.5),
+        const SizedBox(height: 2),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              store.rating.toStringAsFixed(1),
+              style: AppTextStyles.sfarabicBold.copyWith(
+                fontSize: 12,
+                color: AppColors.gray80,
+              ),
+            ),
+            const SizedBox(width: 3),
+            Text(
+              '(${store.ratingCount})',
+              style: AppTextStyles.poppinsRegular.copyWith(
+                fontSize: 10,
+                color: AppColors.gray50,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
