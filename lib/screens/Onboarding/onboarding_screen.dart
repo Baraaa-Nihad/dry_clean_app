@@ -115,10 +115,19 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildDots(int count, int activeIndex) {
-    return GradientCustomIndicator(
-      activeIndex: activeIndex,
-      fem: 1,
-      count: count,
+    // ★ محصور بحجمه ★
+    //
+    // `GradientCustomIndicator` صفٌّ بلا `mainAxisSize.min` — فيأخذ كل
+    // العرض المتاح داخل صفّ آخر، ويدفع زرّ التالي خارج الشاشة.
+    //
+    // ولا يُعدَّل المكوّن نفسه: تستعمله شاشات أخرى تعتمد على تمدّده
+    // وتوسيطه.
+    return IntrinsicWidth(
+      child: GradientCustomIndicator(
+        activeIndex: activeIndex,
+        fem: 1,
+        count: count,
+      ),
     );
   }
 
@@ -343,11 +352,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                   ),
                                 ],
                                 SizedBox(height: 8.h),
-                                _buildDots(onboardingProvider.steps.length,
-                                    _currentPage),
-                                SizedBox(height: 6.h),
 
-                                // زر Start (آخر صفحة) أو الزر الدائري Next
+                                // ★ النقاط على الجنب لا في الوسط ★
+                                //
+                                // موحّدة مع تطبيق السائق: المؤشّر في
+                                // صفٍّ واحد مع زرّ التالي — النقاط عند
+                                // بداية القراءة والزرّ عند نهايتها،
+                                // فينقلبان مع اللغة بلا قاعدة ثانية.
+                                //
+                                // وفي الشاشة الأخيرة يختفيان معاً
+                                // لصالح «ابدأ» بعرض كامل: لم يبقَ ما
+                                // يُؤشَّر إليه.
                                 AnimatedSwitcher(
                                   duration: Duration(milliseconds: 300),
                                   transitionBuilder: (child, animation) =>
@@ -363,17 +378,22 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                           onTap: () => _navigateToMain(
                                               onboardingProvider),
                                         )
-                                      : Align(
+                                      : Row(
                                           key: ValueKey('NextButton'),
-                                          alignment:
-                                              AlignmentDirectional.bottomEnd,
-                                          child: _GlassIconButton(
-                                            icon: nextArrowIcon,
-                                            filled: true,
-                                            size: 45,
-                                            onTap: () => _goToNextPage(
-                                                onboardingProvider),
-                                          ),
+                                          children: [
+                                            _buildDots(
+                                                onboardingProvider
+                                                    .steps.length,
+                                                _currentPage),
+                                            Spacer(),
+                                            _GlassIconButton(
+                                              icon: nextArrowIcon,
+                                              filled: true,
+                                              size: 45,
+                                              onTap: () => _goToNextPage(
+                                                  onboardingProvider),
+                                            ),
+                                          ],
                                         ),
                                 ),
                                 SizedBox(height: 15.h),
