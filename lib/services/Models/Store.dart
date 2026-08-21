@@ -31,6 +31,10 @@ class Store {
     this.latitude,
     this.longitude,
     this.workingHours,
+    this.isOpenNow = true,
+    this.opensAt,
+    this.closesAt,
+    this.openStateReason,
   });
 
   final int id;
@@ -69,6 +73,28 @@ class Store {
   /// حرّ يفشل عند أول محل يكتب «من ٨ للـ٨ ما عدا الجمعة».
   final String? workingHours;
 
+  // ── حالة الفتح ──
+  //
+  // ★ يحسبها الخادم لا التطبيق ★
+  //
+  // في الحساب نافذةٌ تعبر منتصف الليل، ومفتاحٌ يدويّ، وحالةُ محلٍّ لم
+  // يضبط ساعاته. ونسخُ ذلك هنا يعني أن التطبيق يقول «مفتوح» فيُردّ
+  // الطلب — وهو أسوأ من الاثنين.
+  //
+  // والافتراض `true`: نسخة تطبيق قديمة تقرأ خادماً حديثاً يجب أن تسلك
+  // كما كانت، لا أن تُغلق كل المحلّات.
+  final bool isOpenNow;
+
+  /// «HH:MM» — يُقال للزبون متى يفتح، فيعود بدل أن ينصرف
+  final String? opensAt;
+  final String? closesAt;
+
+  /// `MANUALLY_CLOSED` إغلاقٌ مؤقّت بقرار صاحبه، و`OUTSIDE_HOURS` خارج
+  /// الدوام. والفرق يُقال: الأولى لا موعد لها والثانية لها موعد.
+  final String? openStateReason;
+
+  bool get isTemporarilyClosed => openStateReason == 'MANUALLY_CLOSED';
+
   /// محل بلا أصناف مسعَّرة لا يستطيع تنفيذ طلب، فيُعرض معطَّلاً لا مخفياً:
   /// إخفاؤه يجعل الزبون يسأل «أين المحل الذي رأيته أمس».
   bool get canOrder => productsCount > 0;
@@ -96,6 +122,10 @@ class Store {
         hasActiveOffer: j['hasActiveOffer'] == true,
         discountPercent:
             j['discountPercent'] == null ? null : _i(j['discountPercent']),
+        isOpenNow: j['isOpenNow'] != false,
+        opensAt: j['opensAt'] as String?,
+        closesAt: j['closesAt'] as String?,
+        openStateReason: j['openStateReason'] as String?,
         isPromoted: j['isPromoted'] == true,
         isFavorite: j['isFavorite'] == true,
         address: j['address'] as String?,

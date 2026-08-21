@@ -36,12 +36,22 @@ class StoreCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final disabled = !store.canOrder;
 
+    // ★ المغلق يُعرض ولا يُخفى ★
+    //
+    // إخفاؤه يجعل الزبون يسأل «أين المحل الذي طلبت منه أمس». وعرضُه
+    // باهتاً مع سبب وموعد فتحٍ يقول له ماذا يفعل — وهو الفرق بين زبون
+    // يعود وزبون ينصرف.
+    //
+    // ويبقى قابلاً للفتح: من يريد أن يرى الأسعار ويعود غداً لا يُمنع.
+    // والخادم يردّ الطلب نفسه إن حاول، برسالته.
+    final closed = !store.isOpenNow;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Opacity(
         // المحل بلا أصناف يُعرض باهتاً لا مخفياً: إخفاؤه يجعل الزبون
         // يسأل «أين المحل الذي رأيته أمس»
-        opacity: disabled ? 0.55 : 1,
+        opacity: disabled || closed ? 0.55 : 1,
         child: Material(
           color: AppColors.white,
           shape: RoundedRectangleBorder(
@@ -68,7 +78,7 @@ class StoreCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _StoreDetails(store: store),
-                      if (store.hasActiveOffer || disabled) ...[
+                      if (store.hasActiveOffer || disabled || closed) ...[
                         const SizedBox(height: 12),
                         if (store.hasActiveOffer)
                           _StatusPill(
@@ -87,6 +97,25 @@ class StoreCard extends StatelessWidget {
                           _StatusPill(
                             icon: AppIcons.info,
                             label: l10n.translate('store_pricing_unavailable'),
+                            background: AppColors.orangeCardBackgourd,
+                          ),
+
+                        // ★ والموعد في النصّ ★
+                        //
+                        // «مغلق الآن» تُغلق الباب. و«يفتح ٠٩:٠٠» تفتح
+                        // موعداً — والإغلاق المؤقّت لا موعد له، فيُقال
+                        // بنصّه هو.
+                        if (closed)
+                          _StatusPill(
+                            icon: AppIcons.workingHours,
+                            label: store.isTemporarilyClosed
+                                ? l10n.translate('store_closed_temporarily')
+                                : (store.opensAt ?? '').isNotEmpty
+                                    ? l10n.translate(
+                                        'store_closed_opens_at',
+                                        params: {'time': store.opensAt!},
+                                      )
+                                    : l10n.translate('store_closed_now'),
                             background: AppColors.orangeCardBackgourd,
                           ),
                       ],

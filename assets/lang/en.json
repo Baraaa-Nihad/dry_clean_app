@@ -1,5 +1,4 @@
 {
-  
   "welcome_back": "Welcome back! Sign in to your account\n to access all our services",
   "mobile_number": "Mobile Number",
   "password": "Password",
@@ -38,7 +37,7 @@
   "select_delivery_day": "Select delivery day",
   "no_available_collection_times": "No collection days are available for this address right now. Please choose another address or try again later.",
   "no_available_delivery_times": "No delivery days are available for this address right now. Please choose another address or try again later.",
-  "no_available_time_slots": "No time slots are available for this period.",
+  "no_available_time_slots": "No pickup times are available for this address.",
   "select_area": "Select Area",
   "select_collection_day": "Select collection day",
   "select_area_error": "Please select an area",
@@ -222,7 +221,6 @@
   "Add Address Details": "Add Address Details",
   "Set as Default": "Set as Default",
   "default": "Default",
-
   "Are you sure that you want to set \"{addressName}\" as a default address?": "Are you sure that you want to set \"{addressName}\" as the default address?",
   "Order success!": "Order success!",
   "Your payment was successful, and you can track your orders status on your orders screen": "Your payment was successful, and you can track your orders status on your orders screen",
@@ -230,7 +228,7 @@
   "address_from_your_addresses_list": "Address from your addresses list",
   "Go To my orders": "Go To my orders",
   "Receipt": "Receipt",
-  "login_required": "Sign in required",
+  "login_required": "Login Required",
   "login_to_continue": "Please sign in to checkout your orders.",
   "Sign In": "Sign In",
   "Place order": "Place order",
@@ -245,9 +243,7 @@
   "back_to_home": "Back To Home",
   "items_details": "Items Details",
   "go_to_my_orders": "Go To my orders",
-  "login_required": "Login Required",
-"login_required_message": "Please login to continue and send your message to support.",
-  "no_available_time_slots": "No available time slots for this area",
+  "login_required_message": "Please login to continue and send your message to support.",
   "area_id_missing": "Area ID is missing for the selected address",
   "please_complete_step": "Please complete the current step",
   "please_enter_dob": "Please enter your date of birth",
@@ -276,7 +272,6 @@
   "or_enter_custom_name": "Or enter custom name",
   "no_address_names_available": "No ready address names — type your own below",
   "address_name": "Address Name",
-  "governate": "Governate",
   "area": "Area",
   "street": "Street",
   "building": "Building",
@@ -486,7 +481,6 @@
   "time_slots_load_failed": "We couldn't load pickup times for this address. Please try again.",
   "delivery_times_invalid_response": "We couldn't read the available delivery times. Please try again.",
   "delivery_times_load_failed": "We couldn't load delivery times for this address. Please try again.",
-  "no_available_time_slots": "No pickup times are available for this address.",
   "address_area_missing": "The selected address is missing its area information. Please choose another address.",
   "checkout_complete_steps_error": "Complete the address, pickup time, and delivery time before placing your order.",
   "order_missing_data": "Some order details are missing. Review your order and try again.",
@@ -543,7 +537,7 @@
   "catalog_measure_after_collection": "Price is calculated after collection",
   "catalog_previously_added_carpets": "Previously added carpets",
   "catalog_previous_measurements_more": "View all",
-  "\u0645\u0642\u0627\u0633 \u0645\u062e\u0635\u0635": "Custom size",
+  "مقاس مخصص": "Custom size",
   "مقاسات كبيرة": "Large sizes",
   "مقاسات متوسطة": "Medium sizes",
   "مقاسات صغيرة": "Small sizes",
@@ -552,5 +546,9 @@
   "غسيل": "Washing",
   "غسيل وكوي": "Washing & ironing",
   "تنظيف جاف": "Dry cleaning",
-  "كي": "Ironing"
+  "كي": "Ironing",
+  "store_closed_now": "Closed now",
+  "store_closed_opens_at": "Closed now — opens at {time}",
+  "store_closed_temporarily": "Temporarily closed",
+  "store_open_now": "Open now"
 }
