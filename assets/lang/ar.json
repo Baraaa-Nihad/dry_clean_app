@@ -549,5 +549,10 @@
   "store_closed_now": "مغلق الآن",
   "store_closed_opens_at": "مغلق الآن — يفتح {time}",
   "store_closed_temporarily": "مغلق مؤقّتاً",
-  "store_open_now": "مفتوح الآن"
+  "store_open_now": "مفتوح الآن",
+  "order_dimensions_invalid": "تعذّر تأكيد مقاس إحدى القطع. افتح السلّة وأعد اختيار المقاس.",
+  "order_custom_size_disabled": "هذه المغسلة لا تستقبل مقاسات مخصّصة لهذا الصنف حالياً.",
+  "order_unknown_size_disabled": "هذه المغسلة تحتاج مقاساً محدّداً — لا تقبل «سأقيسه عند الاستلام».",
+  "order_promo_needs_final_price": "لا يمكن استخدام كود الخصم قبل تحديد السعر النهائي لكل القطع.",
+  "order_laundry_closed": "المغسلة خارج ساعات العمل الآن. جرّب لاحقاً أو اختر مغسلة أخرى."
 }

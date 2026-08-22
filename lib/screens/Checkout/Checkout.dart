@@ -1014,6 +1014,16 @@ class _CheckoutAddressState extends State<CheckoutAddress>
       'DRYCLEAN_UNAVAILABLE': 'order_laundry_unavailable',
       'DRYCLEAN_NOT_IN_AREA': 'order_laundry_not_in_area',
       'PRODUCTS_UNAVAILABLE': 'order_items_unavailable',
+      // ★ رموز القياس والدوام ★
+      //
+      // كانت تسقط في «تعذّر إرسال الطلب» — وهي رسالة لا تدلّ
+      // على شيء: لا يعرف من يقرؤها أيّ تفصيلٍ يراجع، فيعيد المحاولة
+      // ويفشل مرّةً بعد مرّة.
+      'INVALID_DIMENSIONS': 'order_dimensions_invalid',
+      'CUSTOM_SIZE_DISABLED': 'order_custom_size_disabled',
+      'UNKNOWN_SIZE_DISABLED': 'order_unknown_size_disabled',
+      'PRICE_PENDING_PROMO_DISABLED': 'order_promo_needs_final_price',
+      'DRYCLEAN_CLOSED': 'order_laundry_closed',
       'INVALID_CODE': 'promo_code_invalid',
       'WRONG_STORE': 'promo_wrong_laundry',
       'BELOW_MINIMUM': 'promo_below_minimum',

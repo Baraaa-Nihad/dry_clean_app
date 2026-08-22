@@ -69,6 +69,14 @@ class BasketItemData {
       'quantity': quantity,
       'subCategory': subCategory,
       'subtotal': subtotal,
+      // ★ المساحة تُكتب كما تُقرأ ★
+      //
+      // `fromJson` كانت تقرؤها و`toJson` لا تكتبها. فسلّةٌ تُحفظ في
+      // الجلسة وتعود تفقد مساحتها: يصير مجموعها صفراً، ويُردّ الطلب.
+      //
+      // وهي ما يحتاجه الخادم لمن اختار مقاساً جاهزاً بلا بُعدين.
+      if (area.isNotEmpty && double.tryParse(area) != null)
+        'area': double.parse(area),
       if (width != null) 'width': width,
       if (length != null) 'length': length,
       'measurementPending': measurementPending,

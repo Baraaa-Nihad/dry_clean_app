@@ -14,15 +14,38 @@ import 'package:saleem_dry_clean/utils/store_localization.dart';
 /// رقمين. لكن المقاسات الجاهزة لا تغطّي كل بيت، ومن لا يجد مقاسه يحتاج
 /// مخرجاً — وإلّا امتنع عن الطلب.
 ///
-/// تعيد المساحة بالمتر المربّع، أو null إن تراجع الزبون.
-Future<double?> showProductSizeSheet(
+/// ما قاسه الزبون: مساحةٌ ومعها بُعداها إن عُرفا.
+///
+/// ★ لماذا لا تكفي المساحة ★
+///
+/// الفاتورة تُحسب بالمساحة، لكن المحل يستلم سجادةً يقيسها ليتحقّق.
+/// و«ستّة أمتار» لا تُراجَع: أهي ٢×٣ أم ١×٦؟ فالبُعدان يُحفظان مع
+/// الطلب متى عُرفا، وتبقى المساحة وحدها لمن اختار مقاساً جاهزاً لا
+/// أبعاد له.
+class ProductMeasure {
+  const ProductMeasure({required this.area, this.width, this.length});
+
+  final double area;
+  final double? width;
+  final double? length;
+}
+
+/// تعيد قياس الزبون، أو null إن تراجع.
+Future<ProductMeasure?> showProductSizeSheet(
   BuildContext context, {
   required StoreProduct product,
 }) {
-  return showModalBottomSheet<double>(
+  return showModalBottomSheet<ProductMeasure>(
     context: context,
     backgroundColor: AppColors.transparent,
     isScrollControlled: true,
+    // ★ الشقّ والنقش لا يبتلعان رأس الورقة ★
+    //
+    // بلا هذا تبدأ الورقة من أعلى الشاشة تماماً حين يطول محتواها،
+    // فيختفي مقبضها وعنوانها خلف شريط الحالة.
+    //
+    // وهو يحمي الأعلى وحده — والأسفل يُحسب في الورقة نفسها.
+    useSafeArea: true,
     builder: (_) => _ProductSizeSheet(product: product),
   );
 }
@@ -58,18 +81,27 @@ class _ProductSizeSheetState extends State<_ProductSizeSheet> {
     super.dispose();
   }
 
-  double? get _area {
-    if (!_custom) return _selected?.area;
+  double? get _area => _measure?.area;
+
+  /// القياس الحاليّ — من مقاسٍ جاهز أو من بُعدين مكتوبين.
+  ProductMeasure? get _measure {
+    if (!_custom) {
+      final s = _selected;
+      if (s == null) return null;
+      // المقاس الجاهز يحمل بُعديه، فيُنقلان كما هما
+      return ProductMeasure(area: s.area, width: s.width, length: s.height);
+    }
     final w = double.tryParse(_width.text.trim());
     final h = double.tryParse(_height.text.trim());
     if (w == null || h == null || w <= 0 || h <= 0) return null;
-    return w * h;
+    return ProductMeasure(area: w * h, width: w, length: h);
   }
 
   void _confirm() {
     final l10n = AppLocalizations.of(context);
-    final a = _area;
-    if (a == null) {
+    final measure = _measure;
+    final a = measure?.area;
+    if (measure == null || a == null) {
       setState(() => _error = _custom
           ? l10n.translate('size_enter_dimensions')
           : l10n.translate('size_select_first'));
@@ -81,164 +113,218 @@ class _ProductSizeSheetState extends State<_ProductSizeSheet> {
       setState(() => _error = l10n.translate('size_too_large'));
       return;
     }
-    Navigator.pop(context, a);
+    Navigator.pop(context, measure);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final media = MediaQuery.of(context);
     final p = widget.product;
     final area = _area;
     final total = area == null ? null : area * p.effectivePrice;
 
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+    // ★ الأسفل مسافتان لا واحدة ★
+    //
+    // لوحة المفاتيح حين تُفتح، وشريط الإيماءات حين تُغلق. وأخذُ
+    // الأولى وحدها — وهو ما كان — يترك الزرّ تحت شريط الإيماءات:
+    // يُرى نصفه ولا يُضغط.
+    //
+    // ولا تُجمعان: المفتوحة تغطّي الشريط، فجمعُهما يرفع الزرّ عن
+    // موضعه بلا داعٍ.
+    final keyboard = media.viewInsets.bottom;
+    final gesture = media.viewPadding.bottom;
+    final bottomGap = (keyboard > 0 ? keyboard : gesture) + 22;
+
+    return ConstrainedBox(
+      // ★ سقفٌ دون الشاشة ★
+      //
+      // ورقةٌ تملأ الشاشة تبدو صفحةً لا ورقة، فيبحث الزبون عن زرّ
+      // رجوعٍ ليس فيها. والفجوة فوقها تقول: اسحبني أو المسني لأزول.
+      constraints: BoxConstraints(maxHeight: media.size.height * 0.88),
       child: Container(
         decoration: const BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
-        padding: const EdgeInsets.fromLTRB(22, 12, 22, 22),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.stroke,
-                    borderRadius: BorderRadius.circular(2),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── الرأس: ثابت ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.stroke,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 18),
+                  Text(
+                    localizedCatalogValue(context, p.name),
+                    style: AppTextStyles.sfarabicBold
+                        .copyWith(fontSize: 17, color: AppColors.gray80),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.translate(
+                      'size_priced_per_sqm',
+                      params: {'price': p.effectivePrice.toStringAsFixed(2)},
+                    ),
+                    style: AppTextStyles.sfarabicRegular.copyWith(
+                        fontSize: 12.5, color: AppColors.secondaryTextColor),
+                  ),
+                ],
               ),
-              const SizedBox(height: 18),
-              Text(
-                localizedCatalogValue(context, p.name),
-                style: AppTextStyles.sfarabicBold
-                    .copyWith(fontSize: 17, color: AppColors.gray80),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                l10n.translate(
-                  'size_priced_per_sqm',
-                  params: {'price': p.effectivePrice.toStringAsFixed(2)},
-                ),
-                style: AppTextStyles.sfarabicRegular.copyWith(
-                    fontSize: 12.5, color: AppColors.secondaryTextColor),
-              ),
-              const SizedBox(height: 18),
-              if (p.sizes.isNotEmpty) ...[
-                Text(
-                  l10n.translate('size_choose'),
-                  style: AppTextStyles.sfarabicMedium
-                      .copyWith(fontSize: 13.5, color: AppColors.gray80),
-                ),
-                const SizedBox(height: 10),
-                ...p.sizes.map((s) => _SizeRow(
-                      size: s,
-                      pricePerMeter: p.effectivePrice,
-                      selected: !_custom && _selected == s,
-                      onTap: () => setState(() {
-                        _selected = s;
-                        _custom = false;
-                        _error = null;
-                      }),
-                    )),
-                const SizedBox(height: 6),
-                _CustomToggle(
-                  active: _custom,
-                  onTap: () => setState(() {
-                    _custom = true;
-                    _selected = null;
-                    _error = null;
-                  }),
-                ),
-              ],
-              if (_custom) ...[
-                const SizedBox(height: 14),
-                Row(
+            ),
+
+            // ── الوسط: هو وحده الذي يمرّ ──
+            //
+            // ★ Flexible لا Expanded ★
+            //
+            // سجادةٌ بمقاسين لا تستحقّ ورقةً تملأ الشاشة. و`Flexible`
+            // يأخذ قدر المحتوى ولا يزيد، ولا يتمدّد إلّا عند الحاجة.
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(22, 18, 22, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: _DimField(
-                        controller: _width,
-                        label: l10n.translate('size_width_m'),
-                        onChanged: (_) => setState(() => _error = null),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _DimField(
-                        controller: _height,
-                        label: l10n.translate('size_length_m'),
-                        onChanged: (_) => setState(() => _error = null),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              if (total != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(13),
-                  decoration: BoxDecoration(
-                    color: AppColors.brandSoft,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
+                    if (p.sizes.isNotEmpty) ...[
                       Text(
-                        '${area!.toStringAsFixed(2)} ${l10n.translate('unit_square_meter_short')}',
-                        style: AppTextStyles.poppinsMedium.copyWith(
-                            fontSize: 13, color: AppColors.secondaryTextColor),
+                        l10n.translate('size_choose'),
+                        style: AppTextStyles.sfarabicMedium
+                            .copyWith(fontSize: 13.5, color: AppColors.gray80),
                       ),
-                      const Spacer(),
-                      Text(
-                        '${total.toStringAsFixed(2)}₪',
-                        style: AppTextStyles.poppinsSemiBold.copyWith(
-                            fontSize: 16, color: AppColors.brandAccent),
+                      const SizedBox(height: 10),
+                      ...p.sizes.map((s) => _SizeRow(
+                            size: s,
+                            pricePerMeter: p.effectivePrice,
+                            selected: !_custom && _selected == s,
+                            onTap: () => setState(() {
+                              _selected = s;
+                              _custom = false;
+                              _error = null;
+                            }),
+                          )),
+                      const SizedBox(height: 6),
+                      _CustomToggle(
+                        active: _custom,
+                        onTap: () => setState(() {
+                          _custom = true;
+                          _selected = null;
+                          _error = null;
+                        }),
                       ),
                     ],
-                  ),
-                ),
-              ],
-              if (_error != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  _error!,
-                  style: AppTextStyles.sfarabicMedium
-                      .copyWith(fontSize: 12.5, color: AppColors.red),
-                ),
-              ],
-              const SizedBox(height: 18),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: AppColors.brandGradient,
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: ElevatedButton(
-                  onPressed: _confirm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.transparent,
-                    shadowColor: AppColors.transparent,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                  ),
-                  child: Text(
-                    l10n.translate('size_add_to_basket'),
-                    style: AppTextStyles.sfarabicBold
-                        .copyWith(fontSize: 15, color: AppColors.white),
-                  ),
+                    if (_custom) ...[
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _DimField(
+                              controller: _width,
+                              label: l10n.translate('size_width_m'),
+                              onChanged: (_) => setState(() => _error = null),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _DimField(
+                              controller: _height,
+                              label: l10n.translate('size_length_m'),
+                              onChanged: (_) => setState(() => _error = null),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // ── القدم: المبلغ والزرّ، لا يغيبان مهما طالت المقاسات ──
+            //
+            // ★ لماذا خرجا من المِمرّ ★
+            //
+            // كانا في آخره، فمن فتح ورقةً بعشرة مقاسات لا يرى زرّ
+            // الإضافة حتى ينزل إلى قاعها — ولا شيء يدلّه أن تحتها
+            // شيئاً. والسعر معه: يُقرأ لحظة الضغط لا قبله بشاشة.
+            Padding(
+              padding: EdgeInsets.fromLTRB(22, 14, 22, bottomGap),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (total != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(13),
+                      decoration: BoxDecoration(
+                        color: AppColors.brandSoft,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            '${area!.toStringAsFixed(2)} ${l10n.translate('unit_square_meter_short')}',
+                            style: AppTextStyles.poppinsMedium.copyWith(
+                                fontSize: 13,
+                                color: AppColors.secondaryTextColor),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${total.toStringAsFixed(2)}₪',
+                            style: AppTextStyles.poppinsSemiBold.copyWith(
+                                fontSize: 16, color: AppColors.brandAccent),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (_error != null) ...[
+                    Text(
+                      _error!,
+                      style: AppTextStyles.sfarabicMedium
+                          .copyWith(fontSize: 12.5, color: AppColors.red),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: AppColors.brandGradient,
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: _confirm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.transparent,
+                        shadowColor: AppColors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                      ),
+                      child: Text(
+                        l10n.translate('size_add_to_basket'),
+                        style: AppTextStyles.sfarabicBold
+                            .copyWith(fontSize: 15, color: AppColors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

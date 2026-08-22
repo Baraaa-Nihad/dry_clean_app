@@ -1765,9 +1765,14 @@ class _ProductServicesPageState extends State<_ProductServicesPage> {
           length: widget.product.length,
         );
       } else {
-        final area = await showProductSizeSheet(context, product: offering);
-        if (area == null || !mounted) return;
-        selection = _AreaSelection(area: area);
+        final measure = await showProductSizeSheet(context, product: offering);
+        if (measure == null || !mounted) return;
+        // البُعدان يُنقلان معها: الخادم يسجّلهما ليراجعهما المحل
+        selection = _AreaSelection(
+          area: measure.area,
+          width: measure.width,
+          length: measure.length,
+        );
       }
       _areas.putIfAbsent(offering.serviceId, () => []).add(selection);
     }
